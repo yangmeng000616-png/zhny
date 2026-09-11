@@ -1,0 +1,6 @@
+{
+  "name": "智慧农业大棚数字孪生系统",
+  "description": "基于 Three.js 构建的现代智慧农业温室大棚数字孪生三维系统，具备真实空间比例、设备状态映射、传感器监测与空间漫游交互能力。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
