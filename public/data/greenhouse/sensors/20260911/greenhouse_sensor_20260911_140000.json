@@ -1,0 +1,103 @@
+{
+  "code": 200,
+  "msg": "success",
+  "timestamp": "2026-09-11T14:00:00Z",
+  "data": [
+    {
+      "id": "sensor_temp_001",
+      "type": "temperature",
+      "name": "A区中心空气温湿度传感器",
+      "zone": "A区·高端水果番茄",
+      "position": [-6.0, 2.8, -4.0],
+      "status": "normal",
+      "value": 27.8,
+      "unit": "℃",
+      "targetRange": [20.0, 30.0],
+      "history": [24.5, 25.1, 26.0, 26.8, 27.4, 27.8]
+    },
+    {
+      "id": "sensor_temp_002",
+      "type": "temperature",
+      "name": "B区中心空气温湿度传感器",
+      "zone": "B区·欧洲水果黄瓜",
+      "position": [6.0, 2.8, -4.0],
+      "status": "normal",
+      "value": 28.6,
+      "unit": "℃",
+      "targetRange": [20.0, 32.0],
+      "history": [25.0, 25.7, 26.8, 27.5, 28.1, 28.6]
+    },
+    {
+      "id": "sensor_hum_001",
+      "type": "humidity",
+      "name": "A区空气相对湿度变送器",
+      "zone": "A区·高端水果番茄",
+      "position": [-6.0, 2.5, 0.0],
+      "status": "normal",
+      "value": 73.2,
+      "unit": "%",
+      "targetRange": [60.0, 85.0],
+      "history": [80.0, 78.5, 76.2, 75.0, 74.1, 73.2]
+    },
+    {
+      "id": "sensor_hum_002",
+      "type": "humidity",
+      "name": "B区空气相对湿度变送器",
+      "zone": "B区·欧洲水果黄瓜",
+      "position": [6.0, 2.5, 0.0],
+      "status": "normal",
+      "value": 75.8,
+      "unit": "%",
+      "targetRange": [60.0, 85.0],
+      "history": [82.0, 80.1, 78.4, 77.0, 76.3, 75.8]
+    },
+    {
+      "id": "sensor_co2_001",
+      "type": "co2",
+      "name": "中心红外二氧化碳分析仪",
+      "zone": "主通道核心区",
+      "position": [0.0, 2.4, 0.0],
+      "status": "normal",
+      "value": 720,
+      "unit": "ppm",
+      "targetRange": [600, 1200],
+      "history": [850, 810, 780, 750, 735, 720]
+    },
+    {
+      "id": "sensor_light_001",
+      "type": "light",
+      "name": "顶部全光谱光量子日照计",
+      "zone": "温室冠层上方",
+      "position": [0.0, 5.8, 0.0],
+      "status": "normal",
+      "value": 46.5,
+      "unit": "klux",
+      "targetRange": [25.0, 60.0],
+      "history": [12.0, 25.0, 38.0, 42.0, 45.0, 46.5]
+    },
+    {
+      "id": "sensor_soil_001",
+      "type": "soil_moisture",
+      "name": "A区根际土壤多合一探头",
+      "zone": "A区·高端水果番茄",
+      "position": [-6.0, 0.4, 4.0],
+      "status": "normal",
+      "value": 36.8,
+      "unit": "%",
+      "targetRange": [30.0, 50.0],
+      "history": [34.0, 34.8, 35.2, 35.9, 36.4, 36.8]
+    },
+    {
+      "id": "sensor_soil_002",
+      "type": "soil_ec",
+      "name": "B区基质电导率EC探头",
+      "zone": "B区·欧洲水果黄瓜",
+      "position": [6.0, 0.4, 4.0],
+      "status": "normal",
+      "value": 1.48,
+      "unit": "mS/cm",
+      "targetRange": [1.0, 2.2],
+      "history": [1.42, 1.44, 1.45, 1.46, 1.47, 1.48]
+    }
+  ]
+}

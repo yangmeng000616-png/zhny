@@ -178,6 +178,19 @@ export const initialActuators: ActuatorDevice[] = [
     operatingHours: 1100,
     powerConsumptionKw: 0.9,
   },
+  {
+    id: 'heater_001',
+    type: 'heater',
+    name: '空气源热泵变频恒温加热系统',
+    zone: '中央循环温控区',
+    position: [0, 1.5, 8],
+    status: 'idle',
+    power: false,
+    value: 24,
+    metricUnit: '℃恒温目标',
+    operatingHours: 340,
+    powerConsumptionKw: 4.2,
+  },
 ];
 
 export const initialCropZones: CropZone[] = [

@@ -15,9 +15,9 @@ export class ParkEnvironment {
     // 1. Campus Extended Ground Surface (240m x 240m)
     const groundGeo = new THREE.PlaneGeometry(240, 240);
     const groundMat = new THREE.MeshStandardMaterial({
-      color: 0xc4d8c8, // Fresh agricultural turf / natural soft green park lawn
-      roughness: 0.95,
-      metalness: 0.05,
+      color: 0x0c1524, // Deep cyber agricultural ground surface
+      roughness: 0.9,
+      metalness: 0.1,
     });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
@@ -26,8 +26,8 @@ export class ParkEnvironment {
     parkGroup.add(ground);
 
     // Subtle agricultural open field plots around the perimeter
-    const plotMat1 = new THREE.MeshStandardMaterial({ color: 0xb5c7b8, roughness: 0.9 });
-    const plotMat2 = new THREE.MeshStandardMaterial({ color: 0xbed0c2, roughness: 0.9 });
+    const plotMat1 = new THREE.MeshStandardMaterial({ color: 0x0f2a20, roughness: 0.85 });
+    const plotMat2 = new THREE.MeshStandardMaterial({ color: 0x132338, roughness: 0.85 });
 
     // Open farm plot A (Far East)
     const plotA = new THREE.Mesh(new THREE.PlaneGeometry(35, 75), plotMat1);
@@ -41,8 +41,8 @@ export class ParkEnvironment {
     plotB.position.set(-78, -0.05, -5);
     parkGroup.add(plotB);
 
-    // Ground Grid
-    const parkGrid = new THREE.GridHelper(220, 44, 0x0ea5e9, 0xb8cbbf);
+    // Ground Grid with luminous cyan coordinate markers
+    const parkGrid = new THREE.GridHelper(240, 48, 0x0284c7, 0x162238);
     parkGrid.position.y = -0.04;
     parkGroup.add(parkGrid);
 
@@ -50,17 +50,17 @@ export class ParkEnvironment {
     // ROAD SYSTEM (Asphalt, Markings, Curbs, Crosswalks)
     // -------------------------------------------------------------
     const asphaltMat = new THREE.MeshStandardMaterial({
-      color: 0x5a6676, // Clean modern campus asphalt highway
-      roughness: 0.8,
-      metalness: 0.1,
+      color: 0x080e18, // Deep sleek cyber asphalt highway
+      roughness: 0.7,
+      metalness: 0.2,
     });
     const curbMat = new THREE.MeshStandardMaterial({
-      color: 0xdde6ed, // Architectural light concrete curb
-      roughness: 0.6,
-      metalness: 0.1,
+      color: 0x334155, // Clean dark slate architectural curb
+      roughness: 0.5,
+      metalness: 0.2,
     });
-    const yellowLineMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
-    const whiteLineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const yellowLineMat = new THREE.MeshBasicMaterial({ color: 0xfbbf24 });
+    const whiteLineMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 }); // High-visibility glowing cyan edge line
 
     // 1. North-South Main Highway (南北主干道: X = 22, Z from -90 to +90, Width 7.2m)
     const mainRoadGeo = new THREE.BoxGeometry(7.2, 0.08, 180);
@@ -280,18 +280,18 @@ export class ParkEnvironment {
     interactiveObjects: THREE.Object3D[]
   ) {
     const steelMat = new THREE.MeshStandardMaterial({
-      color: 0xcfd8dc,
+      color: 0x94a3b8, // Crisp silver-steel truss visible against dark background
       metalness: 0.85,
       roughness: 0.25,
     });
 
     const glassMat = new THREE.MeshPhysicalMaterial({
-      color: 0xdff4fc,
+      color: 0x38bdf8, // High-tech cyan-tinted architectural glass
       transparent: true,
-      opacity: 0.25,
-      roughness: 0.1,
+      opacity: 0.32,
+      roughness: 0.08,
       metalness: 0.1,
-      transmission: 0.75,
+      transmission: 0.8,
       ior: 1.45,
     });
     glassMaterials.push(glassMat);

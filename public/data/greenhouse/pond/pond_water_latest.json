@@ -1,0 +1,24 @@
+{
+  "code": 200,
+  "msg": "success",
+  "timestamp": "2026-09-11T14:20:00Z",
+  "data": {
+    "id": "pond_sensor_buoy_01",
+    "name": "生态净化蓄水河塘水质浮标站",
+    "waterLevelMeters": 2.45,
+    "targetWaterLevelRange": [1.8, 3.2],
+    "storageCapacityM3": 4280,
+    "capacityPercentage": 85.6,
+    "waterTemp": 21.4,
+    "dissolvedOxygen": 7.4,
+    "ph": 7.35,
+    "turbidity": 3.8,
+    "ammoniaNitrogen": 0.15,
+    "cod": 2.1,
+    "conductivityEc": 288,
+    "qualityGrade": "Ⅰ类 (优)",
+    "intakePumpStatus": "running",
+    "intakeFlowRate": 45,
+    "lastUpdated": "2026-09-11 14:20:00"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "code": 200,
+  "msg": "success",
+  "timestamp": "2026-09-11T14:20:00Z",
+  "data": {
+    "robotId": "agv_patrol_01",
+    "name": "极目-AI视觉巡检采摘一体机器人",
+    "status": "patrolling",
+    "battery": 84,
+    "speed": 0.8,
+    "currentTask": "主通道作物生长态势与病虫害多光谱扫描",
+    "currentPosition": [0.0, 0.45, 2.5],
+    "heading": 0.0,
+    "waypoints": [
+      { "point": [0.0, 0.45, -14.0], "staySeconds": 15, "action": "multispectral_scan" },
+      { "point": [0.0, 0.45, -7.0], "staySeconds": 10, "action": "leaf_temperature_read" },
+      { "point": [0.0, 0.45, 0.0], "staySeconds": 20, "action": "fruit_counting_ai" },
+      { "point": [0.0, 0.45, 7.0], "staySeconds": 10, "action": "pest_inspection" },
+      { "point": [0.0, 0.45, 14.0], "staySeconds": 15, "action": "tray_height_calibration" },
+      { "point": [0.0, 0.45, 0.0], "staySeconds": 5, "action": "return_transit" }
+    ],
+    "metrics": {
+      "todayDistanceMeters": 1540,
+      "scannedPlants": 5190,
+      "detectedAnomalies": 0,
+      "payloadKg": 14.2
+    }
+  }
+}

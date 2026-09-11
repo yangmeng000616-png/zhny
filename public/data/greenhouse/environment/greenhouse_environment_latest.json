@@ -1,0 +1,15 @@
+{
+  "code": 200,
+  "msg": "success",
+  "timestamp": "2026-09-11T14:20:00Z",
+  "data": {
+    "airTemp": 28.4,
+    "airHumidity": 73.5,
+    "co2": 715,
+    "lightLux": 47.8,
+    "soilMoisture": 37.0,
+    "soilEc": 1.48,
+    "soilPh": 6.8,
+    "waterLevel": 2.45
+  }
+}

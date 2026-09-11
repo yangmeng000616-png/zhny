@@ -101,3 +101,21 @@ export type CameraPreset =
   | 'gh4';
 
 export type ViewDisplayMode = 'standard' | 'xray' | 'thermal' | 'structure_only';
+
+export interface SpatialTagAnchor {
+  id: string;
+  name: string;
+  category: 'weather' | 'fan' | 'light' | 'sensor' | 'control' | 'irrigation' | 'pond' | 'agv';
+  worldPos: [number, number, number];
+  icon: string;
+  statusText: string;
+  subtext: string;
+  targetId: string;
+}
+
+export interface ProjectedTag extends SpatialTagAnchor {
+  screenX: number;
+  screenY: number;
+  isVisible: boolean;
+  distance: number;
+}

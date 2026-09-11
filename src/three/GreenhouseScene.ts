@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { CameraPreset, ViewDisplayMode } from '../types/digitalTwin';
+import { CameraPreset, ViewDisplayMode, SpatialTagAnchor, ProjectedTag } from '../types/digitalTwin';
 import { ParkEnvironment } from './ParkEnvironment';
 
 export interface PickedObjectInfo {
@@ -58,6 +58,12 @@ export class GreenhouseScene {
   private waterFlowParticles: THREE.Points | null = null;
   private agvRobot: { group: THREE.Group; lidarPuck: THREE.Mesh; zDir: number } | null = null;
   private sensorNodes: { id: string; group: THREE.Group; halo: THREE.Mesh }[] = [];
+  private anemometerMesh: THREE.Group | null = null;
+
+  // 3D Spatial Anchored Badges
+  private spatialTags: SpatialTagAnchor[] = [];
+  private onTagsUpdate?: (tags: ProjectedTag[]) => void;
+  private onCameraOrbit?: () => void;
 
   // Interactive Raycasting
   private raycaster: THREE.Raycaster;
@@ -88,22 +94,27 @@ export class GreenhouseScene {
     callbacks?: {
       onHover?: (info: PickedObjectInfo | null, screenPos?: { x: number; y: number }) => void;
       onSelect?: (info: PickedObjectInfo) => void;
+      onTagsUpdate?: (tags: ProjectedTag[]) => void;
+      onCameraOrbit?: () => void;
     }
   ) {
     this.container = container;
     this.onObjectHover = callbacks?.onHover;
     this.onObjectSelect = callbacks?.onSelect;
+    this.onTagsUpdate = callbacks?.onTagsUpdate;
+    this.onCameraOrbit = callbacks?.onCameraOrbit;
 
     const width = container.clientWidth || 800;
     const height = container.clientHeight || 600;
 
-    // 1. Scene setup with realistic natural daylight environment
+    // 1. Scene setup with high-contrast cyber dark digital twin environment
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0xe6f0f8); // Crisp daylight architectural sky
-    this.scene.fog = new THREE.FogExp2(0xe6f0f8, 0.005);
+    this.scene.background = new THREE.Color(0x0a101d); // Deep architectural cyber dark sky
+    // Use wide linear fog so that all park structures within 350 meters are 100% crisp and clear
+    this.scene.fog = new THREE.Fog(0x0a101d, 350, 1100);
 
-    // 2. Camera setup
-    this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 500);
+    // 2. Camera setup - extended far plane for clear long-distance observation
+    this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1200);
     this.camera.position.set(28, 22, 34);
 
     // 3. Renderer setup
@@ -113,7 +124,7 @@ export class GreenhouseScene {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.1;
+    this.renderer.toneMappingExposure = 1.2;
     container.appendChild(this.renderer.domElement);
 
     // 4. OrbitControls setup
@@ -121,9 +132,16 @@ export class GreenhouseScene {
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.05;
     this.controls.maxPolarAngle = Math.PI / 2 + 0.02; // prevent going below ground
-    this.controls.minDistance = 3;
-    this.controls.maxDistance = 280;
+    this.controls.minDistance = 2.5;
+    this.controls.maxDistance = 450; // generous zoom-out distance for entire park
     this.controls.target.set(0, 3, 0);
+
+    // Cancel automatic camera animation as soon as user starts mouse manipulation
+    this.controls.addEventListener('start', () => {
+      this.targetCamPos = null;
+      this.targetControlsTarget = null;
+      this.onCameraOrbit?.();
+    });
 
     // 5. Initialize Groups
     this.rootGroup = new THREE.Group();
@@ -196,6 +214,9 @@ export class GreenhouseScene {
     this.buildSensorNodes();
     this.buildAGVRobot();
     this.buildControlRoomAndEnergy();
+    this.buildWeatherStation();
+    this.buildCampusAmenities();
+    this.initSpatialTags();
 
     // 8.5 Build Agricultural Park Infrastructure: Roads, Additional Greenhouses, River/Pond
     ParkEnvironment.buildRoadNetwork(this.scene, this.parkGroup, this.interactiveObjects);
@@ -216,17 +237,17 @@ export class GreenhouseScene {
   // LIGHTING & ENVIRONMENT
   // -------------------------------------------------------------
   private setupLighting() {
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.15);
+    const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.75);
     this.scene.add(ambientLight);
 
-    const sunLight = new THREE.DirectionalLight(0xfffcf0, 2.1);
+    const sunLight = new THREE.DirectionalLight(0xe0f2fe, 2.2);
     sunLight.position.set(50, 70, 45);
     sunLight.castShadow = true;
     sunLight.shadow.mapSize.width = 2048;
     sunLight.shadow.mapSize.height = 2048;
     sunLight.shadow.camera.near = 0.5;
-    sunLight.shadow.camera.far = 280;
-    const d = 80;
+    sunLight.shadow.camera.far = 380;
+    const d = 110;
     sunLight.shadow.camera.left = -d;
     sunLight.shadow.camera.right = d;
     sunLight.shadow.camera.top = d;
@@ -234,18 +255,18 @@ export class GreenhouseScene {
     sunLight.shadow.bias = -0.0003;
     this.scene.add(sunLight);
 
-    // Daylight sky hemisphere light
-    const hemiLight = new THREE.HemisphereLight(0xe0f2fe, 0xbbf7d0, 0.7);
+    // Deep architectural hemisphere light: cool sky glow + subtle warm ground bounce
+    const hemiLight = new THREE.HemisphereLight(0x38bdf8, 0x0f172a, 0.9);
     this.scene.add(hemiLight);
   }
 
   private buildGroundAndSite() {
-    // 1. Concrete perimeter foundation apron
+    // 1. Concrete perimeter foundation apron (sleek dark concrete slab)
     const groundGeo = new THREE.PlaneGeometry(80, 80);
     const groundMat = new THREE.MeshStandardMaterial({
-      color: 0xdde6ed,
-      roughness: 0.9,
-      metalness: 0.05,
+      color: 0x0f172a, // Deep slate apron
+      roughness: 0.85,
+      metalness: 0.15,
     });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
@@ -257,9 +278,9 @@ export class GreenhouseScene {
     // Greenhouse dimensions: Width: 24m (-12 to +12), Length: 30m (-15 to +15)
     const slabGeo = new THREE.BoxGeometry(24.8, 0.2, 30.8);
     const slabMat = new THREE.MeshStandardMaterial({
-      color: 0xe8eef4,
+      color: 0x182234, // Dark architectural interior floor
       roughness: 0.6,
-      metalness: 0.1,
+      metalness: 0.2,
     });
     const slab = new THREE.Mesh(slabGeo, slabMat);
     slab.position.set(0, -0.1, 0);
@@ -269,9 +290,9 @@ export class GreenhouseScene {
     // 3. Central concrete logistics aisle
     const aisleGeo = new THREE.BoxGeometry(3.0, 0.02, 30.4);
     const aisleMat = new THREE.MeshStandardMaterial({
-      color: 0xf8fafc,
+      color: 0x24334a,
       roughness: 0.4,
-      metalness: 0.1,
+      metalness: 0.2,
     });
     const aisle = new THREE.Mesh(aisleGeo, aisleMat);
     aisle.position.set(0, 0.01, 0);
@@ -279,7 +300,7 @@ export class GreenhouseScene {
     this.structureGroup.add(aisle);
 
     // Yellow safety boundary lines along aisle
-    const lineMat = new THREE.MeshBasicMaterial({ color: 0xeab308 });
+    const lineMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
     const lineGeo = new THREE.PlaneGeometry(0.08, 30.2);
     const lineLeft = new THREE.Mesh(lineGeo, lineMat);
     lineLeft.rotation.x = -Math.PI / 2;
@@ -289,7 +310,7 @@ export class GreenhouseScene {
     this.structureGroup.add(lineLeft, lineRight);
 
     // Ground Grid helper for architectural coordinate reference
-    const grid = new THREE.GridHelper(70, 35, 0x0284c7, 0xc8d7e6);
+    const grid = new THREE.GridHelper(70, 35, 0x0284c7, 0x1e293b);
     grid.position.y = 0.001;
     this.scene.add(grid);
   }
@@ -299,9 +320,9 @@ export class GreenhouseScene {
   // -------------------------------------------------------------
   private buildStructure() {
     const steelMat = new THREE.MeshStandardMaterial({
-      color: 0xcfd8dc,
+      color: 0x94a3b8, // Crisp silver-steel truss visible against dark background
       metalness: 0.85,
-      roughness: 0.22,
+      roughness: 0.25,
     });
     this.structureMaterials.push(steelMat);
 
@@ -616,6 +637,60 @@ export class GreenhouseScene {
       };
       this.interactiveObjects.push(casing);
 
+      this.ventilationGroup.add(fanGroup);
+    }
+
+    // 1.5. Industrial Wall Exhaust Fans (4 Units along East Longitudinal Wall X = 12.08 facing the road)
+    const wallFanPositions = [
+      { id: 'fan_wall_001', name: '1号侧墙工业强力负压大风机', z: -9 },
+      { id: 'fan_wall_002', name: '2号侧墙工业强力负压大风机', z: -3 },
+      { id: 'fan_wall_003', name: '3号侧墙工业强力负压大风机', z: 3 },
+      { id: 'fan_wall_004', name: '4号侧墙工业强力负压大风机', z: 9 },
+    ];
+
+    for (const wp of wallFanPositions) {
+      const fanGroup = new THREE.Group();
+      fanGroup.position.set(12.08, 2.4, wp.z);
+      fanGroup.rotation.y = -Math.PI / 2; // Face outward (+X towards road)
+      fanGroup.name = wp.id;
+
+      // Outer square louver housing
+      const casingGeo = new THREE.BoxGeometry(1.8, 1.8, 0.45);
+      const casing = new THREE.Mesh(casingGeo, casingMat);
+      fanGroup.add(casing);
+
+      // Inner cylindrical airway
+      const tubeGeo = new THREE.CylinderGeometry(0.78, 0.78, 0.46, 24, 1, true);
+      const tubeMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, side: THREE.DoubleSide });
+      const tube = new THREE.Mesh(tubeGeo, tubeMat);
+      tube.rotation.x = Math.PI / 2;
+      fanGroup.add(tube);
+
+      // Spinning Impeller
+      const impeller = new THREE.Group();
+      const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.12, 16), bladeMat);
+      hub.rotation.x = Math.PI / 2;
+      impeller.add(hub);
+
+      const bladeGeo = new THREE.BoxGeometry(0.18, 0.62, 0.02);
+      for (let i = 0; i < 6; i++) {
+        const blade = new THREE.Mesh(bladeGeo, bladeMat);
+        const ang = (i * Math.PI) / 3;
+        blade.position.set(Math.cos(ang) * 0.4, Math.sin(ang) * 0.4, 0);
+        blade.rotation.z = ang;
+        blade.rotation.y = 0.25;
+        impeller.add(blade);
+      }
+      fanGroup.add(impeller);
+
+      this.fanBlades.push({ id: wp.id, mesh: impeller, speed: 80 });
+
+      casing.userData = {
+        id: wp.id,
+        type: 'fan',
+        name: wp.name,
+      };
+      this.interactiveObjects.push(casing);
       this.ventilationGroup.add(fanGroup);
     }
 
@@ -1253,22 +1328,494 @@ export class GreenhouseScene {
   }
 
   // -------------------------------------------------------------
+  // WEATHER STATION (Roof Ridge Mast, Wind Cups, Vane, Pyranometer)
+  // -------------------------------------------------------------
+  private buildWeatherStation() {
+    const weatherGroup = new THREE.Group();
+    weatherGroup.position.set(0, 6.8, 4.0); // center roof ridge
+    weatherGroup.name = 'weather_station_01';
+
+    const mastMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.85, roughness: 0.25 });
+    const cupMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.7, roughness: 0.3 });
+
+    // Mast pole
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 1.8, 8), mastMat);
+    mast.position.y = 0.9;
+    weatherGroup.add(mast);
+
+    // Lightning rod spike
+    const spike = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.4, 8), mastMat);
+    spike.position.y = 1.95;
+    weatherGroup.add(spike);
+
+    // Cross arm
+    const crossarm = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.04, 0.04), mastMat);
+    crossarm.position.y = 1.45;
+    weatherGroup.add(crossarm);
+
+    // Wind Anemometer (3 spinning cups)
+    const anemoGroup = new THREE.Group();
+    anemoGroup.position.set(0.45, 1.55, 0);
+
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.2, 8), mastMat);
+    anemoGroup.add(shaft);
+
+    const cupAssembly = new THREE.Group();
+    cupAssembly.position.y = 0.08;
+    for (let i = 0; i < 3; i++) {
+      const ang = (i * Math.PI * 2) / 3;
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.015, 0.015), mastMat);
+      arm.position.set(Math.cos(ang) * 0.09, 0, Math.sin(ang) * 0.09);
+      arm.rotation.y = -ang;
+      cupAssembly.add(arm);
+
+      // Hemispherical cup
+      const cup = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 8, 0, Math.PI), cupMat);
+      cup.position.set(Math.cos(ang) * 0.18, 0, Math.sin(ang) * 0.18);
+      cup.rotation.y = -ang + Math.PI / 2;
+      cupAssembly.add(cup);
+    }
+    anemoGroup.add(cupAssembly);
+    this.anemometerMesh = cupAssembly;
+    weatherGroup.add(anemoGroup);
+
+    // Wind Direction Vane
+    const vaneGroup = new THREE.Group();
+    vaneGroup.position.set(-0.45, 1.55, 0);
+    const vaneShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.2, 8), mastMat);
+    vaneGroup.add(vaneShaft);
+    const fin = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.08, 0.01), cupMat);
+    fin.position.set(0.1, 0.1, 0);
+    vaneGroup.add(fin);
+    weatherGroup.add(vaneGroup);
+
+    // Solar Pyranometer Dome (Sun radiation sensor)
+    const domeMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xfacc15, emissiveIntensity: 0.6 });
+    const pyrano = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 12, 0, Math.PI * 2, 0, Math.PI / 2), domeMat);
+    pyrano.position.set(0, 1.8, 0);
+    weatherGroup.add(pyrano);
+
+    // Mini Solar Panel for Weather Station
+    const pvMat = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, metalness: 0.8, roughness: 0.2 });
+    const solarPnl = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.02, 0.25), pvMat);
+    solarPnl.rotation.x = 0.5;
+    solarPnl.position.set(0, 1.1, 0.2);
+    weatherGroup.add(solarPnl);
+
+    // Interactive Raycasting Hit Box
+    const hitBox = new THREE.Mesh(new THREE.BoxGeometry(1.6, 2.2, 1.2), new THREE.MeshBasicMaterial({ visible: false }));
+    hitBox.position.y = 1.1;
+    hitBox.userData = { id: 'weather_station_01', type: 'sensor', name: '室外农业气象综合监测站' };
+    weatherGroup.add(hitBox);
+    this.interactiveObjects.push(hitBox);
+
+    this.structureGroup.add(weatherGroup);
+  }
+
+  // -------------------------------------------------------------
+  // CAMPUS AMENITIES: CONTROL CENTER, OUTDOOR IRRIGATION TANKS & TRUCK
+  // -------------------------------------------------------------
+  private buildCampusAmenities() {
+    const amenitiesGroup = new THREE.Group();
+    amenitiesGroup.name = 'Campus_Amenities';
+
+    // 1. Control Center / Guardhouse Building (X = 16.5, Z = 13.5)
+    const controlBuilding = new THREE.Group();
+    controlBuilding.position.set(16.5, 0, 13.5);
+    controlBuilding.name = 'control_center_01';
+
+    // Concrete foundation slab
+    const slabMat = new THREE.MeshStandardMaterial({ color: 0xcfd8dc, roughness: 0.7 });
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(6.6, 0.25, 4.8), slabMat);
+    slab.position.y = 0.125;
+    controlBuilding.add(slab);
+
+    // Main office building walls
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.35 });
+    const walls = new THREE.Mesh(new THREE.BoxGeometry(6.0, 3.2, 4.2), wallMat);
+    walls.position.y = 1.85;
+    walls.castShadow = true;
+    controlBuilding.add(walls);
+
+    // Sloped blue solar panel roof (matches the reference image!)
+    const solarRoofMat = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, metalness: 0.8, roughness: 0.25 });
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.2, 4.6), solarRoofMat);
+    roof.position.set(0, 3.55, 0);
+    roof.rotation.x = -0.15; // gentle pitch
+    controlBuilding.add(roof);
+
+    // Glass ribbon windows & entrance door
+    const glassMat = new THREE.MeshPhysicalMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.6,
+      roughness: 0.1,
+      metalness: 0.2,
+      transmission: 0.7,
+    });
+    const door = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.2, 0.05), glassMat);
+    door.position.set(-1.6, 1.35, 2.12);
+    controlBuilding.add(door);
+
+    const windowPnl = new THREE.Mesh(new THREE.BoxGeometry(2.8, 1.2, 0.05), glassMat);
+    windowPnl.position.set(1.1, 1.8, 2.12);
+    controlBuilding.add(windowPnl);
+
+    // Security Boom Barrier Gate at entrance driveway
+    const gatePostMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.5 });
+    const gatePost = new THREE.Mesh(new THREE.BoxGeometry(0.35, 1.1, 0.35), gatePostMat);
+    gatePost.position.set(12.8 - 16.5, 0.55, 15.6 - 13.5);
+    controlBuilding.add(gatePost);
+
+    const barrierMat = new THREE.MeshStandardMaterial({ color: 0xef4444 });
+    const barrierArm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 3.6), barrierMat);
+    barrierArm.position.set(12.8 - 16.5, 0.95, (15.6 - 13.5) - 1.8);
+    controlBuilding.add(barrierArm);
+
+    // Signboard on control center
+    const signMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, emissive: 0x0284c7, emissiveIntensity: 0.3 });
+    const sign = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.5, 0.06), signMat);
+    sign.position.set(0, 3.1, 2.14);
+    controlBuilding.add(sign);
+
+    // Hit box for interaction
+    const ctrlHit = new THREE.Mesh(new THREE.BoxGeometry(6.6, 3.8, 5.0), new THREE.MeshBasicMaterial({ visible: false }));
+    ctrlHit.position.y = 1.9;
+    ctrlHit.userData = { id: 'control_center_01', type: 'structure', name: '智慧农业中央控制中心与监控大厅' };
+    controlBuilding.add(ctrlHit);
+    this.interactiveObjects.push(ctrlHit);
+
+    amenitiesGroup.add(controlBuilding);
+
+    // 2. Outdoor Irrigation Storage Tanks & Booster Pump Station (X = 16.5, Z = 2.5)
+    const tankGroup = new THREE.Group();
+    tankGroup.position.set(16.5, 0, 2.5);
+    tankGroup.name = 'irrigation_system_main';
+
+    // Concrete equipment foundation
+    const tankPadMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.8 });
+    const tankPad = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.25, 7.8), tankPadMat);
+    tankPad.position.y = 0.125;
+    tankGroup.add(tankPad);
+
+    // Dual cylindrical water storage tanks
+    const tankMat = new THREE.MeshStandardMaterial({
+      color: 0xe2e8f0, // Clean industrial white/silver
+      metalness: 0.6,
+      roughness: 0.25,
+    });
+    const saddleMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.3 });
+    const pipeMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.7, roughness: 0.3 });
+    const valveMat = new THREE.MeshStandardMaterial({ color: 0xdc2626 });
+
+    [-1.6, 1.6].forEach((tz) => {
+      // Horizontal cylinder body
+      const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 3.6, 24), tankMat);
+      tank.rotation.z = Math.PI / 2;
+      tank.position.set(0, 1.15, tz);
+      tankGroup.add(tank);
+
+      // Spherical end caps
+      const capGeo = new THREE.SphereGeometry(0.85, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+      const cap1 = new THREE.Mesh(capGeo, tankMat);
+      cap1.rotation.z = -Math.PI / 2;
+      cap1.position.set(1.8, 1.15, tz);
+      const cap2 = new THREE.Mesh(capGeo, tankMat);
+      cap2.rotation.z = Math.PI / 2;
+      cap2.position.set(-1.8, 1.15, tz);
+      tankGroup.add(cap1, cap2);
+
+      // Support steel saddle cradles
+      [-1.0, 1.0].forEach((sx) => {
+        const saddle = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.5, 1.9), saddleMat);
+        saddle.position.set(sx, 0.45, tz);
+        tankGroup.add(saddle);
+      });
+    });
+
+    // Connecting blue pipes & manifold
+    const manifold = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 3.6, 12), pipeMat);
+    manifold.position.set(0, 0.55, 0);
+    tankGroup.add(manifold);
+
+    const feedPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 3.8, 12), pipeMat);
+    feedPipe.rotation.z = Math.PI / 2;
+    feedPipe.position.set(-1.5, 0.55, 0);
+    tankGroup.add(feedPipe);
+
+    // Gate valve handwheels
+    [-1.6, 1.6].forEach((tz) => {
+      const valve = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.02, 8, 16), valveMat);
+      valve.rotation.x = Math.PI / 2;
+      valve.position.set(0.8, 1.15, tz + 0.9);
+      tankGroup.add(valve);
+    });
+
+    // Skid-mounted booster pump unit
+    const pumpMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.8, roughness: 0.2 });
+    const pumpMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.6, 12), pumpMat);
+    pumpMesh.rotation.x = Math.PI / 2;
+    pumpMesh.position.set(-1.2, 0.5, 0);
+    tankGroup.add(pumpMesh);
+
+    // Hit box
+    const tankHit = new THREE.Mesh(new THREE.BoxGeometry(4.6, 2.5, 7.8), new THREE.MeshBasicMaterial({ visible: false }));
+    tankHit.position.y = 1.25;
+    tankHit.userData = { id: 'irrigation_system_main', type: 'pump', name: '智能水肥一体化储水与智能变频泵组' };
+    tankGroup.add(tankHit);
+    this.interactiveObjects.push(tankHit);
+
+    amenitiesGroup.add(tankGroup);
+
+    // 3. Parked White Logistics Inspection Truck (X = 19.5, Z = -4.5)
+    const truckGroup = new THREE.Group();
+    truckGroup.position.set(19.5, 0, -4.5);
+    truckGroup.name = 'logistics_truck';
+
+    const truckWhiteMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3 });
+    const truckDarkMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7 });
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
+
+    // Chassis
+    const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.2, 4.8), truckDarkMat);
+    chassis.position.y = 0.45;
+    truckGroup.add(chassis);
+
+    // Cab
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.4, 1.4), truckWhiteMat);
+    cab.position.set(0, 1.2, 1.6);
+    truckGroup.add(cab);
+
+    // Windshield
+    const windshield = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.8), glassMat);
+    windshield.position.set(0, 1.4, 2.31);
+    truckGroup.add(windshield);
+
+    // Rear cargo box
+    const cargo = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.8, 3.2), truckWhiteMat);
+    cargo.position.set(0, 1.45, -0.7);
+    truckGroup.add(cargo);
+
+    // Green stripe on cargo box
+    const stripeMat = new THREE.MeshStandardMaterial({ color: 0x16a34a });
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(1.92, 0.25, 3.1), stripeMat);
+    stripe.position.set(0, 1.35, -0.7);
+    truckGroup.add(stripe);
+
+    // Wheels (4 units)
+    [
+      { x: -0.95, z: 1.5 },
+      { x: 0.95, z: 1.5 },
+      { x: -0.95, z: -1.2 },
+      { x: 0.95, z: -1.2 },
+    ].forEach((wp) => {
+      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.2, 16), wheelMat);
+      wheel.rotation.z = Math.PI / 2;
+      wheel.position.set(wp.x, 0.32, wp.z);
+      truckGroup.add(wheel);
+    });
+
+    amenitiesGroup.add(truckGroup);
+
+    // 4. Landscaped Agricultural Trees along Road Verge
+    const treePositions = [
+      { x: 15.5, z: -9.5 },
+      { x: 15.5, z: -13.5 },
+      { x: 15.5, z: 8.5 },
+      { x: 26.5, z: -5.0 },
+      { x: 26.5, z: 6.0 },
+    ];
+
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.85 });
+    const leafMat1 = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.6 });
+    const leafMat2 = new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.5 });
+
+    treePositions.forEach((tp) => {
+      const tree = new THREE.Group();
+      tree.position.set(tp.x, 0, tp.z);
+
+      // Trunk
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 2.0, 8), trunkMat);
+      trunk.position.y = 1.0;
+      tree.add(trunk);
+
+      // Canopy layers
+      const cone1 = new THREE.Mesh(new THREE.ConeGeometry(1.4, 1.8, 8), leafMat1);
+      cone1.position.y = 2.4;
+      const cone2 = new THREE.Mesh(new THREE.ConeGeometry(1.1, 1.5, 8), leafMat2);
+      cone2.position.y = 3.2;
+      tree.add(cone1, cone2);
+
+      amenitiesGroup.add(tree);
+    });
+
+    this.parkGroup.add(amenitiesGroup);
+  }
+
+  // -------------------------------------------------------------
+  // 3D SPATIAL ANCHORED TAGS ENGINE
+  // -------------------------------------------------------------
+  private initSpatialTags() {
+    this.spatialTags = [
+      {
+        id: 'tag_weather',
+        name: '气象站',
+        category: 'weather',
+        worldPos: [0, 7.8, 4.0],
+        icon: 'CloudSun',
+        statusText: '在线 · 正常',
+        subtext: '光照 68klux · 风速 2.4m/s · 晴',
+        targetId: 'weather_station_01',
+      },
+      {
+        id: 'tag_ventilation',
+        name: '通风系统',
+        category: 'fan',
+        worldPos: [12.2, 3.6, 0.0],
+        icon: 'Fan',
+        statusText: '4台大功率风机 · 运行中',
+        subtext: '转速 80% · 负压抽风',
+        targetId: 'fan_wall_001',
+      },
+      {
+        id: 'tag_grow_light',
+        name: '补光灯',
+        category: 'light',
+        worldPos: [6.0, 5.0, 2.0],
+        icon: 'Lightbulb',
+        statusText: 'LED全光谱补光阵列',
+        subtext: '亮度 75% · 智能补光中',
+        targetId: 'light_grow_001',
+      },
+      {
+        id: 'tag_sensor',
+        name: '环境传感器',
+        category: 'sensor',
+        worldPos: [0.0, 4.2, 0.0],
+        icon: 'Cpu',
+        statusText: '多参数物联网传感节点',
+        subtext: '温 28.6℃ · 湿 72% · CO₂ 680ppm',
+        targetId: 'sensor_temp_001',
+      },
+      {
+        id: 'tag_control_center',
+        name: '控制中心',
+        category: 'control',
+        worldPos: [16.5, 3.6, 13.5],
+        icon: 'Monitor',
+        statusText: '智慧农业中央控制中心',
+        subtext: '边缘PLC控制柜 · 光伏并网',
+        targetId: 'control_center_01',
+      },
+      {
+        id: 'tag_irrigation',
+        name: '灌溉系统',
+        category: 'irrigation',
+        worldPos: [16.5, 3.2, 2.5],
+        icon: 'Droplets',
+        statusText: '水肥一体化蓄水与泵站',
+        subtext: '压力 0.35MPa · 流量 45m³/h',
+        targetId: 'irrigation_system_main',
+      },
+      {
+        id: 'tag_pond',
+        name: '生态河塘水质',
+        category: 'pond',
+        worldPos: [42.0, 2.6, 44.0],
+        icon: 'Waves',
+        statusText: 'Ⅰ类生态水体 · 水位 2.45m',
+        subtext: '溶解氧 7.4mg/L · 浊度 3.8NTU',
+        targetId: 'pond_station_01',
+      },
+      {
+        id: 'tag_agv',
+        name: '巡检机器人',
+        category: 'agv',
+        worldPos: [0.0, 1.8, 0.0],
+        icon: 'Bot',
+        statusText: 'AGV-01 智能巡检',
+        subtext: '电量 86% · 巡视中',
+        targetId: 'agv_patrol_01',
+      },
+    ];
+  }
+
+  public calculateSpatialTags() {
+    if (!this.onTagsUpdate) return;
+    const width = this.container.clientWidth || 800;
+    const height = this.container.clientHeight || 600;
+
+    const results: ProjectedTag[] = [];
+    const tempVec = new THREE.Vector3();
+
+    for (const tag of this.spatialTags) {
+      if (tag.id === 'tag_agv' && this.agvRobot) {
+        tempVec.copy(this.agvRobot.group.position);
+        tempVec.y += 1.4;
+      } else {
+        tempVec.set(tag.worldPos[0], tag.worldPos[1], tag.worldPos[2]);
+      }
+
+      const dist = this.camera.position.distanceTo(tempVec);
+      tempVec.project(this.camera);
+
+      const isVisible = tempVec.z < 1.0 && tempVec.z > -1.0;
+      const screenX = (tempVec.x * 0.5 + 0.5) * width;
+      const screenY = (-(tempVec.y * 0.5) + 0.5) * height;
+
+      results.push({
+        ...tag,
+        screenX,
+        screenY,
+        isVisible,
+        distance: dist,
+      });
+    }
+
+    this.onTagsUpdate(results);
+  }
+
+  // -------------------------------------------------------------
   // INTERACTION & EVENTS
   // -------------------------------------------------------------
   private setupEvents() {
     const dom = this.renderer.domElement;
+    let pointerDownPos = { x: 0, y: 0 };
+    let isDragging = false;
+
+    dom.addEventListener('pointerdown', (e: PointerEvent) => {
+      pointerDownPos = { x: e.clientX, y: e.clientY };
+      isDragging = false;
+      // Stop any camera lerp animation immediately on user interaction
+      this.targetCamPos = null;
+      this.targetControlsTarget = null;
+      this.onCameraOrbit?.();
+    });
 
     dom.addEventListener('pointermove', (e: PointerEvent) => {
       const rect = dom.getBoundingClientRect();
       this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
+      const dist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
+      if (dist > 4) {
+        isDragging = true;
+      }
+
       this.handleHover(e.clientX, e.clientY);
     });
 
-    dom.addEventListener('click', () => {
+    dom.addEventListener('pointerup', () => {
+      if (isDragging) return; // User was rotating, panning or orbiting, do not treat as click!
       this.handleClick();
     });
+
+    // Also stop camera animation on mouse wheel / trackpad pinch zoom
+    dom.addEventListener('wheel', () => {
+      this.targetCamPos = null;
+      this.targetControlsTarget = null;
+      this.onCameraOrbit?.();
+    }, { passive: true });
 
     window.addEventListener('resize', this.onWindowResize);
   }
@@ -1324,10 +1871,8 @@ export class GreenhouseScene {
           name: obj.userData.name,
           worldPosition: intersects[0].point,
         };
+        // Select object to inspect details in modal without snatching user's camera viewpoint
         this.onObjectSelect?.(info);
-
-        // Gently focus camera target to object position
-        this.focusOnPosition(intersects[0].point);
       }
     }
   }
@@ -1569,6 +2114,14 @@ export class GreenhouseScene {
         this.targetControlsTarget = null;
       }
     }
+
+    // 8.5 Rotate weather anemometer cups
+    if (this.anemometerMesh) {
+      this.anemometerMesh.rotation.y += 3.5 * delta;
+    }
+
+    // 9. Update 3D projected spatial tags
+    this.calculateSpatialTags();
 
     this.controls.update();
     this.renderer.render(this.scene, this.camera);

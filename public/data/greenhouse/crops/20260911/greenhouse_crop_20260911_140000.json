@@ -1,0 +1,67 @@
+{
+  "code": 200,
+  "msg": "success",
+  "timestamp": "2026-09-11T14:00:00Z",
+  "data": [
+    {
+      "id": "crop_zone_01",
+      "name": "A区·高品质水果番茄",
+      "cropType": "千禧粉玉樱桃番茄",
+      "plantingDate": "2026-07-20",
+      "expectedHarvest": "2026-09-28",
+      "growthProgress": 78,
+      "health": "optimal",
+      "areaSqMeters": 216,
+      "stemCount": 1850,
+      "soilMoisture": 36.8,
+      "soilEc": 1.45,
+      "soilTemp": 22.4,
+      "centerPos": [-6.0, 0.0, -8.0]
+    },
+    {
+      "id": "crop_zone_02",
+      "name": "B区·欧洲无刺水果小黄瓜",
+      "cropType": "荷兰高产雌性系水果瓜",
+      "plantingDate": "2026-08-05",
+      "expectedHarvest": "2026-10-15",
+      "growthProgress": 62,
+      "health": "optimal",
+      "areaSqMeters": 216,
+      "stemCount": 1600,
+      "soilMoisture": 42.1,
+      "soilEc": 1.62,
+      "soilTemp": 23.1,
+      "centerPos": [6.0, 0.0, -8.0]
+    },
+    {
+      "id": "crop_zone_03",
+      "name": "C区·NFT浅液流水培生菜",
+      "cropType": "意大利红罗马生菜",
+      "plantingDate": "2026-08-25",
+      "expectedHarvest": "2026-09-20",
+      "growthProgress": 88,
+      "health": "good",
+      "areaSqMeters": 216,
+      "stemCount": 4200,
+      "soilMoisture": 85.0,
+      "soilEc": 1.85,
+      "soilTemp": 20.8,
+      "centerPos": [-6.0, 0.0, 8.0]
+    },
+    {
+      "id": "crop_zone_04",
+      "name": "D区·立体多层高架草莓",
+      "cropType": "红颜高糖白草莓",
+      "plantingDate": "2026-08-12",
+      "expectedHarvest": "2026-11-01",
+      "growthProgress": 50,
+      "health": "optimal",
+      "areaSqMeters": 216,
+      "stemCount": 3100,
+      "soilMoisture": 32.5,
+      "soilEc": 1.25,
+      "soilTemp": 21.6,
+      "centerPos": [6.0, 0.0, 8.0]
+    }
+  ]
+}

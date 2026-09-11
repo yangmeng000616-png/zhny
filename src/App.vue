@@ -11,6 +11,7 @@ import type {
   CameraPreset,
   ViewDisplayMode,
   PondWaterQuality,
+  ProjectedTag,
 } from './types/digitalTwin';
 import {
   initialEnvironment,
@@ -20,6 +21,7 @@ import {
   initialAGV,
   initialPondWaterData,
 } from './data/mockData';
+import { dataService } from './services/dataService';
 
 import TopNavbar from './components/TopNavbar.vue';
 import LeftMetricsPanel from './components/LeftMetricsPanel.vue';
@@ -28,23 +30,63 @@ import BottomTrendPanel from './components/BottomTrendPanel.vue';
 import DeviceDetailModal from './components/DeviceDetailModal.vue';
 import RoamGuideOverlay from './components/RoamGuideOverlay.vue';
 import HoverTooltip from './components/HoverTooltip.vue';
+import SpatialTagsOverlay from './components/SpatialTagsOverlay.vue';
 
 const canvasContainerRef = ref<HTMLDivElement | null>(null);
 let sceneInstance: GreenhouseScene | null = null;
 
-// Digital Twin Dynamic States
+// Digital Twin Dynamic States (accessed via dataService layer)
 const environment = ref<EnvironmentSnapshot>(initialEnvironment);
 const sensors = ref<SensorData[]>(initialSensors);
 const actuators = ref<ActuatorDevice[]>(initialActuators);
 const crops = ref<CropZone[]>(initialCropZones);
 const agv = ref<AGVRobot>(initialAGV);
 const pondWater = ref<PondWaterQuality>(initialPondWaterData);
+const dataSourceMode = ref<'local' | 'api'>(dataService.getMode());
+
+// Load data via unified DataService
+const loadDataFromService = async () => {
+  try {
+    const [envData, sensorsData, actuatorsData, cropsData, pondData, agvData] = await Promise.all([
+      dataService.getEnvironmentSnapshot(),
+      dataService.getSensorData(),
+      dataService.getDeviceStatus(),
+      dataService.getCropStatus(),
+      dataService.getPondWaterQuality(),
+      dataService.getTrajectory(),
+    ]);
+    if (envData) environment.value = envData;
+    if (sensorsData) sensors.value = sensorsData;
+    if (actuatorsData) actuators.value = actuatorsData;
+    if (cropsData) crops.value = cropsData;
+    if (pondData) pondWater.value = pondData;
+    if (agvData) {
+      agv.value = {
+        ...agv.value,
+        battery: agvData.battery,
+        speed: agvData.speed,
+        currentTask: agvData.currentTask,
+      };
+    }
+  } catch (err) {
+    console.warn('[DataService] Error loading data:', err);
+  }
+};
+
+const handleToggleDataSource = async () => {
+  const nextMode = dataSourceMode.value === 'local' ? 'api' : 'local';
+  dataService.setMode(nextMode);
+  dataSourceMode.value = nextMode;
+  await loadDataFromService();
+};
 
 // View & UI Controls
 const currentPreset = ref<CameraPreset>('aerial');
 const displayMode = ref<ViewDisplayMode>('standard');
 const autoMode = ref<boolean>(true);
 const showRoamGuide = ref<boolean>(false);
+const spatialTags = ref<ProjectedTag[]>([]);
+const showSpatialTags = ref<boolean>(true);
 
 // Interaction State
 const selectedObject = ref<PickedObjectInfo | null>(null);
@@ -58,6 +100,8 @@ let telemetryTimer: ReturnType<typeof setInterval> | null = null;
 
 // 1. Initialize Three.js Scene
 onMounted(() => {
+  loadDataFromService();
+
   if (canvasContainerRef.value) {
     sceneInstance = new GreenhouseScene(canvasContainerRef.value, {
       onHover: (info, screenPos) => {
@@ -66,6 +110,12 @@ onMounted(() => {
       },
       onSelect: (info) => {
         selectedObject.value = info;
+      },
+      onTagsUpdate: (tags) => {
+        spatialTags.value = tags;
+      },
+      onCameraOrbit: () => {
+        currentPreset.value = 'custom' as any;
       },
     });
   }
@@ -163,6 +213,8 @@ const handleToggleActuator = (id: string, power: boolean) => {
     return a;
   });
 
+  dataService.updateDeviceStatus(id, power);
+
   if (!sceneInstance) return;
   const act = actuators.value.find((a) => a.id === id);
   if (!act) return;
@@ -187,6 +239,8 @@ const handleUpdateActuatorValue = (id: string, value: number) => {
     }
     return a;
   });
+
+  dataService.updateDeviceStatus(id, true, value);
 
   if (!sceneInstance) return;
   const act = actuators.value.find((a) => a.id === id);
@@ -254,6 +308,31 @@ const handleFocusDevice = (deviceId: string) => {
   const targetPos = new THREE.Vector3(act.position[0], act.position[1], act.position[2]);
   sceneInstance.focusOnPosition(targetPos);
 };
+
+// 7. Spatial Tag click navigation
+const handleSelectTag = (tag: ProjectedTag) => {
+  if (!sceneInstance) return;
+  const targetPos = new THREE.Vector3(tag.worldPos[0], tag.worldPos[1], tag.worldPos[2]);
+  sceneInstance.focusOnPosition(targetPos);
+  selectedObject.value = {
+    id: tag.targetId || tag.id,
+    type: (tag.category === 'fan'
+      ? 'fan'
+      : tag.category === 'sensor'
+      ? 'sensor'
+      : tag.category === 'agv'
+      ? 'agv'
+      : tag.category === 'light'
+      ? 'grow_light'
+      : tag.category === 'irrigation'
+      ? 'pump'
+      : tag.category === 'pond'
+      ? 'pond_buoy'
+      : 'structure') as any,
+    name: tag.name,
+    worldPosition: targetPos,
+  };
+};
 </script>
 
 <template>
@@ -264,15 +343,26 @@ const handleFocusDevice = (deviceId: string) => {
       class="absolute inset-0 z-0 w-full h-full cursor-grab active:cursor-grabbing"
     />
 
+    <!-- 3D Spatial Anchored Badges Overlay -->
+    <SpatialTagsOverlay
+      :tags="spatialTags"
+      :visible="showSpatialTags"
+      @select-tag="handleSelectTag"
+    />
+
     <!-- Top Header Navbar -->
     <TopNavbar
       :current-preset="currentPreset"
       :display-mode="displayMode"
       :time-string="timeString"
+      :show-spatial-tags="showSpatialTags"
+      :data-source-mode="dataSourceMode"
       @preset-change="handlePresetChange"
       @display-mode-change="handleDisplayModeChange"
       @toggle-guide="showRoamGuide = true"
       @reset-camera="handleResetCamera"
+      @toggle-spatial-tags="showSpatialTags = !showSpatialTags"
+      @toggle-data-source="handleToggleDataSource"
     />
 
     <!-- Left Environment Telemetry Panel -->
