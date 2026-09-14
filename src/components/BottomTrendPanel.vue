@@ -18,17 +18,36 @@ import {
   Activity,
 } from 'lucide-vue-next';
 
-defineProps<{
-  crops: CropZone[];
-  agv: AGVRobot;
-}>();
+const props = withDefaults(
+  defineProps<{
+    crops: CropZone[];
+    agv: AGVRobot;
+    leftCollapsed?: boolean;
+    rightCollapsed?: boolean;
+    collapsed?: boolean;
+  }>(),
+  {
+    leftCollapsed: false,
+    rightCollapsed: false,
+    collapsed: false,
+  }
+);
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'focusCropZone', zoneId: string): void;
   (e: 'focusAGV'): void;
+  (e: 'update:collapsed', val: boolean): void;
 }>();
 
-const collapsed = ref(false);
+const localCollapsed = ref(false);
+const isCollapsed = computed({
+  get: () => props.collapsed ?? localCollapsed.value,
+  set: (val: boolean) => {
+    localCollapsed.value = val;
+    emit('update:collapsed', val);
+  },
+});
+
 const activeMetric = ref<'temp' | 'humidity' | 'co2' | 'soil' | 'water_level' | 'water_do'>('temp');
 
 const chartConfig = computed(() => {
@@ -108,25 +127,31 @@ const areaD = computed(() => {
 </script>
 
 <template>
-  <div class="absolute left-3 right-3 bottom-3 z-20 pointer-events-none transition-all duration-300 flex flex-col items-center">
+  <div
+    :class="[
+      'absolute bottom-2.5 z-20 pointer-events-none transition-all duration-300 flex flex-col items-center',
+      leftCollapsed ? 'left-14' : 'left-3 lg:left-[232px]',
+      rightCollapsed ? 'right-14' : 'right-3 lg:right-[304px]'
+    ]"
+  >
     <!-- Drawer Toggle Header Button -->
     <button
-      @click="collapsed = !collapsed"
-      class="pointer-events-auto mb-1 flex items-center gap-1.5 px-3.5 py-1.5 rounded-t-xl bg-slate-950/85 hover:bg-slate-900 text-cyan-300 text-xs font-semibold border-t border-x border-cyan-500/30 shadow-[0_-4px_16px_rgba(0,0,0,0.5)] backdrop-blur-2xl transition-colors cursor-pointer"
+      @click="isCollapsed = !isCollapsed"
+      class="pointer-events-auto mb-1 flex items-center gap-1.5 px-3 py-1 rounded-t-xl bg-slate-950/70 hover:bg-slate-900/90 text-cyan-300 text-[11px] font-semibold border-t border-x border-cyan-500/30 shadow-[0_-4px_16px_rgba(0,0,0,0.5)] backdrop-blur-2xl transition-colors cursor-pointer shrink-0"
     >
       <TrendingUp class="w-3.5 h-3.5 text-cyan-400" />
-      <span>24H环境态势 / 作物长势 / 巡检机 ({{ collapsed ? '点击展开' : '收起' }})</span>
-      <ChevronUp v-if="collapsed" class="w-4 h-4 text-cyan-400" />
-      <ChevronDown v-else class="w-4 h-4 text-cyan-400" />
+      <span>24H环境态势 / 作物长势 / 巡检机 ({{ isCollapsed ? '点击展开' : '收起' }})</span>
+      <ChevronUp v-if="isCollapsed" class="w-3.5 h-3.5 text-cyan-400" />
+      <ChevronDown v-else class="w-3.5 h-3.5 text-cyan-400" />
     </button>
 
     <!-- Main Drawer Content -->
     <div
-      v-if="!collapsed"
-      class="pointer-events-auto w-full max-w-6xl bg-slate-950/80 hover:bg-slate-950/90 backdrop-blur-2xl rounded-2xl border border-cyan-500/30 shadow-[0_20px_50px_rgba(0,0,0,0.8)] ring-1 ring-white/10 p-3.5 grid grid-cols-1 md:grid-cols-12 gap-3 text-xs transition-all duration-300"
+      v-if="!isCollapsed"
+      class="pointer-events-auto w-full max-w-5xl bg-slate-950/45 hover:bg-slate-950/60 backdrop-blur-2xl rounded-2xl border border-cyan-500/30 shadow-[0_20px_50px_rgba(0,0,0,0.8)] ring-1 ring-white/10 p-2.5 sm:p-3 grid grid-cols-1 lg:grid-cols-12 gap-2 sm:gap-2.5 text-xs transition-all duration-300"
     >
       <!-- Section 1: 24-Hour Environment Spline Graph (col 5) -->
-      <div class="md:col-span-5 flex flex-col justify-between bg-slate-900/60 backdrop-blur-sm p-3 rounded-xl border border-slate-800/80 shadow-xs">
+      <div class="lg:col-span-5 flex flex-col justify-between bg-slate-950/35 hover:bg-slate-900/45 backdrop-blur-md p-2.5 rounded-xl border border-white/10 shadow-xs">
         <div class="flex items-center justify-between mb-1.5">
           <div class="flex items-center gap-1.5 font-bold text-slate-100">
             <Activity class="w-4 h-4 text-cyan-400" />
@@ -231,8 +256,8 @@ const areaD = computed(() => {
         </div>
       </div>
 
-      <!-- Section 2: Crop Zones Growth Progress (col 5) -->
-      <div class="md:col-span-5 bg-slate-900/60 backdrop-blur-sm p-3 rounded-xl border border-slate-800/80 shadow-xs flex flex-col justify-between">
+      <!-- Section 2: Crop Zones Growth Progress (col 4) -->
+      <div class="lg:col-span-4 bg-slate-950/35 hover:bg-slate-900/45 backdrop-blur-md p-2.5 rounded-xl border border-white/10 shadow-xs flex flex-col justify-between">
         <div class="flex items-center justify-between mb-1.5">
           <div class="flex items-center gap-1.5 font-bold text-slate-100">
             <Sprout class="w-4 h-4 text-emerald-400" />
@@ -246,7 +271,7 @@ const areaD = computed(() => {
             v-for="crop in crops"
             :key="crop.id"
             @click="$emit('focusCropZone', crop.id)"
-            class="bg-slate-900/70 hover:bg-slate-850 p-2 rounded-lg border border-slate-800/80 cursor-pointer transition-all hover:border-emerald-500/50 group shadow-xs backdrop-blur-xs"
+            class="bg-slate-950/40 hover:bg-slate-900/50 p-2 rounded-lg border border-white/10 cursor-pointer transition-all hover:border-emerald-500/50 group shadow-xs backdrop-blur-xs"
             title="点击三维视角聚焦此栽培区"
           >
             <div class="flex items-center justify-between text-[11px]">
@@ -267,10 +292,10 @@ const areaD = computed(() => {
         </div>
       </div>
 
-      <!-- Section 3: Autonomous Patrol AGV Telemetry (col 2) -->
+      <!-- Section 3: Autonomous Patrol AGV Telemetry (col 3) -->
       <div
         @click="$emit('focusAGV')"
-        class="md:col-span-2 bg-slate-900/60 hover:bg-slate-850 backdrop-blur-sm p-3 rounded-xl border border-slate-800/80 shadow-xs flex flex-col justify-between cursor-pointer transition-all hover:border-cyan-500/50 group"
+        class="lg:col-span-3 bg-slate-950/35 hover:bg-slate-900/45 backdrop-blur-md p-2.5 rounded-xl border border-white/10 shadow-xs flex flex-col justify-between cursor-pointer transition-all hover:border-cyan-400/50 group"
         title="点击三维视角追踪农情巡检机器人"
       >
         <div class="flex items-center justify-between">

@@ -68,7 +68,7 @@ const isGreenhouse = computed(() => props.info?.type === 'greenhouse');
 <template>
   <div
     v-if="info"
-    class="absolute top-20 right-4 sm:right-96 z-30 w-80 sm:w-96 bg-slate-950/85 hover:bg-slate-950/95 backdrop-blur-2xl rounded-2xl border border-cyan-500/40 shadow-[0_25px_60px_rgba(0,0,0,0.85)] ring-1 ring-white/10 overflow-hidden text-xs text-slate-300 animate-in fade-in zoom-in-95 duration-200 transition-all duration-300"
+    class="absolute top-20 right-3 left-3 sm:left-auto sm:right-74 lg:right-78 z-30 w-auto sm:w-92 bg-slate-950/50 hover:bg-slate-950/65 backdrop-blur-2xl rounded-2xl border border-cyan-500/30 shadow-[0_25px_60px_rgba(0,0,0,0.85)] ring-1 ring-white/10 overflow-hidden text-xs text-slate-300 animate-in fade-in zoom-in-95 duration-200 transition-all duration-300"
   >
     <!-- Modal Header -->
     <div class="p-3.5 bg-slate-900/70 backdrop-blur-sm border-b border-slate-800/80 flex items-center justify-between">

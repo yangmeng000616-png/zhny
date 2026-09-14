@@ -88,6 +88,12 @@ const showRoamGuide = ref<boolean>(false);
 const spatialTags = ref<ProjectedTag[]>([]);
 const showSpatialTags = ref<boolean>(true);
 
+// Coordinated responsive panel states to prevent overlapping
+const isMobileScreen = typeof window !== 'undefined' ? window.innerWidth < 1024 : false;
+const leftPanelCollapsed = ref<boolean>(isMobileScreen);
+const rightPanelCollapsed = ref<boolean>(isMobileScreen);
+const bottomPanelCollapsed = ref<boolean>(false);
+
 // Interaction State
 const selectedObject = ref<PickedObjectInfo | null>(null);
 const hoveredObject = ref<PickedObjectInfo | null>(null);
@@ -370,6 +376,7 @@ const handleSelectTag = (tag: ProjectedTag) => {
       :environment="environment"
       :sensors="sensors"
       :pond-water="pondWater"
+      v-model:collapsed="leftPanelCollapsed"
       @select-sensor="handleSelectSensor"
       @focus-pond="handlePresetChange('pond')"
     />
@@ -378,6 +385,7 @@ const handleSelectTag = (tag: ProjectedTag) => {
     <RightControlPanel
       :actuators="actuators"
       :auto-mode="autoMode"
+      v-model:collapsed="rightPanelCollapsed"
       @toggle-actuator="handleToggleActuator"
       @update-actuator-value="handleUpdateActuatorValue"
       @toggle-auto-mode="autoMode = !autoMode"
@@ -388,6 +396,9 @@ const handleSelectTag = (tag: ProjectedTag) => {
     <BottomTrendPanel
       :crops="crops"
       :agv="agv"
+      :left-collapsed="leftPanelCollapsed"
+      :right-collapsed="rightPanelCollapsed"
+      v-model:collapsed="bottomPanelCollapsed"
       @focus-crop-zone="handleFocusCropZone"
       @focus-a-g-v="handleFocusAGV"
     />

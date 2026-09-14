@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import type { EnvironmentSnapshot, SensorData, PondWaterQuality } from '../types/digitalTwin';
 import {
   Thermometer,
@@ -15,18 +15,33 @@ import {
   ArrowUpRight,
 } from 'lucide-vue-next';
 
-defineProps<{
-  environment: EnvironmentSnapshot;
-  sensors: SensorData[];
-  pondWater: PondWaterQuality;
-}>();
+const props = withDefaults(
+  defineProps<{
+    environment: EnvironmentSnapshot;
+    sensors: SensorData[];
+    pondWater: PondWaterQuality;
+    collapsed?: boolean;
+  }>(),
+  {
+    collapsed: false,
+  }
+);
 
 const emit = defineEmits<{
   (e: 'selectSensor', sensorId: string): void;
   (e: 'focusPond'): void;
+  (e: 'update:collapsed', val: boolean): void;
 }>();
 
-const collapsed = ref(false);
+const localCollapsed = ref(false);
+const isCollapsed = computed({
+  get: () => props.collapsed ?? localCollapsed.value,
+  set: (val: boolean) => {
+    localCollapsed.value = val;
+    emit('update:collapsed', val);
+  },
+});
+
 const activeTab = ref<'realtime' | 'water' | 'sensors'>('realtime');
 </script>
 
@@ -34,7 +49,7 @@ const activeTab = ref<'realtime' | 'water' | 'sensors'>('realtime');
   <div
     :class="[
       'absolute top-20 left-3 bottom-12 z-20 transition-all duration-300 pointer-events-none flex items-start',
-      collapsed ? '-translate-x-[calc(100%-12px)]' : 'translate-x-0'
+      isCollapsed ? '-translate-x-[calc(100%-12px)]' : 'translate-x-0'
     ]"
   >
     <!-- Main Panel Box -->
@@ -426,11 +441,11 @@ const activeTab = ref<'realtime' | 'water' | 'sensors'>('realtime');
 
     <!-- Collapse/Expand Handle Button -->
     <button
-      @click="collapsed = !collapsed"
+      @click="isCollapsed = !isCollapsed"
       class="pointer-events-auto mt-6 -ml-1 bg-slate-950/60 hover:bg-slate-900/80 text-cyan-400 hover:text-cyan-200 p-1 rounded-r-lg border-y border-r border-cyan-500/30 shadow-lg backdrop-blur-xl transition-colors cursor-pointer"
-      :title="collapsed ? '展开监测面板' : '折叠监测面板'"
+      :title="isCollapsed ? '展开监测面板' : '折叠监测面板'"
     >
-      <ChevronRight v-if="collapsed" class="w-4 h-4" />
+      <ChevronRight v-if="isCollapsed" class="w-4 h-4" />
       <ChevronLeft v-else class="w-4 h-4" />
     </button>
   </div>
