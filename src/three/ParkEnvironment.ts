@@ -6,14 +6,19 @@ export interface ParkSubsystems {
   beaconLight: THREE.PointLight;
 }
 
+export interface PerimeterGateSubsystems {
+  barrierPivot: THREE.Group;
+  signalLight: THREE.Mesh;
+}
+
 export class ParkEnvironment {
   public static buildRoadNetwork(
     scene: THREE.Scene,
     parkGroup: THREE.Group,
     interactiveObjects: THREE.Object3D[]
   ) {
-    // 1. Campus Extended Ground Surface (240m x 240m)
-    const groundGeo = new THREE.PlaneGeometry(240, 240);
+    // 1. Campus Extended Ground Surface (270m x 270m)
+    const groundGeo = new THREE.PlaneGeometry(270, 270);
     const groundMat = new THREE.MeshStandardMaterial({
       color: 0x111622, // Natural deep dark agricultural campus terrain
       roughness: 0.88,
@@ -42,12 +47,12 @@ export class ParkEnvironment {
     parkGroup.add(plotB);
 
     // Architectural subtle reference grid (subdued, non-intrusive)
-    const parkGrid = new THREE.GridHelper(240, 48, 0x1e293b, 0x141d2a);
+    const parkGrid = new THREE.GridHelper(270, 54, 0x1e293b, 0x141d2a);
     parkGrid.position.y = -0.04;
     parkGroup.add(parkGrid);
 
     // -------------------------------------------------------------
-    // ROAD SYSTEM (Asphalt, Markings, Curbs, Crosswalks)
+    // ROAD SYSTEM (Asphalt, Markings, Curbs, Crosswalks, Service Spurs)
     // -------------------------------------------------------------
     const asphaltMat = new THREE.MeshStandardMaterial({
       color: 0x1a2332, // Realistic matte dark asphalt
@@ -60,131 +65,267 @@ export class ParkEnvironment {
       metalness: 0.15,
     });
     const yellowLineMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.5 });
-    const whiteLineMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.5 }); // Crisp matte off-white road marking line
+    const whiteLineMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.5 });
+    const hazardStripeMat = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.4 });
 
-    // 1. North-South Main Highway (南北主干道: X = 22, Z from -90 to +90, Width 7.2m)
-    const mainRoadGeo = new THREE.BoxGeometry(7.2, 0.08, 180);
-    const mainRoad = new THREE.Mesh(mainRoadGeo, asphaltMat);
-    mainRoad.position.set(22, 0.02, 0);
-    mainRoad.receiveShadow = true;
-    parkGroup.add(mainRoad);
+    // Helper to create straight road segment
+    const addRoad = (
+      x: number,
+      z: number,
+      width: number,
+      length: number,
+      isEW: boolean,
+      hasCurbs: boolean = true
+    ) => {
+      const geo = isEW
+        ? new THREE.BoxGeometry(length, 0.08, width)
+        : new THREE.BoxGeometry(width, 0.08, length);
+      const mesh = new THREE.Mesh(geo, asphaltMat);
+      mesh.position.set(x, 0.02, z);
+      mesh.receiveShadow = true;
+      parkGroup.add(mesh);
 
-    // Curbs for main road
-    const curbLeft = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.15, 180), curbMat);
-    curbLeft.position.set(22 - 3.75, 0.06, 0);
-    const curbRight = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.15, 180), curbMat);
-    curbRight.position.set(22 + 3.75, 0.06, 0);
-    parkGroup.add(curbLeft, curbRight);
+      if (hasCurbs) {
+        if (isEW) {
+          const curbTop = new THREE.Mesh(new THREE.BoxGeometry(length, 0.15, 0.28), curbMat);
+          curbTop.position.set(x, 0.06, z - width / 2 - 0.14);
+          const curbBot = new THREE.Mesh(new THREE.BoxGeometry(length, 0.15, 0.28), curbMat);
+          curbBot.position.set(x, 0.06, z + width / 2 + 0.14);
+          parkGroup.add(curbTop, curbBot);
+        } else {
+          const curbL = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.15, length), curbMat);
+          curbL.position.set(x - width / 2 - 0.14, 0.06, z);
+          const curbR = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.15, length), curbMat);
+          curbR.position.set(x + width / 2 + 0.14, 0.06, z);
+          parkGroup.add(curbL, curbR);
+        }
+      }
+      return mesh;
+    };
 
-    // White Edge Markings
-    const edgeLineGeo = new THREE.PlaneGeometry(0.18, 180);
-    const whiteEdgeLeft = new THREE.Mesh(edgeLineGeo, whiteLineMat);
-    whiteEdgeLeft.rotation.x = -Math.PI / 2;
-    whiteEdgeLeft.position.set(22 - 3.2, 0.065, 0);
-    const whiteEdgeRight = new THREE.Mesh(edgeLineGeo, whiteLineMat);
-    whiteEdgeRight.rotation.x = -Math.PI / 2;
-    whiteEdgeRight.position.set(22 + 3.2, 0.065, 0);
-    parkGroup.add(whiteEdgeLeft, whiteEdgeRight);
+    // Helper to create dashed center line
+    const addDashedLine = (
+      xStart: number,
+      zStart: number,
+      xEnd: number,
+      zEnd: number,
+      dashLen: number = 2.4,
+      gapLen: number = 2.4
+    ) => {
+      const dx = xEnd - xStart;
+      const dz = zEnd - zStart;
+      const totalLen = Math.hypot(dx, dz);
+      const steps = Math.floor(totalLen / (dashLen + gapLen));
+      const ux = dx / totalLen;
+      const uz = dz / totalLen;
+      const angle = Math.atan2(dx, dz);
 
-    // Dashed Yellow Center Line
-    const dashLen = 2.5;
-    const gapLen = 2.5;
-    const totalDashes = Math.floor(180 / (dashLen + gapLen));
-    for (let i = 0; i < totalDashes; i++) {
-      const z = -90 + (i + 0.5) * (dashLen + gapLen);
-      // skip intersections
-      if ((z > 16 && z < 25) || (z > -28 && z < -18)) continue;
-      const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.16, dashLen), yellowLineMat);
-      dash.rotation.x = -Math.PI / 2;
-      dash.position.set(22, 0.065, z);
-      parkGroup.add(dash);
+      for (let i = 0; i < steps; i++) {
+        const dist = (i + 0.5) * (dashLen + gapLen);
+        const px = xStart + ux * dist;
+        const pz = zStart + uz * dist;
+        const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.16, dashLen), yellowLineMat);
+        dash.rotation.x = -Math.PI / 2;
+        dash.rotation.z = -angle;
+        dash.position.set(px, 0.066, pz);
+        parkGroup.add(dash);
+      }
+    };
+
+    // =============================================================
+    // 1. NORTH-SOUTH CENTRAL ARTERY (南北中轴主干道: X = 22)
+    // =============================================================
+    // External Approach Highway (outside south gate: Z = 88 to 125, width 8.6m)
+    addRoad(22, 106.5, 8.6, 37, false, true);
+    addDashedLine(22, 89.5, 22, 125);
+
+    // Internal Central Highway (inside campus: Z = -78 to 88, length 166m, width 7.8m)
+    addRoad(22, 5, 7.8, 166, false, true);
+    addDashedLine(22, -76, 22, 87);
+
+    // North Highway Outer Connector (north of north gate: Z = -78 to -115, width 7.8m)
+    addRoad(22, -96.5, 7.8, 37, false, true);
+    addDashedLine(22, -115, 22, -79.5);
+
+    // White Edge Lines for Main Road
+    const whiteEdgeL = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 166), whiteLineMat);
+    whiteEdgeL.rotation.x = -Math.PI / 2;
+    whiteEdgeL.position.set(22 - 3.55, 0.065, 5);
+    const whiteEdgeR = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 166), whiteLineMat);
+    whiteEdgeR.rotation.x = -Math.PI / 2;
+    whiteEdgeR.position.set(22 + 3.55, 0.065, 5);
+    parkGroup.add(whiteEdgeL, whiteEdgeR);
+
+    // =============================================================
+    // 2. COMPLETE PERIMETER RING ROAD (完整外环环园巡检安保大道)
+    // =============================================================
+    // South Outer Ring Road (南部内环道: Z = 80, X from -84 to +86, length 170m, width 5.5m)
+    addRoad(1, 80, 5.5, 170, true, true);
+    addDashedLine(-84, 80, 86, 80);
+
+    // North Outer Ring Road (北部巡检道: Z = -70, X from -84 to +86, length 170m, width 5.5m)
+    addRoad(1, -70, 5.5, 170, true, true);
+    addDashedLine(-84, -70, 86, -70);
+
+    // West Outer Ring Road (西部围界外环: X = -84, Z from -70 to +80, length 150m, width 5.2m)
+    addRoad(-84, 5, 5.2, 150, false, true);
+    addDashedLine(-84, -70, -84, 80);
+
+    // East Outer Ring Road (东部围界外环: X = 86, Z from -70 to +80, length 150m, width 5.2m)
+    addRoad(86, 5, 5.2, 150, false, true);
+    addDashedLine(86, -70, 86, 80);
+
+    // =============================================================
+    // 3. INTERNAL PRIMARY CROSS ARTERIES (园区内部主要横向与纵向干道)
+    // =============================================================
+    // East-West Central Connecting Avenue (东西向中央大道: Z = 20, X from -84 to +86, length 170m, width 6.6m)
+    addRoad(1, 20, 6.6, 170, true, true);
+    addDashedLine(-84, 20, 86, 20);
+
+    // Northern Production Service Road (北部温室服务道: Z = -24, X from -84 to +86, length 170m, width 5.8m)
+    addRoad(1, -24, 5.8, 170, true, true);
+    addDashedLine(-84, -24, 86, -24);
+
+    // Southern Agricultural Loop Road (南部高产示范环线: Z = 55, X from -84 to +86, length 170m, width 5.8m)
+    addRoad(1, 55, 5.8, 170, true, true);
+    addDashedLine(-84, 55, 86, 55);
+
+    // Western Logistics & Farm Machinery Lane (西部农机与冷链骨干道: X = -58, Z from -70 to +70, length 140m, width 5.2m)
+    addRoad(-58, 0, 5.2, 140, false, true);
+    addDashedLine(-58, -70, -58, 70);
+
+    // Eastern Utility Lane (东部试验示范支干道: X = 58, Z from -70 to +70, length 140m, width 5.2m)
+    addRoad(58, 0, 5.2, 140, false, true);
+    addDashedLine(58, -70, 58, 70);
+
+    // =============================================================
+    // 4. LOGISTICS YARD & SPECIALIZED SERVICE SPURS (专用物流广场与进出支路)
+    // =============================================================
+    // A. Cold Chain Logistics Loading Apron & Turning Yard (冷链物流装卸重卡回车广场: X = -36, Z = -38, 34m x 18m)
+    const coldChainApronGeo = new THREE.BoxGeometry(34, 0.08, 18);
+    const coldChainApron = new THREE.Mesh(coldChainApronGeo, asphaltMat);
+    coldChainApron.position.set(-36, 0.02, -38);
+    coldChainApron.receiveShadow = true;
+    parkGroup.add(coldChainApron);
+
+    // Hazard striping along loading apron perimeter
+    const apronHazard = new THREE.Mesh(new THREE.BoxGeometry(34.2, 0.12, 0.3), hazardStripeMat);
+    apronHazard.position.set(-36, 0.06, -47.1);
+    parkGroup.add(apronHazard);
+
+    // B. Fertigation & Water Hub Dedicated Spur (水肥一体化中心进出通道: X = 42, Z from -48 to -24, width 4.2m)
+    addRoad(42, -36, 4.2, 24, false, true);
+
+    // C. Ecological Fish Pond Service Road (生态鱼塘与观景台作业道: X = 42, Z from -24 to -4, width 4.2m)
+    addRoad(42, -14, 4.2, 20, false, true);
+
+    // D. Autonomous Drone Dock Service Spur (无人机机巢专用联络道: Z = 34, X from 12 to 22, width 4.0m)
+    addRoad(17, 34, 4.0, 10, true, true);
+
+    // E. Inter-Greenhouse Harvest Aisle (1#智能玻璃温室与3#大棚间采摘道: X = -20, Z from -24 to +20, width 3.8m)
+    addRoad(-20, -2, 3.8, 44, false, true);
+
+    // F. Southern Greenhouse Harvest Aisle (1#与6#鱼菜共生棚间机耕道: X = -4, Z from 20 to 55, width 3.8m)
+    addRoad(-4, 37.5, 3.8, 35, false, true);
+
+    // G. Smart Outdoor Field Agricultural Spur (智能大田农机作业道: X = -36, Z from 55 to 74, width 4.2m)
+    addRoad(-36, 64.5, 4.2, 19, false, true);
+
+    // H. Eddy Covariance Flux Tower Service Track (通量观测塔维护便道: Z = 34, X from 58 to 74, width 3.8m)
+    addRoad(66, 34, 3.8, 16, true, true);
+
+    // =============================================================
+    // 5. MAIN ENTRANCE PLAZA & PARKING BAYS (主大门迎宾广场与车位)
+    // =============================================================
+    // West Visitor & Inspection Parking Bay (X = 10 to 18, Z = 74 to 82)
+    const parkBayGeo = new THREE.BoxGeometry(10, 0.08, 12);
+    const parkBay = new THREE.Mesh(parkBayGeo, asphaltMat);
+    parkBay.position.set(13.5, 0.02, 74);
+    parkGroup.add(parkBay);
+
+    // 4 Striped Parking Stalls
+    for (let p = 0; p < 4; p++) {
+      const pz = 70 + p * 2.8;
+      const stallLine = new THREE.Mesh(new THREE.PlaneGeometry(4.8, 0.14), whiteLineMat);
+      stallLine.rotation.x = -Math.PI / 2;
+      stallLine.position.set(13.5, 0.065, pz);
+      parkGroup.add(stallLine);
     }
 
-    // 2. East-West Central Connecting Avenue (东西向主联络道: Z = 20, X from -75 to +75, Width 6.5m)
-    const ewRoadGeo = new THREE.BoxGeometry(150, 0.08, 6.5);
-    const ewRoad = new THREE.Mesh(ewRoadGeo, asphaltMat);
-    ewRoad.position.set(0, 0.02, 20);
-    ewRoad.receiveShadow = true;
-    parkGroup.add(ewRoad);
+    // East Logistics Staging & Check-in Bay (X = 26 to 34, Z = 74 to 82)
+    const stagingBayGeo = new THREE.BoxGeometry(10, 0.08, 12);
+    const stagingBay = new THREE.Mesh(stagingBayGeo, asphaltMat);
+    stagingBay.position.set(30.5, 0.02, 74);
+    parkGroup.add(stagingBay);
 
-    // Curbs for EW road
-    const ewCurbTop = new THREE.Mesh(new THREE.BoxGeometry(150, 0.15, 0.3), curbMat);
-    ewCurbTop.position.set(0, 0.06, 20 - 3.4);
-    const ewCurbBot = new THREE.Mesh(new THREE.BoxGeometry(150, 0.15, 0.3), curbMat);
-    ewCurbBot.position.set(0, 0.06, 20 + 3.4);
-    parkGroup.add(ewCurbTop, ewCurbBot);
+    // =============================================================
+    // 6. ROAD MARKINGS: STOP LINES, HATCHED ZONES & ARROWS
+    // =============================================================
+    // Yellow Cross-Hatched Safety Box at Main Entrance Gate (黄线网格禁停区: X = 22, Z = 88)
+    this.createHatchedBox(parkGroup, 22, 88, 8.4, 7.5);
+    // Yellow Cross-Hatched Safety Box at Central Intersection (X = 22, Z = 20)
+    this.createHatchedBox(parkGroup, 22, 20, 8.4, 7.5);
+    // Yellow Cross-Hatched Safety Box at Northern Intersection (X = 22, Z = -24)
+    this.createHatchedBox(parkGroup, 22, -24, 8.4, 7.0);
 
-    // Dashed center line for EW road
-    const ewDashes = Math.floor(150 / (dashLen + gapLen));
-    for (let i = 0; i < ewDashes; i++) {
-      const x = -75 + (i + 0.5) * (dashLen + gapLen);
-      // skip intersection with main road
-      if (x > 18 && x < 26) continue;
-      const dash = new THREE.Mesh(new THREE.PlaneGeometry(dashLen, 0.16), yellowLineMat);
-      dash.rotation.x = -Math.PI / 2;
-      dash.position.set(x, 0.065, 20);
-      parkGroup.add(dash);
-    }
+    // STOP "停" Road Markings at Main Gate Inbound & Outbound
+    this.createStopLine(parkGroup, whiteLineMat, 20.2, 90.5, 3.4);
+    this.createStopLine(parkGroup, whiteLineMat, 23.8, 85.5, 3.4);
 
-    // 3. Northern Inter-Greenhouse Service Road (北部生产服务道: Z = -24, X from -65 to +65, Width 5.5m)
-    const northRoadGeo = new THREE.BoxGeometry(130, 0.08, 5.5);
-    const northRoad = new THREE.Mesh(northRoadGeo, asphaltMat);
-    northRoad.position.set(0, 0.02, -24);
-    northRoad.receiveShadow = true;
-    parkGroup.add(northRoad);
+    // White Directional Straight & Turn Arrows on Main Artery
+    this.createRoadArrow(parkGroup, whiteLineMat, 20.2, 95, 0); // Inbound straight
+    this.createRoadArrow(parkGroup, whiteLineMat, 20.2, 72, 0); // Northbound straight
+    this.createRoadArrow(parkGroup, whiteLineMat, 23.8, 76, Math.PI); // Southbound exit straight
+    this.createRoadArrow(parkGroup, whiteLineMat, 20.2, 28, 0); // Central straight
+    this.createRoadArrow(parkGroup, whiteLineMat, 23.8, 12, Math.PI); // Central exit straight
 
-    // 4. Southern Agricultural Loop Road (南部示范区环线道: Z = 60, X from -75 to +75, Width 5.5m)
-    const southRoadGeo = new THREE.BoxGeometry(150, 0.08, 5.5);
-    const southRoad = new THREE.Mesh(southRoadGeo, asphaltMat);
-    southRoad.position.set(0, 0.02, 60);
-    southRoad.receiveShadow = true;
-    parkGroup.add(southRoad);
-
-    // Curbs for South road
-    const southCurbTop = new THREE.Mesh(new THREE.BoxGeometry(150, 0.15, 0.3), curbMat);
-    southCurbTop.position.set(0, 0.06, 60 - 2.9);
-    const southCurbBot = new THREE.Mesh(new THREE.BoxGeometry(150, 0.15, 0.3), curbMat);
-    southCurbBot.position.set(0, 0.06, 60 + 2.9);
-    parkGroup.add(southCurbTop, southCurbBot);
-
-    // 5. Western Farm Logistics Lane (西部农机通道: X = -58, Z from -60 to +60, Width 4.8m)
-    const westLaneGeo = new THREE.BoxGeometry(4.8, 0.08, 120);
-    const westLane = new THREE.Mesh(westLaneGeo, asphaltMat);
-    westLane.position.set(-58, 0.02, 0);
-    westLane.receiveShadow = true;
-    parkGroup.add(westLane);
-
-    // 6. Eastern Facility Lane (东部公用设施支道: X = 58, Z from -60 to +60, Width 4.8m)
-    const eastLaneGeo = new THREE.BoxGeometry(4.8, 0.08, 120);
-    const eastLane = new THREE.Mesh(eastLaneGeo, asphaltMat);
-    eastLane.position.set(58, 0.02, 0);
-    eastLane.receiveShadow = true;
-    parkGroup.add(eastLane);
-
-    // 7. Zebra Crossings (斑马线) at key spots
+    // =============================================================
+    // 7. ZEBRA PEDESTRIAN CROSSINGS (斑马线)
+    // =============================================================
+    this.createZebraCrossing(parkGroup, whiteLineMat, 22, 82.5, false);
     this.createZebraCrossing(parkGroup, whiteLineMat, 22, 16.5, false);
     this.createZebraCrossing(parkGroup, whiteLineMat, 22, 24.5, false);
     this.createZebraCrossing(parkGroup, whiteLineMat, 0, 20, true);
     this.createZebraCrossing(parkGroup, whiteLineMat, 42, 20, true);
     this.createZebraCrossing(parkGroup, whiteLineMat, -42, 20, true);
-    this.createZebraCrossing(parkGroup, whiteLineMat, 22, 60, false);
-    this.createZebraCrossing(parkGroup, whiteLineMat, -36, 60, true);
-    this.createZebraCrossing(parkGroup, whiteLineMat, 0, 60, true);
+    this.createZebraCrossing(parkGroup, whiteLineMat, 22, 55, false);
+    this.createZebraCrossing(parkGroup, whiteLineMat, -36, 55, true);
+    this.createZebraCrossing(parkGroup, whiteLineMat, 0, 55, true);
+    this.createZebraCrossing(parkGroup, whiteLineMat, -58, -24, false);
+    this.createZebraCrossing(parkGroup, whiteLineMat, -36, -24, true);
 
-    // 8. Modern Solar LED Street Lights (Poles along the expanded road network)
+    // =============================================================
+    // 8. MODERN SOLAR LED STREET LIGHTS (全园区智能路灯网络)
+    // =============================================================
     const streetLightPositions = [
       // Along Main North-South Highway
-      [22 + 4.2, -75],
-      [22 + 4.2, -50],
-      [22 + 4.2, -10],
-      [22 + 4.2, 10],
-      [22 + 4.2, 35],
-      [22 + 4.2, 60],
-      [22 + 4.2, 80],
-      [22 - 4.2, -65],
-      [22 - 4.2, -35],
-      [22 - 4.2, 5],
-      [22 - 4.2, 45],
+      [22 + 4.5, -95],
+      [22 + 4.5, -75],
+      [22 + 4.5, -50],
+      [22 + 4.5, -10],
+      [22 + 4.5, 10],
+      [22 + 4.5, 35],
+      [22 + 4.5, 60],
+      [22 + 4.5, 80],
+      [22 + 4.5, 105],
+      [22 - 4.5, -65],
+      [22 - 4.5, -35],
+      [22 - 4.5, 5],
+      [22 - 4.5, 45],
+      [22 - 4.5, 95],
+      // Along Outer Ring Roads
+      [-84 - 3.2, -45],
+      [-84 - 3.2, 15],
+      [-84 - 3.2, 50],
+      [86 + 3.2, -45],
+      [86 + 3.2, 15],
+      [86 + 3.2, 50],
+      [-40, 80 + 3.4],
+      [0, 80 + 3.4],
+      [50, 80 + 3.4],
+      [-40, -70 - 3.4],
+      [0, -70 - 3.4],
+      [50, -70 - 3.4],
       // Along East-West Central Avenue
       [-58, 20 + 3.8],
       [-28, 20 + 3.8],
@@ -192,16 +333,16 @@ export class ParkEnvironment {
       [8, 20 + 3.8],
       [58, 20 + 3.8],
       // Along Southern Loop Road
-      [-45, 60 + 3.4],
-      [-15, 60 + 3.4],
-      [15, 60 + 3.4],
-      [45, 60 + 3.4],
-      [-58, 60 - 3.4],
-      // Along Western & Eastern lanes
-      [-58 - 3.0, -15],
-      [-58 - 3.0, 45],
-      [58 + 3.0, -15],
-      [58 + 3.0, 45],
+      [-45, 55 + 3.4],
+      [-15, 55 + 3.4],
+      [15, 55 + 3.4],
+      [45, 55 + 3.4],
+      // Along Cold Chain Yard & Logistics Lanes
+      [-58 - 3.2, -35],
+      [-20, -38 - 9.5],
+      [-58 - 3.2, 20],
+      [58 + 3.2, -15],
+      [58 + 3.2, 45],
     ];
 
     streetLightPositions.forEach(([lx, lz], idx) => {
@@ -209,13 +350,761 @@ export class ParkEnvironment {
     });
 
     // 9. Directional Agricultural Park Road Signs
-    this.createRoadSign(parkGroup, 24.5, 23.5, '园区核心导览');
+    this.createRoadSign(parkGroup, 25.5, 84, '南大门正门 · 示范园中枢 ➔');
+    this.createRoadSign(parkGroup, 25.5, 23.5, '园区核心导览 · 1#智能温室');
     this.createRoadSign(parkGroup, -20, 23.5, '3#圆拱 ➔ 8#光伏温室');
-    this.createRoadSign(parkGroup, 24.5, -20, '4#育苗中心 · 水肥罐区 ➔');
-    this.createRoadSign(parkGroup, 24.5, 52, '5#日光 ➔ 6#鱼菜共生');
-    this.createRoadSign(parkGroup, 26, 32, '无人机智能机巢 ➔');
-    this.createRoadSign(parkGroup, -48, -20, '冷链物流中心 ➔');
+    this.createRoadSign(parkGroup, 25.5, -20, '4#育苗中心 · 水肥罐区 ➔');
+    this.createRoadSign(parkGroup, 25.5, 50, '5#日光 ➔ 6#鱼菜共生');
+    this.createRoadSign(parkGroup, 25.5, 32, '无人机智能机巢 ➔');
+    this.createRoadSign(parkGroup, -48, -20, '冷链物流中心 · 分选车间 ➔');
     this.createRoadSign(parkGroup, 66, 20, '7#垂直气雾培 · 通量塔 ➔');
+    this.createRoadSign(parkGroup, 25.5, -72, '北大门 · 农机应急通道 ➔');
+  }
+
+  // =============================================================
+  // PERIMETER SECURITY WALLS & INTEGRATED MAIN ENTRANCE GATE
+  // (四周实体安全围墙与建在围墙上的园区正大门)
+  // =============================================================
+  public static buildPerimeterWallsAndGate(
+    scene: THREE.Scene,
+    parkGroup: THREE.Group,
+    interactiveObjects: THREE.Object3D[]
+  ): PerimeterGateSubsystems {
+    const wallsAndGateGroup = new THREE.Group();
+    wallsAndGateGroup.name = 'Campus_Perimeter_Walls_And_Gate';
+
+    // Materials
+    const plinthMat = new THREE.MeshStandardMaterial({
+      color: 0x334155, // Solid stone/concrete foundation plinth
+      roughness: 0.7,
+      metalness: 0.15,
+    });
+    const pillarMat = new THREE.MeshStandardMaterial({
+      color: 0x1e293b, // Architectural dark slate pillar masonry
+      roughness: 0.5,
+      metalness: 0.2,
+    });
+    const fenceMat = new THREE.MeshStandardMaterial({
+      color: 0x0f172a, // Industrial anti-climb galvanized dark slate steel railing
+      roughness: 0.35,
+      metalness: 0.75,
+    });
+    const pillarCapMat = new THREE.MeshStandardMaterial({
+      color: 0x475569, // Beveled decorative capstone
+      roughness: 0.4,
+      metalness: 0.25,
+    });
+    const lampGlowMat = new THREE.MeshStandardMaterial({
+      color: 0xfbbf24,
+      emissive: 0xfbbf24,
+      emissiveIntensity: 0.6,
+      roughness: 0.2,
+    });
+    const hedgeMat = new THREE.MeshStandardMaterial({
+      color: 0x166534, // Lush dark evergreen privacy hedge shrubs
+      roughness: 0.9,
+      metalness: 0.05,
+    });
+
+    // Wall Boundaries: X in [-92, 92], Z in [-78, 88]
+    // -------------------------------------------------------------
+    // Helper to generate a straight wall section with concrete base, pillars, security fence & hedge
+    // -------------------------------------------------------------
+    const buildWallSegment = (
+      xStart: number,
+      zStart: number,
+      xEnd: number,
+      zEnd: number
+    ) => {
+      const dx = xEnd - xStart;
+      const dz = zEnd - zStart;
+      const length = Math.hypot(dx, dz);
+      if (length < 0.5) return;
+
+      const angle = Math.atan2(dx, dz);
+      const midX = (xStart + xEnd) / 2;
+      const midZ = (zStart + zEnd) / 2;
+
+      const segGroup = new THREE.Group();
+      segGroup.position.set(midX, 0, midZ);
+      segGroup.rotation.y = angle;
+
+      // 1. Solid Reinforced Concrete Base Plinth (0.45m high, 0.42m thick)
+      const plinth = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.45, length), plinthMat);
+      plinth.position.y = 0.225;
+      plinth.castShadow = true;
+      plinth.receiveShadow = true;
+      segGroup.add(plinth);
+
+      // 2. High-grade Architectural Security Steel Fencing between pillars (1.8m height)
+      const fenceHeight = 1.8;
+      const fenceBody = new THREE.Mesh(
+        new THREE.BoxGeometry(0.12, fenceHeight, length),
+        fenceMat
+      );
+      fenceBody.position.y = 0.45 + fenceHeight / 2;
+      fenceBody.castShadow = true;
+      segGroup.add(fenceBody);
+
+      // Top security spike rail
+      const spikeRail = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.08, length), pillarMat);
+      spikeRail.position.y = 0.45 + fenceHeight + 0.04;
+      segGroup.add(spikeRail);
+
+      // 3. Masonry Pillars every 6 meters
+      const pillarSpacing = 6.0;
+      const numPillars = Math.floor(length / pillarSpacing);
+      for (let p = 0; p <= numPillars; p++) {
+        const pz = -length / 2 + p * (length / Math.max(1, numPillars));
+        // Pillar body (0.65m x 2.45m x 0.65m)
+        const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.65, 2.45, 0.65), pillarMat);
+        pillar.position.set(0, 1.225, pz);
+        pillar.castShadow = true;
+
+        // Pyramidal capstone
+        const cap = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.18, 0.78), pillarCapMat);
+        cap.position.set(0, 2.45 + 0.09, pz);
+
+        // Amber night accent lamp inset on top of pillar
+        const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.08, 12, 12), lampGlowMat);
+        lamp.position.set(0, 2.65, pz);
+
+        segGroup.add(pillar, cap, lamp);
+      }
+
+      // 4. Low evergreen landscaping hedge along inside of the wall
+      const hedge = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.9, length * 0.98), hedgeMat);
+      hedge.position.set(0.65, 0.45, 0);
+      segGroup.add(hedge);
+
+      wallsAndGateGroup.add(segGroup);
+    };
+
+    // Build the 4 Perimeter Walls (Leaving openings for South Main Gate & North Logistics Gate)
+    // 1. West Wall: X = -92, Z from -78 to +88 (Length 166m)
+    buildWallSegment(-92, -78, -92, 88);
+
+    // 2. East Wall: X = +92, Z from -78 to +88 (Length 166m)
+    buildWallSegment(92, -78, 92, 88);
+
+    // 3. North Wall: Z = -78, X from -92 to +92 (with secondary North Gate at X = 22)
+    buildWallSegment(-92, -78, 16, -78); // West half of north wall
+    buildWallSegment(28, -78, 92, -78); // East half of north wall
+
+    // 4. South Wall: Z = +88, X from -92 to +92 (with Main Grand Entrance Gate at X = 22, opening from X = 13 to 31)
+    buildWallSegment(-92, 88, 13, 88); // West half of south wall
+    buildWallSegment(31, 88, 92, 88); // East half of south wall
+
+    // -------------------------------------------------------------
+    // 4 CORNER CCTV & SECURITY SURVEILLANCE POSTS
+    // -------------------------------------------------------------
+    const cornerPositions = [
+      [-92, -78],
+      [92, -78],
+      [-92, 88],
+      [92, 88],
+    ];
+    cornerPositions.forEach(([cx, cz]) => {
+      const cornerTower = new THREE.Group();
+      cornerTower.position.set(cx, 0, cz);
+
+      // Heavy concrete foundation
+      const base = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.6, 1.6), plinthMat);
+      base.position.y = 0.3;
+      cornerTower.add(base);
+
+      // Galvanized steel surveillance mast (5.5m high)
+      const mastMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.8, roughness: 0.25 });
+      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 5.2, 8), mastMat);
+      mast.position.y = 2.9;
+      cornerTower.add(mast);
+
+      // 360° PTZ HD dome camera & solar telemetry pod
+      const pod = new THREE.Mesh(
+        new THREE.BoxGeometry(0.45, 0.45, 0.35),
+        new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.7 })
+      );
+      pod.position.set(0, 5.4, 0);
+
+      const dome = new THREE.Mesh(
+        new THREE.SphereGeometry(0.16, 16, 16),
+        new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.9, roughness: 0.1 })
+      );
+      dome.position.set(0, 5.15, 0);
+
+      const solar = new THREE.Mesh(
+        new THREE.BoxGeometry(0.8, 0.04, 0.6),
+        new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.2 })
+      );
+      solar.position.set(0, 5.75, 0);
+      solar.rotation.x = 0.35;
+
+      cornerTower.add(pod, dome, solar);
+      wallsAndGateGroup.add(cornerTower);
+    });
+
+    // -------------------------------------------------------------
+    // NORTH LOGISTICS & EMERGENCY GATE (北侧农机与物流备用门: X = 22, Z = -78)
+    // -------------------------------------------------------------
+    const northGateGroup = new THREE.Group();
+    northGateGroup.position.set(22, 0, -78);
+
+    // Industrial portal gantry
+    const nGantryMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.6, roughness: 0.4 });
+    const nPillarL = new THREE.Mesh(new THREE.BoxGeometry(0.8, 4.8, 0.8), nGantryMat);
+    nPillarL.position.set(-5.5, 2.4, 0);
+    const nPillarR = new THREE.Mesh(new THREE.BoxGeometry(0.8, 4.8, 0.8), nGantryMat);
+    nPillarR.position.set(5.5, 2.4, 0);
+    const nBeam = new THREE.Mesh(new THREE.BoxGeometry(12.2, 0.8, 0.9), nGantryMat);
+    nBeam.position.set(0, 4.8, 0);
+    northGateGroup.add(nPillarL, nPillarR, nBeam);
+
+    // Height clearance & warning signage
+    const nSignCanvas = document.createElement('canvas');
+    nSignCanvas.width = 512;
+    nSignCanvas.height = 96;
+    const nCtx = nSignCanvas.getContext('2d');
+    if (nCtx) {
+      nCtx.fillStyle = '#0f172a';
+      nCtx.fillRect(0, 0, 512, 96);
+      nCtx.strokeStyle = '#eab308';
+      nCtx.lineWidth = 6;
+      nCtx.strokeRect(4, 4, 504, 88);
+      nCtx.fillStyle = '#eab308';
+      nCtx.font = 'bold 30px "PingFang SC", sans-serif';
+      nCtx.textAlign = 'center';
+      nCtx.textBaseline = 'middle';
+      nCtx.fillText('农机重载物流通道 · 限高4.5M', 256, 48);
+    }
+    const nSignTex = new THREE.CanvasTexture(nSignCanvas);
+    const nSignMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(8.5, 0.7),
+      new THREE.MeshBasicMaterial({ map: nSignTex })
+    );
+    nSignMesh.position.set(0, 4.8, -0.48);
+    nSignMesh.rotation.y = Math.PI;
+    northGateGroup.add(nSignMesh);
+
+    // Sliding metal security gate leaves
+    const gateLeafMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.7, roughness: 0.4 });
+    const leafL = new THREE.Mesh(new THREE.BoxGeometry(5.2, 2.6, 0.1), gateLeafMat);
+    leafL.position.set(-2.7, 1.3, 0);
+    const leafR = new THREE.Mesh(new THREE.BoxGeometry(5.2, 2.6, 0.1), gateLeafMat);
+    leafR.position.set(2.7, 1.3, 0);
+    northGateGroup.add(leafL, leafR);
+
+    wallsAndGateGroup.add(northGateGroup);
+
+    // =============================================================
+    // =============================================================
+    // GRAND MAIN ENTRANCE GATE ON SOUTH PERIMETER WALL
+    // (建在南围墙上的园区正大门 · 科技龙门架牌楼 + 门卫保卫室 + 智能道闸)
+    // Position: X = 22, Z = +88 (Directly integrated into South Wall!)
+    // =============================================================
+    // =============================================================
+    const mainGateGroup = new THREE.Group();
+    mainGateGroup.position.set(22, 0, 88);
+    mainGateGroup.name = 'Perimeter_Main_Entrance_Gate';
+
+    // -------------------------------------------------------------
+    // 1. GRAND ARCHITECTURAL PORTAL ARCHWAY (科技门头龙门牌楼)
+    // -------------------------------------------------------------
+    const archMat = new THREE.MeshStandardMaterial({
+      color: 0x1e293b, // Modern dark anthracite metal framing
+      metalness: 0.7,
+      roughness: 0.3,
+    });
+    const titaniumMat = new THREE.MeshStandardMaterial({
+      color: 0x94a3b8, // Brushed titanium composite cladding
+      metalness: 0.85,
+      roughness: 0.25,
+    });
+    const cyanTrimMat = new THREE.MeshStandardMaterial({
+      color: 0x0284c7, // Agri-tech blue fascia
+      roughness: 0.2,
+      metalness: 0.4,
+    });
+
+    // Left Giant Pylon (X = -8.5 rel to gate center, i.e. X = 13.5)
+    const leftPylon = new THREE.Mesh(new THREE.BoxGeometry(1.6, 6.4, 2.6), archMat);
+    leftPylon.position.set(-8.5, 3.2, 0);
+    leftPylon.castShadow = true;
+
+    // Right Giant Pylon (X = +8.5 rel to gate center, i.e. X = 30.5)
+    const rightPylon = new THREE.Mesh(new THREE.BoxGeometry(1.6, 6.4, 2.6), archMat);
+    rightPylon.position.set(8.5, 3.2, 0);
+    rightPylon.castShadow = true;
+
+    // Overhead Massive Lintel Beam (Clearance 4.8m underneath for all high-cube trucks)
+    const lintelBeam = new THREE.Mesh(new THREE.BoxGeometry(18.6, 1.4, 2.8), archMat);
+    lintelBeam.position.set(0, 5.7, 0);
+    lintelBeam.castShadow = true;
+
+    // Architectural Decorative Cladding Caps
+    const topCanopy = new THREE.Mesh(new THREE.BoxGeometry(19.2, 0.25, 3.4), cyanTrimMat);
+    topCanopy.position.set(0, 6.45, 0);
+
+    const leftClad = new THREE.Mesh(new THREE.BoxGeometry(1.7, 6.45, 0.4), titaniumMat);
+    leftClad.position.set(-8.5, 3.2, 1.32);
+    const rightClad = new THREE.Mesh(new THREE.BoxGeometry(1.7, 6.45, 0.4), titaniumMat);
+    rightClad.position.set(8.5, 3.2, 1.32);
+
+    mainGateGroup.add(leftPylon, rightPylon, lintelBeam, topCanopy, leftClad, rightClad);
+
+    // -------------------------------------------------------------
+    // 2. ILLUMINATED GATE SIGNBOARD (示范园正门发光字牌匾)
+    // -------------------------------------------------------------
+    // South Face (facing approaching traffic from outside the park)
+    const signCanvasS = document.createElement('canvas');
+    signCanvasS.width = 1024;
+    signCanvasS.height = 256;
+    const sCtx = signCanvasS.getContext('2d');
+    if (sCtx) {
+      sCtx.fillStyle = '#0a101d';
+      sCtx.fillRect(0, 0, 1024, 256);
+
+      // Gold & cyan decorative border
+      sCtx.strokeStyle = '#38bdf8';
+      sCtx.lineWidth = 8;
+      sCtx.strokeRect(10, 10, 1004, 236);
+
+      sCtx.strokeStyle = '#f59e0b';
+      sCtx.lineWidth = 3;
+      sCtx.strokeRect(18, 18, 988, 220);
+
+      // Main park title
+      sCtx.fillStyle = '#f8fafc';
+      sCtx.font = 'bold 54px "PingFang SC", "Microsoft YaHei", sans-serif';
+      sCtx.textAlign = 'center';
+      sCtx.textBaseline = 'middle';
+      sCtx.shadowColor = '#38bdf8';
+      sCtx.shadowBlur = 12;
+      sCtx.fillText('国家现代农业产业科技示范园', 512, 100);
+
+      // Subtitle
+      sCtx.shadowBlur = 0;
+      sCtx.fillStyle = '#38bdf8';
+      sCtx.font = 'bold 24px monospace';
+      sCtx.fillText('NATIONAL MODERN AGRI-TECH DEMONSTRATION PARK', 512, 160);
+
+      sCtx.fillStyle = '#10b981';
+      sCtx.font = 'bold 20px "PingFang SC", sans-serif';
+      sCtx.fillText('● 智能车牌识别出入管控系统 · 规范通行', 512, 202);
+    }
+    const signTexS = new THREE.CanvasTexture(signCanvasS);
+    const signMeshS = new THREE.Mesh(
+      new THREE.PlaneGeometry(16.5, 1.25),
+      new THREE.MeshBasicMaterial({ map: signTexS })
+    );
+    signMeshS.position.set(0, 5.7, 1.42);
+    mainGateGroup.add(signMeshS);
+
+    // North Face (facing vehicles exiting the park from inside)
+    const signCanvasN = document.createElement('canvas');
+    signCanvasN.width = 1024;
+    signCanvasN.height = 160;
+    const nCtx2 = signCanvasN.getContext('2d');
+    if (nCtx2) {
+      nCtx2.fillStyle = '#0a101d';
+      nCtx2.fillRect(0, 0, 1024, 160);
+      nCtx2.strokeStyle = '#38bdf8';
+      nCtx2.lineWidth = 6;
+      nCtx2.strokeRect(8, 8, 1008, 144);
+      nCtx2.fillStyle = '#f8fafc';
+      nCtx2.font = 'bold 44px "PingFang SC", sans-serif';
+      nCtx2.textAlign = 'center';
+      nCtx2.textBaseline = 'middle';
+      nCtx2.fillText('科技兴农 · 数字孪生 · 安全生产', 512, 80);
+    }
+    const signTexN = new THREE.CanvasTexture(signCanvasN);
+    const signMeshN = new THREE.Mesh(
+      new THREE.PlaneGeometry(16.5, 1.25),
+      new THREE.MeshBasicMaterial({ map: signTexN })
+    );
+    signMeshN.position.set(0, 5.7, -1.42);
+    signMeshN.rotation.y = Math.PI;
+    mainGateGroup.add(signMeshN);
+
+    // -------------------------------------------------------------
+    // 3. SECURITY GUARDHOUSE & PASS OFFICE (门卫值班保卫室)
+    // Built right on the south wall at X = -7.5 (i.e. world X = 14.5, Z = 88)
+    // -------------------------------------------------------------
+    const guardhouse = new THREE.Group();
+    guardhouse.position.set(-7.5, 0, 0);
+
+    // Concrete base foundation
+    const ghFoundation = new THREE.Mesh(
+      new THREE.BoxGeometry(5.2, 0.3, 3.8),
+      new THREE.MeshStandardMaterial({ color: 0xcfd8dc, roughness: 0.8 })
+    );
+    ghFoundation.position.y = 0.15;
+    guardhouse.add(ghFoundation);
+
+    // Office building body (5.0m wide, 3.2m tall, 3.5m deep)
+    const ghBody = new THREE.Mesh(
+      new THREE.BoxGeometry(5.0, 3.2, 3.5),
+      new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.4 })
+    );
+    ghBody.position.y = 1.75;
+    ghBody.castShadow = true;
+    guardhouse.add(ghBody);
+
+    // Sloped blue solar roof
+    const ghRoof = new THREE.Mesh(
+      new THREE.BoxGeometry(5.4, 0.25, 4.0),
+      new THREE.MeshStandardMaterial({ color: 0x1d4ed8, metalness: 0.8, roughness: 0.2 })
+    );
+    ghRoof.position.set(0, 3.45, 0);
+    ghRoof.rotation.x = -0.12;
+    guardhouse.add(ghRoof);
+
+    // Blue fascia trim
+    const ghFascia = new THREE.Mesh(
+      new THREE.BoxGeometry(5.2, 0.35, 3.7),
+      cyanTrimMat
+    );
+    ghFascia.position.set(0, 3.2, 0);
+    guardhouse.add(ghFascia);
+
+    // Observation Security Windows (facing roadway at +X)
+    const glassMat = new THREE.MeshPhysicalMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.55,
+      roughness: 0.1,
+      metalness: 0.2,
+    });
+    // Window facing driveway
+    const winEast = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.4, 2.2), glassMat);
+    winEast.position.set(2.54, 1.9, 0);
+    guardhouse.add(winEast);
+
+    // Security pass counter window (facing south/outside)
+    const winSouth = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.2, 0.08), glassMat);
+    winSouth.position.set(0.8, 1.8, 1.78);
+    guardhouse.add(winSouth);
+
+    // Pass office door
+    const doorMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(1.1, 2.2, 0.08),
+      new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.6 })
+    );
+    doorMesh.position.set(-1.2, 1.25, 1.78);
+    guardhouse.add(doorMesh);
+
+    // Air conditioner condenser unit on wall
+    const acUnit = new THREE.Mesh(
+      new THREE.BoxGeometry(0.9, 0.65, 0.35),
+      new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.5 })
+    );
+    acUnit.position.set(-1.8, 2.3, -1.8);
+    guardhouse.add(acUnit);
+
+    // Guardhouse identification plaque
+    const ghSign = new THREE.Mesh(
+      new THREE.BoxGeometry(2.2, 0.45, 0.06),
+      new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.3 })
+    );
+    ghSign.position.set(0, 3.0, 1.8);
+    guardhouse.add(ghSign);
+
+    mainGateGroup.add(guardhouse);
+
+    // -------------------------------------------------------------
+    // 4. PEDESTRIAN & STAFF TURNSTILE ACCESS GATE (人行出入闸机)
+    // Positioned at X = -10.5 (rel to center)
+    // -------------------------------------------------------------
+    const turnstileGroup = new THREE.Group();
+    turnstileGroup.position.set(-10.5, 0, 0);
+
+    const turnstileMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.85, roughness: 0.2 });
+    const tBoxL = new THREE.Mesh(new THREE.BoxGeometry(0.28, 1.05, 1.4), turnstileMat);
+    tBoxL.position.set(-0.65, 0.52, 0);
+    const tBoxR = new THREE.Mesh(new THREE.BoxGeometry(0.28, 1.05, 1.4), turnstileMat);
+    tBoxR.position.set(0.65, 0.52, 0);
+
+    // Turnstile rotating arms
+    const tArm = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.8), turnstileMat);
+    tArm.rotation.z = Math.PI / 4;
+    tArm.position.set(0, 0.65, 0);
+
+    // Card reader badge post
+    const badgePost = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.2), turnstileMat);
+    badgePost.position.set(0.65, 0.6, 0.8);
+    const badgeHead = new THREE.Mesh(
+      new THREE.BoxGeometry(0.18, 0.14, 0.06),
+      new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x10b981, emissiveIntensity: 0.8 })
+    );
+    badgeHead.position.set(0.65, 1.25, 0.8);
+
+    turnstileGroup.add(tBoxL, tBoxR, tArm, badgePost, badgeHead);
+    mainGateGroup.add(turnstileGroup);
+
+    // -------------------------------------------------------------
+    // 5. ROADWAY CENTER SAFETY ISLAND & BOLLARDS (中央安全隔离岛)
+    // -------------------------------------------------------------
+    const hazardStripeMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.4 });
+    const islandMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.6 });
+    const island = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.22, 7.8), islandMat);
+    island.position.set(0, 0.11, 0);
+    mainGateGroup.add(island);
+
+    // Hazard striped ends on safety island
+    const islandHazardFront = new THREE.Mesh(new THREE.BoxGeometry(0.88, 0.24, 0.2), hazardStripeMat);
+    islandHazardFront.position.set(0, 0.12, 3.9);
+    const islandHazardRear = islandHazardFront.clone();
+    islandHazardRear.position.set(0, 0.12, -3.9);
+    mainGateGroup.add(islandHazardFront, islandHazardRear);
+
+    // 4 Safety Bollards along center island
+    [-2.5, -0.8, 0.8, 2.5].forEach((bz) => {
+      const bollard = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.08, 0.08, 0.9, 12),
+        new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.4 })
+      );
+      bollard.position.set(0, 0.55, bz);
+      mainGateGroup.add(bollard);
+    });
+
+    // -------------------------------------------------------------
+    // 6. INBOUND INTELLIGENT BOOM BARRIER (入园车道道闸: X = -1.8, Z = 0)
+    // -------------------------------------------------------------
+    const barrierHousingMat = new THREE.MeshStandardMaterial({
+      color: 0xf59e0b, // High visibility security yellow/orange
+      metalness: 0.5,
+      roughness: 0.35,
+    });
+    const barrierBaseMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.7 });
+
+    // Barrier Pedestal Base
+    const inBarrierPost = new THREE.Mesh(new THREE.BoxGeometry(0.42, 1.15, 0.42), barrierHousingMat);
+    inBarrierPost.position.set(-3.6, 0.58, 0);
+    const inBarrierBase = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.15, 0.48), barrierBaseMat);
+    inBarrierBase.position.set(-3.6, 0.08, 0);
+    mainGateGroup.add(inBarrierPost, inBarrierBase);
+
+    // Traffic Signal Indicator Light on Barrier Box (Red = closed, Green = raised)
+    const signalMat = new THREE.MeshStandardMaterial({
+      color: 0xef4444,
+      emissive: 0xef4444,
+      emissiveIntensity: 1.2,
+      roughness: 0.2,
+    });
+    const signalLight = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 16), signalMat);
+    signalLight.position.set(-3.6, 1.25, 0);
+    mainGateGroup.add(signalLight);
+
+    // Animated Boom Barrier Arm Pivot
+    const barrierPivot = new THREE.Group();
+    // Pivot positioned at top of housing (-3.6, 1.05, 0)
+    barrierPivot.position.set(-3.6, 1.05, 0);
+
+    // Boom arm extending across the inbound lane in +X direction towards center island (length 3.4m)
+    const armGroup = new THREE.Group();
+    const stripeColors = [0xef4444, 0xffffff, 0xef4444, 0xffffff, 0xef4444, 0xffffff, 0xef4444];
+    const segLen = 3.3 / stripeColors.length;
+    stripeColors.forEach((col, idx) => {
+      const segMat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.4 });
+      const seg = new THREE.Mesh(new THREE.BoxGeometry(segLen, 0.09, 0.05), segMat);
+      seg.position.set(idx * segLen + segLen / 2, 0, 0);
+      armGroup.add(seg);
+    });
+
+    // Rubber safety bumper cushion under arm
+    const bumper = new THREE.Mesh(
+      new THREE.BoxGeometry(3.3, 0.02, 0.05),
+      new THREE.MeshStandardMaterial({ color: 0x1e293b })
+    );
+    bumper.position.set(1.65, -0.05, 0);
+    armGroup.add(bumper);
+
+    barrierPivot.add(armGroup);
+    mainGateGroup.add(barrierPivot);
+
+    // -------------------------------------------------------------
+    // 7. INBOUND ALPR LICENSE PLATE CAMERA & LED INFO SCREEN
+    // -------------------------------------------------------------
+    const alprPole = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.04, 0.04, 2.2, 8),
+      new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.8 })
+    );
+    alprPole.position.set(-3.6, 1.1, 1.4);
+
+    // High-speed capture camera head
+    const camHead = new THREE.Mesh(
+      new THREE.BoxGeometry(0.14, 0.12, 0.26),
+      new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9 })
+    );
+    camHead.position.set(-3.6, 2.0, 1.4);
+    camHead.rotation.x = -0.25; // Aiming towards approaching vehicles from south
+    mainGateGroup.add(alprPole, camHead);
+
+    // Electronic LED Display Canvas (Live Gate Clearance Status)
+    const ledCanvas = document.createElement('canvas');
+    ledCanvas.width = 256;
+    ledCanvas.height = 128;
+    const lCtx = ledCanvas.getContext('2d');
+    if (lCtx) {
+      lCtx.fillStyle = '#050a14';
+      lCtx.fillRect(0, 0, 256, 128);
+      lCtx.fillStyle = '#10b981';
+      lCtx.font = 'bold 20px monospace';
+      lCtx.fillText('AUTO-ALPR OK', 16, 34);
+      lCtx.fillStyle = '#38bdf8';
+      lCtx.font = 'bold 24px "PingFang SC", sans-serif';
+      lCtx.fillText('苏E·A886F', 16, 70);
+      lCtx.fillStyle = '#f59e0b';
+      lCtx.font = '16px "PingFang SC", sans-serif';
+      lCtx.fillText('冷链白名单 · 自动抬杆', 16, 102);
+    }
+    const ledTex = new THREE.CanvasTexture(ledCanvas);
+    const ledScreenMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.72, 0.42),
+      new THREE.MeshBasicMaterial({ map: ledTex })
+    );
+    ledScreenMesh.position.set(-3.6, 1.4, 1.4);
+    mainGateGroup.add(ledScreenMesh);
+
+    // -------------------------------------------------------------
+    // 8. OUTBOUND BARRIER & ALPR CAMERA (出园车道道闸: X = +1.8)
+    // -------------------------------------------------------------
+    const outBarrierPost = new THREE.Mesh(new THREE.BoxGeometry(0.42, 1.15, 0.42), barrierHousingMat);
+    outBarrierPost.position.set(3.6, 0.58, 0);
+    const outBarrierBase = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.15, 0.48), barrierBaseMat);
+    outBarrierBase.position.set(3.6, 0.08, 0);
+    mainGateGroup.add(outBarrierPost, outBarrierBase);
+
+    // Outbound barrier arm (-X towards center island)
+    const outArmGroup = new THREE.Group();
+    stripeColors.forEach((col, idx) => {
+      const segMat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.4 });
+      const seg = new THREE.Mesh(new THREE.BoxGeometry(segLen, 0.09, 0.05), segMat);
+      seg.position.set(-(idx * segLen + segLen / 2), 0, 0);
+      outArmGroup.add(seg);
+    });
+    outArmGroup.position.set(3.6, 1.05, 0);
+    mainGateGroup.add(outArmGroup);
+
+    // Outbound camera
+    const outAlprPole = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.04, 0.04, 2.2, 8),
+      new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.8 })
+    );
+    outAlprPole.position.set(3.6, 1.1, -1.4);
+    const outCamHead = camHead.clone();
+    outCamHead.position.set(3.6, 2.0, -1.4);
+    outCamHead.rotation.x = 0.25;
+    mainGateGroup.add(outAlprPole, outCamHead);
+
+    // -------------------------------------------------------------
+    // 9. DEDICATED HIT BOX FOR GATE FACILITY INTERACTION
+    // -------------------------------------------------------------
+    const gateHit = new THREE.Mesh(
+      new THREE.BoxGeometry(22, 6.8, 8.0),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    gateHit.position.set(0, 3.4, 0);
+    gateHit.userData = {
+      id: 'facility_entrance_gate',
+      type: 'gate',
+      name: '园区主大门 · 智能车牌识别出入道闸',
+    };
+    mainGateGroup.add(gateHit);
+    interactiveObjects.push(gateHit);
+
+    wallsAndGateGroup.add(mainGateGroup);
+    parkGroup.add(wallsAndGateGroup);
+
+    return {
+      barrierPivot,
+      signalLight,
+    };
+  }
+
+  // -------------------------------------------------------------
+  // ROAD MARKINGS & STREET FURNITURE HELPERS
+  // -------------------------------------------------------------
+  private static createHatchedBox(
+    group: THREE.Group,
+    x: number,
+    z: number,
+    width: number,
+    length: number
+  ) {
+    const hatchedMat = new THREE.MeshStandardMaterial({
+      color: 0xf59e0b,
+      roughness: 0.5,
+      transparent: true,
+      opacity: 0.85,
+    });
+    const boxBorder = new THREE.Mesh(new THREE.PlaneGeometry(width, length), hatchedMat);
+    boxBorder.rotation.x = -Math.PI / 2;
+    boxBorder.position.set(x, 0.066, z);
+
+    // Subtle inner cut to create realistic border
+    const innerAsphalt = new THREE.Mesh(
+      new THREE.PlaneGeometry(width - 0.5, length - 0.5),
+      new THREE.MeshStandardMaterial({ color: 0x1a2332, roughness: 0.82 })
+    );
+    innerAsphalt.rotation.x = -Math.PI / 2;
+    innerAsphalt.position.set(x, 0.067, z);
+
+    // Diagonal yellow stripe lattice
+    const stripes = 6;
+    for (let s = 0; s < stripes; s++) {
+      const diag = new THREE.Mesh(new THREE.PlaneGeometry(0.14, Math.hypot(width, length) * 0.7), hatchedMat);
+      diag.rotation.x = -Math.PI / 2;
+      diag.rotation.z = Math.PI / 4;
+      diag.position.set(x + (s - (stripes - 1) / 2) * 1.1, 0.068, z);
+      group.add(diag);
+    }
+
+    group.add(boxBorder, innerAsphalt);
+  }
+
+  private static createStopLine(
+    group: THREE.Group,
+    mat: THREE.Material,
+    x: number,
+    z: number,
+    width: number
+  ) {
+    // Solid thick white stop line
+    const stopLine = new THREE.Mesh(new THREE.PlaneGeometry(width, 0.42), mat);
+    stopLine.rotation.x = -Math.PI / 2;
+    stopLine.position.set(x, 0.067, z);
+    group.add(stopLine);
+  }
+
+  private static createRoadArrow(
+    group: THREE.Group,
+    mat: THREE.Material,
+    x: number,
+    z: number,
+    rotY: number
+  ) {
+    const arrowGroup = new THREE.Group();
+    arrowGroup.position.set(x, 0.068, z);
+    arrowGroup.rotation.y = rotY;
+
+    // Stem
+    const stem = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 2.2), mat);
+    stem.rotation.x = -Math.PI / 2;
+    stem.position.z = 0.5;
+
+    // Arrowhead
+    const headL = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.9), mat);
+    headL.rotation.x = -Math.PI / 2;
+    headL.rotation.z = Math.PI / 4;
+    headL.position.set(-0.25, 0, -0.6);
+
+    const headR = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.9), mat);
+    headR.rotation.x = -Math.PI / 2;
+    headR.rotation.z = -Math.PI / 4;
+    headR.position.set(0.25, 0, -0.6);
+
+    arrowGroup.add(stem, headL, headR);
+    group.add(arrowGroup);
   }
 
   private static createZebraCrossing(

@@ -241,19 +241,24 @@ export class DynamicActorsManager {
     this.actorsGroup.add(truckGroup);
 
     // Define route waypoints around park loop
-    // Northern Service Road (Z = -24) -> North-South Main Highway (X = 22) -> Southern Loop (Z = 60) -> Western Lane (X = -58) -> loop
+    // Northern Service Road (Z = -24) -> North-South Main Highway (X = 22) -> South Gate (X = 22, Z = 88) -> Southern Loop (Z = 60) -> Western Lane (X = -58) -> Cold Chain Center -> loop
     const waypoints: RoadWaypoint[] = [
       { x: -58, z: -24 },
-      { x: -36, z: -24 }, // Near coldchain hub
+      { x: -36, z: -24 }, // Near coldchain hub loading bay
       { x: 0, z: -24 },   // Near 4# nursery
       { x: 22, z: -24 },  // Turn south onto Main Highway
       { x: 22, z: 20 },   // Crossing central avenue
-      { x: 22, z: 60 },   // Turn west onto Southern Loop
+      { x: 22, z: 60 },   // South junction
+      { x: 22, z: 82 },   // Approaching South Entrance Gate
+      { x: 22, z: 96 },   // Passing South Entrance Gate to outer approach plaza
+      { x: 22, z: 98 },   // Plaza turnaround
+      { x: 22, z: 88 },   // Returning through South Gate
+      { x: 22, z: 60 },   // Back to southern ring junction
       { x: 0, z: 60 },    // Passing south of Greenhouses 5 & 6
       { x: -36, z: 60 },  // Passing smart field
       { x: -58, z: 60 },  // Turn north onto Western Logistics Lane
       { x: -58, z: 20 },  // Cruising north
-      { x: -58, z: -24 }, // Back to north road
+      { x: -58, z: -24 }, // Back to north service road
     ];
 
     this.reeferTruck = {
@@ -729,15 +734,15 @@ export class DynamicActorsManager {
       const nextIdx = (truck.currentSegment + 1) % truck.waypoints.length;
       const nextWp = truck.waypoints[nextIdx];
 
-      // Gate proximity detection (Main Entrance gate is near X = 16.5, Z = 14.5)
+      // Gate proximity detection (Main South Entrance Gate is at X = 22, Z = 88)
       const tPos = truck.group.position;
-      const distToGate = Math.hypot(tPos.x - 16.5, tPos.z - 14.5);
-      if (distToGate < 18.0) {
+      const distToGate = Math.hypot(tPos.x - 22.0, tPos.z - 88.0);
+      if (distToGate < 14.0) {
         if (!this.isNearGate) {
           this.isNearGate = true;
           this.onApproachGate?.('苏E·A886F');
         }
-      } else if (distToGate > 25.0) {
+      } else if (distToGate > 22.0) {
         if (this.isNearGate) {
           this.isNearGate = false;
           this.onLeaveGate?.('苏E·A886F');

@@ -1181,6 +1181,7 @@ const handleTimeChange = (hourFraction: number) => {
       @close="showGateModal = false"
       @toggle-barrier="handleToggleGateBarrier"
       @open-vehicle-details="openVehicleDetails"
+      @open-logistics-ledger="showGateModal = false; showLogisticsLedger = true"
     />
 
     <!-- Vehicle Mission & Driver Identification Modal -->

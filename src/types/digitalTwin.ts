@@ -260,7 +260,8 @@ export type CameraPreset =
   | 'fertigation'
   | 'fertigation_tanks'
   | 'smart_field'
-  | 'flux_tower';
+  | 'flux_tower'
+  | 'gate';
 
 export type ViewDisplayMode = 'standard' | 'xray' | 'thermal' | 'structure_only';
 
