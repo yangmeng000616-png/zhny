@@ -124,6 +124,98 @@ export interface GreenhouseMicroclimate {
   actuators?: GreenhouseActuatorControl[];
 }
 
+// -------------------------------------------------------------
+// AGRICULTURAL OPERATIONS & PLANTING CYCLES (农事作业与种植周期)
+// -------------------------------------------------------------
+export type FarmingOperationType =
+  | 'irrigation'
+  | 'fertilization'
+  | 'pesticide'
+  | 'phenology'
+  | 'pruning'
+  | 'harvest';
+
+export interface FarmingRecord {
+  id: string;
+  greenhouseId: string; // 'gh_001' ~ 'gh_008'
+  greenhouseName: string;
+  cropName: string;
+  type: FarmingOperationType;
+  title: string;
+  timestamp: string; // e.g. '2026-09-13 14:30'
+  operator: string;
+  irrigationDetails?: {
+    method: '微喷灌' | '滴灌' | '潮汐灌溉' | 'NFT营养液循环' | '气雾喷施';
+    waterVolumeL: number; // 浇水量 (升)
+    durationMinutes: number; // 灌溉时长 (分)
+    soilMoistureBefore: number; // 灌前基质含水率 (%)
+    soilMoistureAfter: number; // 灌后基质含水率 (%)
+    triggerMode: 'AI自动智能诱发' | '定时计划轮灌' | '人工手动指令';
+  };
+  fertilizationDetails?: {
+    formula: string; // 配方名称
+    fertilizerAmountKg: number; // 施肥量 (kg 或 L)
+    targetEc: number;
+    measuredEc: number;
+    targetPh: number;
+    measuredPh: number;
+    dilutionRatio: string;
+  };
+  pesticideDetails?: {
+    agentName: string; // 药剂品名 (生物菌剂/无公害药剂)
+    targetPest: string; // 防治病虫害对象
+    method: '超低容量弥雾' | '常温恒压喷雾' | '高架轨道喷药机' | '烟雾熏蒸' | '生物天敌释放';
+    concentration: string; // 配比浓度
+    dosageL: number; // 药液体积 (L)
+    safetyIntervalDays: number; // PHI 安全采收间隔期 (天)
+    safetyDaysLeft: number; // 剩余安全天数
+    isBiocontrol: boolean; // 是否绿色生物防治
+  };
+  harvestDetails?: {
+    batchNumber: string;
+    harvestWeightKg: number;
+    qualityGrade: '特级精品果' | '一级品' | '特级无公害';
+    sugarBrix?: number;
+    traceabilityCode: string;
+  };
+  notes?: string;
+  status: 'completed' | 'in_progress' | 'scheduled';
+}
+
+export interface PhenologyStage {
+  stageName: string;
+  durationDays: number;
+  passedDays: number;
+  startDate: string;
+  endDate?: string;
+  accumulatedTempDegreeDays: number; // 积温 (℃·d)
+  status: 'completed' | 'current' | 'upcoming';
+  stageTarget: string;
+  keyOperations: string[];
+}
+
+export interface GreenhousePlantingCycle {
+  greenhouseId: string;
+  batchCode: string;
+  cropName: string;
+  variety: string;
+  sowingDate: string;
+  transplantDate: string;
+  expectedHarvestDate: string;
+  totalCycleDays: number;
+  currentCycleDay: number;
+  stages: PhenologyStage[];
+  cumulativeStats: {
+    totalWaterM3: number;
+    totalFertilizerKg: number;
+    sprayCount: number;
+    accumulatedGdd: number; // 累计有效积温
+    harvestBatches: number;
+    totalHarvestKg: number;
+    expectedTotalYieldKg: number;
+  };
+}
+
 export interface PondWaterQuality {
   id: string;
   name: string;

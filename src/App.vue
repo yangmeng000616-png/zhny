@@ -19,6 +19,8 @@ import type {
   RadarEchoFrame,
   OutdoorWeatherSnapshot,
   GreenhouseMicroclimate,
+  FarmingRecord,
+  GreenhousePlantingCycle,
 } from './types/digitalTwin';
 import {
   initialEnvironment,
@@ -30,6 +32,7 @@ import {
   initialOutdoorWeather,
   initialGreenhousesMicroclimates,
 } from './data/mockData';
+import { initialFarmingRecords, initialPlantingCycles } from './data/farmingData';
 import { dataService } from './services/dataService';
 import { weatherService } from './services/weatherService';
 
@@ -47,6 +50,8 @@ import EnvironmentFieldController from './components/EnvironmentFieldController.
 import HistoryPlaybackBar from './components/HistoryPlaybackBar.vue';
 import GreenhouseStationModal from './components/GreenhouseStationModal.vue';
 import GreenhouseMatrixModal from './components/GreenhouseMatrixModal.vue';
+import UnifiedFarmingCenterModal from './components/UnifiedFarmingCenterModal.vue';
+import FarmingRecordAddModal from './components/FarmingRecordAddModal.vue';
 
 const canvasContainerRef = ref<HTMLDivElement | null>(null);
 let sceneInstance: GreenhouseScene | null = null;
@@ -69,6 +74,13 @@ const greenhousesMicroclimates = ref<GreenhouseMicroclimate[]>(initialGreenhouse
 const showGreenhouseStation = ref<boolean>(false);
 const stationGreenhouseId = ref<string>('gh_001');
 const showGreenhouseMatrix = ref<boolean>(false);
+
+// Per-Greenhouse Farming Records & Planting Cycles Management
+const farmingRecords = ref<FarmingRecord[]>(initialFarmingRecords);
+const plantingCycles = ref<Record<string, GreenhousePlantingCycle>>(initialPlantingCycles);
+const showFarmingCenter = ref<boolean>(false);
+const showAddRecordModal = ref<boolean>(false);
+const targetAddRecordGhId = ref<string>('gh_001');
 
 // Digital Twin Advanced Features & Panels
 const showWeatherPanel = ref<boolean>(false);
@@ -451,6 +463,57 @@ const openGreenhouseMatrix = () => {
   selectedObject.value = null;
 };
 
+// Open Park-wide Farming Operations & Cycles Center
+const openFarmingCenter = () => {
+  showFarmingCenter.value = true;
+};
+
+// Open Add Farming Record Modal
+const openAddFarmingRecordModal = (ghId?: string) => {
+  targetAddRecordGhId.value = ghId || stationGreenhouseId.value || 'gh_001';
+  showAddRecordModal.value = true;
+};
+
+// Handle submission of new farming record
+const handleAddFarmingRecord = (newRecord: FarmingRecord) => {
+  // 1. Prepend to records list
+  farmingRecords.value.unshift(newRecord);
+
+  // 2. Update planting cycle cumulative statistics for this greenhouse
+  const cycle = plantingCycles.value[newRecord.greenhouseId];
+  if (cycle) {
+    if (newRecord.type === 'irrigation' && newRecord.irrigationDetails) {
+      cycle.cumulativeStats.totalWaterM3 = +(
+        cycle.cumulativeStats.totalWaterM3 +
+        newRecord.irrigationDetails.waterVolumeL / 1000
+      ).toFixed(1);
+    } else if (newRecord.type === 'fertilization' && newRecord.fertilizationDetails) {
+      cycle.cumulativeStats.totalFertilizerKg = +(
+        cycle.cumulativeStats.totalFertilizerKg +
+        newRecord.fertilizationDetails.fertilizerAmountKg
+      ).toFixed(1);
+    } else if (newRecord.type === 'pesticide') {
+      cycle.cumulativeStats.sprayCount += 1;
+    } else if (newRecord.type === 'harvest' && newRecord.harvestDetails) {
+      cycle.cumulativeStats.totalHarvestKg =
+        (cycle.cumulativeStats.totalHarvestKg || 0) +
+        newRecord.harvestDetails.harvestWeightKg;
+      cycle.cumulativeStats.harvestBatches = (cycle.cumulativeStats.harvestBatches || 0) + 1;
+    }
+  }
+
+  // 3. Reflect into current greenhouse microclimate if irrigation or fertilization occurred
+  const gh = greenhousesMicroclimates.value.find((g) => g.id === newRecord.greenhouseId);
+  if (gh) {
+    if (newRecord.type === 'irrigation' && newRecord.irrigationDetails) {
+      gh.rootMoisture = newRecord.irrigationDetails.soilMoistureAfter;
+    }
+    if (newRecord.type === 'fertilization' && newRecord.fertilizationDetails) {
+      gh.rootEc = newRecord.fertilizationDetails.measuredEc;
+    }
+  }
+};
+
 const handleStationSelectGreenhouse = (ghId: string) => {
   stationGreenhouseId.value = ghId;
   selectedGreenhouseId.value = ghId;
@@ -723,6 +786,7 @@ const handleTimeChange = (hourFraction: number) => {
       @toggle-history-bar="showHistoryBar = !showHistoryBar; if (showHistoryBar) bottomPanelCollapsed = true;"
       @toggle-sensors="handleToggleSensors"
       @open-greenhouse-matrix="openGreenhouseMatrix"
+      @open-farming-center="openFarmingCenter"
     />
 
     <!-- Left Environment Telemetry Panel -->
@@ -832,12 +896,16 @@ const handleTimeChange = (hourFraction: number) => {
       :greenhouse-id="stationGreenhouseId"
       :greenhouses="greenhousesMicroclimates"
       :outdoor-weather="outdoorWeather"
+      :farming-records="farmingRecords"
+      :planting-cycles="plantingCycles"
       @close="showGreenhouseStation = false"
       @select-greenhouse="handleStationSelectGreenhouse"
       @toggle-actuator="handleStationActuatorToggle"
       @update-actuator-value="handleStationActuatorValue"
       @focus-camera="handleStationFocusCamera"
       @open-matrix="openGreenhouseMatrix"
+      @open-farming-center="openFarmingCenter"
+      @open-add-record-modal="openAddFarmingRecordModal"
     />
 
     <!-- 8-Greenhouse Cluster Matrix Modal -->
@@ -848,6 +916,26 @@ const handleTimeChange = (hourFraction: number) => {
       @close="showGreenhouseMatrix = false"
       @inspect-greenhouse="openGreenhouseStation"
       @focus-greenhouse="handleMatrixFocusGreenhouse"
+    />
+
+    <!-- Park-wide 8-Greenhouse Unified Farming Operations & Lifecycle Center -->
+    <UnifiedFarmingCenterModal
+      :visible="showFarmingCenter"
+      :greenhouses="greenhousesMicroclimates"
+      :records="farmingRecords"
+      :planting-cycles="plantingCycles"
+      @close="showFarmingCenter = false"
+      @open-add-modal="(ghId) => openAddFarmingRecordModal(ghId)"
+      @inspect-greenhouse="openGreenhouseStation"
+    />
+
+    <!-- Add Farming Record Modal -->
+    <FarmingRecordAddModal
+      :visible="showAddRecordModal"
+      :greenhouses="greenhousesMicroclimates"
+      :default-greenhouse-id="targetAddRecordGhId"
+      @close="showAddRecordModal = false"
+      @add-record="handleAddFarmingRecord"
     />
 
     <!-- 3D Mouse Hover Tooltip -->

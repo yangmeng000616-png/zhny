@@ -23,6 +23,7 @@ import {
   Waves,
   Sprout,
   LayoutGrid,
+  FileSpreadsheet,
 } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -52,6 +53,7 @@ const emit = defineEmits<{
   (e: 'toggleHistoryBar'): void;
   (e: 'toggleSensors'): void;
   (e: 'openGreenhouseMatrix'): void;
+  (e: 'openFarmingCenter'): void;
 }>();
 
 const showGhMenu = ref<boolean>(false);
@@ -355,6 +357,17 @@ const selectPreset = (preset: CameraPreset) => {
       >
         <LayoutGrid class="w-3.5 h-3.5" />
         <span>8棚独立面板</span>
+      </button>
+
+      <!-- 6. 8-Greenhouse Farming & Lifecycle Ledger Deck -->
+      <button
+        id="btn-top-farming-center"
+        @click="$emit('openFarmingCenter')"
+        class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-300 hover:text-white font-semibold transition-all cursor-pointer shadow-xs text-xs"
+        title="打开全园8座大棚农事作业记录(浇水/施肥/打药)与种植周期台账"
+      >
+        <FileSpreadsheet class="w-3.5 h-3.5 text-cyan-400" />
+        <span>8棚农事台账</span>
       </button>
     </div>
 

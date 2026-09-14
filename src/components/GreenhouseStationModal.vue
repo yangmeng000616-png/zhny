@@ -27,12 +27,21 @@ import {
   Power,
   TrendingUp,
   Cpu,
+  FileSpreadsheet,
+  FlaskConical,
+  Calendar,
+  PackageCheck,
+  Scissors,
+  Plus,
+  ChevronRight,
 } from 'lucide-vue-next';
 import type {
   GreenhouseMicroclimate,
   GreenhouseActuatorControl,
   CameraPreset,
   OutdoorWeatherSnapshot,
+  FarmingRecord,
+  GreenhousePlantingCycle,
 } from '../types/digitalTwin';
 
 const props = defineProps<{
@@ -40,6 +49,8 @@ const props = defineProps<{
   greenhouseId: string;
   greenhouses: GreenhouseMicroclimate[];
   outdoorWeather?: OutdoorWeatherSnapshot;
+  farmingRecords?: FarmingRecord[];
+  plantingCycles?: Record<string, GreenhousePlantingCycle>;
 }>();
 
 const emit = defineEmits<{
@@ -47,6 +58,8 @@ const emit = defineEmits<{
   (e: 'selectGreenhouse', id: string): void;
   (e: 'focusCamera', preset: CameraPreset): void;
   (e: 'openMatrix'): void;
+  (e: 'openFarmingCenter'): void;
+  (e: 'openAddRecordModal', ghId: string): void;
   (e: 'toggleActuator', ghId: string, actuatorId: string, status: boolean): void;
   (e: 'updateActuatorValue', ghId: string, actuatorId: string, value: number): void;
 }>();
@@ -56,8 +69,48 @@ const currentGreenhouse = computed(() => {
   return props.greenhouses.find((g) => g.id === props.greenhouseId) || props.greenhouses[0];
 });
 
-// Active tab in the modal: 'telemetry' | 'controls' | 'camera' | 'agronomy'
-const activeTab = ref<'telemetry' | 'controls' | 'camera' | 'agronomy'>('telemetry');
+// Active tab in the modal: 'telemetry' | 'controls' | 'farming' | 'agronomy' | 'camera'
+const activeTab = ref<'telemetry' | 'controls' | 'farming' | 'agronomy' | 'camera'>('telemetry');
+
+// Farming Filter within this greenhouse
+const farmingFilterType = ref<'all' | 'irrigation' | 'fertilization' | 'pesticide' | 'harvest'>('all');
+
+// All records for this greenhouse
+const ghFarmingRecords = computed(() => {
+  if (!props.farmingRecords || !currentGreenhouse.value) return [];
+  return props.farmingRecords.filter((r) => r.greenhouseId === currentGreenhouse.value.id);
+});
+
+// Filtered records for this greenhouse
+const filteredGhRecords = computed(() => {
+  if (farmingFilterType.value === 'all') return ghFarmingRecords.value;
+  return ghFarmingRecords.value.filter((r) => r.type === farmingFilterType.value);
+});
+
+// Current Planting cycle info
+const currentPlantingCycle = computed(() => {
+  if (!props.plantingCycles || !currentGreenhouse.value) return undefined;
+  return props.plantingCycles[currentGreenhouse.value.id];
+});
+
+// Cumulative Irrigation in this greenhouse
+const ghCumulativeIrrigation = computed(() => {
+  return ghFarmingRecords.value
+    .filter((r) => r.type === 'irrigation' && r.irrigationDetails)
+    .reduce((sum, r) => sum + (r.irrigationDetails?.waterVolumeL || 0), 0);
+});
+
+// Cumulative Fertilizer in this greenhouse
+const ghCumulativeFertilizer = computed(() => {
+  return ghFarmingRecords.value
+    .filter((r) => r.type === 'fertilization' && r.fertilizationDetails)
+    .reduce((sum, r) => sum + (r.fertilizationDetails?.fertilizerAmountKg || 0), 0);
+});
+
+// Cumulative Spray/Biocontrol in this greenhouse
+const ghSprayCount = computed(() => {
+  return ghFarmingRecords.value.filter((r) => r.type === 'pesticide').length;
+});
 
 // Camera view mode: 'rgb' | 'thermal'
 const cameraMode = ref<'rgb' | 'thermal'>('rgb');
@@ -271,6 +324,19 @@ const handleFocus = () => {
             >
               <Sprout class="w-4 h-4" />
               <span>作物长势与农艺</span>
+            </button>
+
+            <button
+              id="tab-btn-farming"
+              @click="activeTab = 'farming'"
+              class="px-4 py-2.5 text-xs sm:text-sm font-medium border-b-2 flex items-center gap-1.5 transition-colors cursor-pointer"
+              :class="activeTab === 'farming' ? 'border-emerald-400 text-emerald-300 font-semibold' : 'border-transparent text-slate-400 hover:text-slate-200'"
+            >
+              <FileSpreadsheet class="w-4 h-4" />
+              <span>农事记录与种植周期</span>
+              <span class="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-700/50">
+                {{ ghFarmingRecords.length }}条
+              </span>
             </button>
 
             <button
@@ -648,6 +714,371 @@ const handleFocus = () => {
                 <div class="mt-4 pt-3 border-t border-slate-750 flex items-center justify-between text-[11px] text-slate-400">
                   <span>数字孪生农艺模型</span>
                   <span class="text-cyan-400 font-mono">v4.8 实时更新</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Link to Farming Records -->
+            <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-750 flex items-center justify-between">
+              <div class="flex items-center gap-2 text-xs">
+                <FileSpreadsheet class="w-4 h-4 text-emerald-400" />
+                <span class="text-slate-300">本温室已归档 <strong>{{ ghFarmingRecords.length }}</strong> 笔水肥药农事记录</span>
+              </div>
+              <button
+                @click="activeTab = 'farming'"
+                class="text-xs text-emerald-400 hover:text-emerald-300 font-medium flex items-center gap-1 cursor-pointer"
+              >
+                <span>进入本棚农事台账与种植周期</span>
+                <ChevronRight class="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          <!-- ================= TAB 3.5: 农事台账与种植周期 (Farming Records & Lifecycle) ================= -->
+          <div v-else-if="activeTab === 'farming'" class="space-y-4">
+            <!-- 1. Planting Cycle Banner -->
+            <div class="bg-slate-800/80 p-4 rounded-xl border border-emerald-500/30 space-y-3">
+              <div class="flex items-start justify-between flex-wrap gap-2">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <h3 class="text-sm font-bold text-white">
+                      {{ currentGreenhouse.name }} - 作物种植全生命周期档案
+                    </h3>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-cyan-950 text-cyan-300 border border-cyan-800/40">
+                      {{ currentPlantingCycle?.batchCode ?? 'BATCH-2026-T01' }}
+                    </span>
+                  </div>
+                  <div class="text-xs text-slate-400 mt-1 flex items-center gap-3">
+                    <span>作物: <strong class="text-slate-200">{{ currentGreenhouse.cropName }}</strong></span>
+                    <span>•</span>
+                    <span>品种: {{ currentPlantingCycle?.variety ?? currentGreenhouse.agronomy?.variety ?? '良种选育' }}</span>
+                    <span>•</span>
+                    <span>定植日期: {{ currentPlantingCycle?.transplantDate ?? currentGreenhouse.agronomy?.transplantDate ?? '2026-02-18' }}</span>
+                  </div>
+                </div>
+
+                <!-- Harvest countdown chip -->
+                <div class="px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-right">
+                  <span class="text-[10px] text-slate-400 block">预计采收倒计时</span>
+                  <span class="font-mono text-sm font-bold text-amber-300">
+                    {{ currentGreenhouse.agronomy?.harvestCountdownDays ?? 16 }} 天
+                  </span>
+                </div>
+              </div>
+
+              <!-- Phenology Stages Horizontal Gantt -->
+              <div v-if="currentPlantingCycle?.stages" class="space-y-1.5 pt-1">
+                <div class="flex items-center justify-between text-xs text-slate-400">
+                  <span class="flex items-center gap-1.5">
+                    <Calendar class="w-3.5 h-3.5 text-emerald-400" />
+                    <span>物候发育阶段进程 (在田 {{ currentPlantingCycle.currentCycleDay }} / {{ currentPlantingCycle.totalCycleDays }} 天)</span>
+                  </span>
+                  <span class="text-emerald-400 font-semibold font-mono">
+                    {{ Math.round((currentPlantingCycle.currentCycleDay / currentPlantingCycle.totalCycleDays) * 100) }}% 周期进度
+                  </span>
+                </div>
+
+                <!-- Visual Step Segments -->
+                <div class="grid grid-flow-col auto-cols-fr gap-1.5 p-1 bg-slate-900/90 rounded-xl border border-slate-800">
+                  <div
+                    v-for="(stg, sIdx) in currentPlantingCycle.stages"
+                    :key="sIdx"
+                    class="p-2 rounded-lg text-xs transition-all relative overflow-hidden"
+                    :class="[
+                      stg.status === 'completed' ? 'bg-emerald-950/40 border border-emerald-500/40 text-emerald-200' :
+                      stg.status === 'current' ? 'bg-cyan-950/60 border border-cyan-400 text-cyan-200 shadow-md shadow-cyan-500/10' :
+                      'bg-slate-950/40 border border-slate-800/60 text-slate-500'
+                    ]"
+                  >
+                    <div class="flex items-center justify-between text-[11px] mb-0.5">
+                      <span class="font-semibold truncate">{{ stg.stageName }}</span>
+                      <span
+                        class="text-[9px] px-1 py-0.2 rounded font-mono"
+                        :class="stg.status === 'completed' ? 'bg-emerald-500/20 text-emerald-300' : stg.status === 'current' ? 'bg-cyan-500/20 text-cyan-300 font-bold animate-pulse' : 'text-slate-600'"
+                      >
+                        {{ stg.status === 'completed' ? '已完成' : stg.status === 'current' ? '当前进行' : '未开始' }}
+                      </span>
+                    </div>
+                    <div class="text-[10px] text-slate-400">
+                      积温: {{ stg.accumulatedTempDegreeDays }} ℃·d
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Current Stage Tasks -->
+                <div
+                  v-if="currentPlantingCycle.stages.find(s => s.status === 'current')"
+                  class="p-2.5 rounded-lg bg-cyan-950/30 border border-cyan-500/30 text-xs text-slate-300 flex items-start justify-between gap-3"
+                >
+                  <div>
+                    <span class="text-cyan-300 font-semibold block mb-0.5">本阶段调控核心目标与农艺指令:</span>
+                    <span class="text-slate-400 text-[11px] leading-relaxed">
+                      {{ currentPlantingCycle.stages.find(s => s.status === 'current')?.stageTarget }}
+                    </span>
+                  </div>
+                  <div class="shrink-0 flex items-center gap-1 text-[11px] text-cyan-300 bg-cyan-900/40 px-2 py-1 rounded-md border border-cyan-700/50">
+                    <Sparkles class="w-3.5 h-3.5" />
+                    <span>AI物候模型指导</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Cumulative Farming Metrics Strip -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div class="bg-slate-800/70 p-3 rounded-xl border border-slate-750 flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
+                  <Droplets class="w-4 h-4" />
+                </div>
+                <div>
+                  <span class="text-slate-400 text-[11px] block">已记录浇水补墒</span>
+                  <span class="font-mono text-sm font-bold text-white">
+                    {{ ghCumulativeIrrigation.toLocaleString() }} <span class="text-xs text-cyan-400">L</span>
+                  </span>
+                </div>
+              </div>
+
+              <div class="bg-slate-800/70 p-3 rounded-xl border border-slate-750 flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                  <FlaskConical class="w-4 h-4" />
+                </div>
+                <div>
+                  <span class="text-slate-400 text-[11px] block">已记录水肥施用</span>
+                  <span class="font-mono text-sm font-bold text-white">
+                    {{ ghCumulativeFertilizer.toFixed(1) }} <span class="text-xs text-emerald-400">kg</span>
+                  </span>
+                </div>
+              </div>
+
+              <div class="bg-slate-800/70 p-3 rounded-xl border border-slate-750 flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                  <ShieldCheck class="w-4 h-4" />
+                </div>
+                <div>
+                  <span class="text-slate-400 text-[11px] block">植保打药巡防</span>
+                  <span class="font-mono text-sm font-bold text-white">
+                    {{ ghSprayCount }} <span class="text-xs text-amber-400">次 (绿色达标)</span>
+                  </span>
+                </div>
+              </div>
+
+              <div class="bg-slate-800/70 p-3 rounded-xl border border-slate-750 flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
+                  <PackageCheck class="w-4 h-4" />
+                </div>
+                <div>
+                  <span class="text-slate-400 text-[11px] block">预估本棚总产</span>
+                  <span class="font-mono text-sm font-bold text-white">
+                    {{ (currentPlantingCycle?.cumulativeStats.expectedTotalYieldKg ?? 32000).toLocaleString() }} <span class="text-xs text-rose-400">kg</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Toolbar: Filter by Operation Type + Action Buttons -->
+            <div class="flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-slate-800">
+              <div class="flex items-center gap-1.5 overflow-x-auto">
+                <button
+                  @click="farmingFilterType = 'all'"
+                  class="px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer"
+                  :class="farmingFilterType === 'all' ? 'bg-emerald-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-300 hover:text-white'"
+                >
+                  全部记录 ({{ ghFarmingRecords.length }})
+                </button>
+                <button
+                  @click="farmingFilterType = 'irrigation'"
+                  class="px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1"
+                  :class="farmingFilterType === 'irrigation' ? 'bg-cyan-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-300 hover:text-white'"
+                >
+                  <Droplets class="w-3.5 h-3.5" />
+                  <span>浇水灌溉</span>
+                </button>
+                <button
+                  @click="farmingFilterType = 'fertilization'"
+                  class="px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1"
+                  :class="farmingFilterType === 'fertilization' ? 'bg-emerald-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-300 hover:text-white'"
+                >
+                  <FlaskConical class="w-3.5 h-3.5" />
+                  <span>水肥施肥</span>
+                </button>
+                <button
+                  @click="farmingFilterType = 'pesticide'"
+                  class="px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1"
+                  :class="farmingFilterType === 'pesticide' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-300 hover:text-white'"
+                >
+                  <ShieldCheck class="w-3.5 h-3.5" />
+                  <span>植保打药</span>
+                </button>
+                <button
+                  @click="farmingFilterType = 'harvest'"
+                  class="px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1"
+                  :class="farmingFilterType === 'harvest' ? 'bg-rose-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-300 hover:text-white'"
+                >
+                  <PackageCheck class="w-3.5 h-3.5" />
+                  <span>采收出库</span>
+                </button>
+              </div>
+
+              <!-- Right: Add Record & Full Park Deck -->
+              <div class="flex items-center gap-2">
+                <button
+                  @click="emit('openFarmingCenter')"
+                  class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium border border-slate-700 flex items-center gap-1 transition-colors cursor-pointer"
+                  title="打开全园8座大棚农事总台账"
+                >
+                  <FileSpreadsheet class="w-3.5 h-3.5 text-emerald-400" />
+                  <span>全园农事总台账</span>
+                </button>
+
+                <button
+                  @click="emit('openAddRecordModal', currentGreenhouse.id)"
+                  class="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1 transition-all shadow-md shadow-emerald-500/20 cursor-pointer"
+                >
+                  <Plus class="w-3.5 h-3.5" />
+                  <span>+ 登记本棚农事</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 4. Records List for this Greenhouse -->
+            <div class="space-y-2.5">
+              <div v-if="filteredGhRecords.length === 0" class="text-center py-8 text-slate-400 text-xs bg-slate-800/40 rounded-xl border border-slate-750">
+                本大棚暂无此类农事记录，可点击上方「+ 登记本棚农事」立即记录。
+              </div>
+
+              <div
+                v-for="rec in filteredGhRecords"
+                :key="rec.id"
+                class="bg-slate-800/80 rounded-xl border border-slate-750 hover:border-emerald-500/40 p-3.5 transition-all space-y-2"
+              >
+                <div class="flex items-start justify-between flex-wrap gap-2">
+                  <div class="flex items-start gap-3">
+                    <div
+                      class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                      :class="[
+                        rec.type === 'irrigation' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40' :
+                        rec.type === 'fertilization' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' :
+                        rec.type === 'pesticide' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' :
+                        rec.type === 'harvest' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40' :
+                        'bg-purple-500/20 text-purple-400 border border-purple-500/40'
+                      ]"
+                    >
+                      <Droplets v-if="rec.type === 'irrigation'" class="w-4 h-4" />
+                      <FlaskConical v-else-if="rec.type === 'fertilization'" class="w-4 h-4" />
+                      <ShieldCheck v-else-if="rec.type === 'pesticide'" class="w-4 h-4" />
+                      <PackageCheck v-else-if="rec.type === 'harvest'" class="w-4 h-4" />
+                      <Scissors v-else class="w-4 h-4" />
+                    </div>
+
+                    <div>
+                      <h4 class="text-xs sm:text-sm font-bold text-white">
+                        {{ rec.title }}
+                      </h4>
+                      <div class="flex items-center gap-3 text-[11px] text-slate-400 mt-0.5">
+                        <span class="font-mono text-slate-300">{{ rec.timestamp }}</span>
+                        <span>•</span>
+                        <span>经办: {{ rec.operator }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                    <CheckCircle2 class="w-3 h-3 text-emerald-400" />
+                    已归档
+                  </span>
+                </div>
+
+                <!-- Parameters Sub-strip -->
+                <div
+                  v-if="rec.type === 'irrigation' && rec.irrigationDetails"
+                  class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-900/80 p-2 rounded-lg text-xs"
+                >
+                  <div>
+                    <span class="text-slate-400 text-[10px] block">方式:</span>
+                    <span class="text-cyan-300 font-semibold">{{ rec.irrigationDetails.method }}</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-400 text-[10px] block">灌溉水量:</span>
+                    <span class="text-white font-mono font-bold">{{ rec.irrigationDetails.waterVolumeL.toLocaleString() }} L</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-400 text-[10px] block">基质墒情变化:</span>
+                    <span class="font-mono text-emerald-400 font-bold">
+                      {{ rec.irrigationDetails.soilMoistureBefore }}% → {{ rec.irrigationDetails.soilMoistureAfter }}%
+                    </span>
+                  </div>
+                  <div>
+                    <span class="text-slate-400 text-[10px] block">触发模式:</span>
+                    <span class="text-slate-300">{{ rec.irrigationDetails.triggerMode }}</span>
+                  </div>
+                </div>
+
+                <div
+                  v-else-if="rec.type === 'fertilization' && rec.fertilizationDetails"
+                  class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-900/80 p-2 rounded-lg text-xs"
+                >
+                  <div class="sm:col-span-2">
+                    <span class="text-slate-400 text-[10px] block">水肥配方:</span>
+                    <span class="text-emerald-300 font-medium truncate block">{{ rec.fertilizationDetails.formula }}</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-400 text-[10px] block">用肥量 / 比例:</span>
+                    <span class="text-white font-mono font-bold">{{ rec.fertilizationDetails.fertilizerAmountKg }} kg</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-400 text-[10px] block">实测 EC / pH:</span>
+                    <span class="font-mono text-cyan-300 font-bold">
+                      {{ rec.fertilizationDetails.measuredEc }} / {{ rec.fertilizationDetails.measuredPh }}
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  v-else-if="rec.type === 'pesticide' && rec.pesticideDetails"
+                  class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-900/80 p-2 rounded-lg text-xs"
+                >
+                  <div class="sm:col-span-2">
+                    <span class="text-slate-400 text-[10px] block">制剂品名:</span>
+                    <span class="text-amber-300 font-medium">{{ rec.pesticideDetails.agentName }}</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-400 text-[10px] block">靶标 / 方式:</span>
+                    <span class="text-slate-200">{{ rec.pesticideDetails.targetPest }}</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-400 text-[10px] block">安全间隔期 (PHI):</span>
+                    <span class="font-mono text-emerald-400 font-bold">
+                      {{ rec.pesticideDetails.safetyIntervalDays === 0 ? '0天 (绿色无害)' : `${rec.pesticideDetails.safetyIntervalDays}天 (解禁准采)` }}
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  v-else-if="rec.type === 'harvest' && rec.harvestDetails"
+                  class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-900/80 p-2 rounded-lg text-xs"
+                >
+                  <div>
+                    <span class="text-slate-400 text-[10px] block">批次号:</span>
+                    <span class="font-mono text-rose-300">{{ rec.harvestDetails.batchNumber }}</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-400 text-[10px] block">采收重量:</span>
+                    <span class="font-mono text-white font-bold">{{ rec.harvestDetails.harvestWeightKg }} kg</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-400 text-[10px] block">品质品级:</span>
+                    <span class="text-emerald-300 font-semibold">{{ rec.harvestDetails.qualityGrade }}</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-400 text-[10px] block">糖度实测:</span>
+                    <span class="font-mono text-amber-300 font-bold">{{ rec.harvestDetails.sugarBrix ?? 12 }} °Brix</span>
+                  </div>
+                </div>
+
+                <!-- Notes -->
+                <div v-if="rec.notes" class="text-[11px] text-slate-400 leading-relaxed pl-0.5">
+                  {{ rec.notes }}
                 </div>
               </div>
             </div>
