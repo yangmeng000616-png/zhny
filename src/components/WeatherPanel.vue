@@ -33,6 +33,7 @@ const emit = defineEmits<{
   (e: 'applyRadarFrame3D', frame: RadarEchoFrame | null): void;
   (e: 'focusGreenhouse', ghId: string): void;
   (e: 'mitigateRisk', warning: AgroRiskWarning): void;
+  (e: 'toggleWeatherLayer', layer: 'rain' | 'wind' | 'radar', visible: boolean): void;
 }>();
 
 // Weather Data States
@@ -42,8 +43,28 @@ const radarFrames = ref<RadarEchoFrame[]>([]);
 const activeRadarIndex = ref<number>(2); // Default to current frame (0, 1, 2, 3, 4)
 const isRadarPlaying = ref<boolean>(false);
 const showRadarIn3D = ref<boolean>(true);
+const showRainIn3D = ref<boolean>(true);
+const showWindIn3D = ref<boolean>(true);
 const riskWarnings = ref<AgroRiskWarning[]>([]);
 const activeTab = ref<'nowcast' | 'radar' | 'risks'>('nowcast');
+
+const handleToggleLayer = (layer: 'rain' | 'wind' | 'radar') => {
+  if (layer === 'rain') {
+    showRainIn3D.value = !showRainIn3D.value;
+    emit('toggleWeatherLayer', 'rain', showRainIn3D.value);
+  } else if (layer === 'wind') {
+    showWindIn3D.value = !showWindIn3D.value;
+    emit('toggleWeatherLayer', 'wind', showWindIn3D.value);
+  } else if (layer === 'radar') {
+    showRadarIn3D.value = !showRadarIn3D.value;
+    emit('toggleWeatherLayer', 'radar', showRadarIn3D.value);
+    if (!showRadarIn3D.value) {
+      emit('applyRadarFrame3D', null);
+    } else if (radarFrames.value[activeRadarIndex.value]) {
+      emit('applyRadarFrame3D', radarFrames.value[activeRadarIndex.value]);
+    }
+  }
+};
 
 let radarPlayTimer: ReturnType<typeof setInterval> | null = null;
 let refreshTimer: ReturnType<typeof setInterval> | null = null;
@@ -193,6 +214,49 @@ onBeforeUnmount(() => {
           {{ riskWarnings.filter(r => !r.isMitigated).length }}
         </span>
       </button>
+    </div>
+
+    <!-- 3D Weather Layers Quick Controls -->
+    <div class="px-3 py-2 bg-slate-900/80 border-b border-slate-800 flex items-center justify-between text-[11px]">
+      <span class="text-slate-400 flex items-center gap-1.5 font-medium">
+        <Layers class="w-3.5 h-3.5 text-cyan-400" />
+        三维视效图层
+      </span>
+      <div class="flex items-center gap-1.5">
+        <button
+          @click="handleToggleLayer('rain')"
+          :class="[
+            'px-2 py-0.5 rounded text-[10px] font-medium transition-all cursor-pointer border',
+            showRainIn3D
+              ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+              : 'bg-slate-800/60 text-slate-400 border-slate-700/60 hover:text-slate-200'
+          ]"
+        >
+          雨丝粒子
+        </button>
+        <button
+          @click="handleToggleLayer('wind')"
+          :class="[
+            'px-2 py-0.5 rounded text-[10px] font-medium transition-all cursor-pointer border',
+            showWindIn3D
+              ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+              : 'bg-slate-800/60 text-slate-400 border-slate-700/60 hover:text-slate-200'
+          ]"
+        >
+          3D风场
+        </button>
+        <button
+          @click="handleToggleLayer('radar')"
+          :class="[
+            'px-2 py-0.5 rounded text-[10px] font-medium transition-all cursor-pointer border',
+            showRadarIn3D
+              ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+              : 'bg-slate-800/60 text-slate-400 border-slate-700/60 hover:text-slate-200'
+          ]"
+        >
+          雷达回波
+        </button>
+      </div>
     </div>
 
     <!-- Tab Contents -->

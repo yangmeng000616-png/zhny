@@ -15,9 +15,9 @@ export class ParkEnvironment {
     // 1. Campus Extended Ground Surface (240m x 240m)
     const groundGeo = new THREE.PlaneGeometry(240, 240);
     const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x0c1524, // Deep cyber agricultural ground surface
-      roughness: 0.9,
-      metalness: 0.1,
+      color: 0x111622, // Natural deep dark agricultural campus terrain
+      roughness: 0.88,
+      metalness: 0.05,
     });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
@@ -26,8 +26,8 @@ export class ParkEnvironment {
     parkGroup.add(ground);
 
     // Subtle agricultural open field plots around the perimeter
-    const plotMat1 = new THREE.MeshStandardMaterial({ color: 0x0f2a20, roughness: 0.85 });
-    const plotMat2 = new THREE.MeshStandardMaterial({ color: 0x132338, roughness: 0.85 });
+    const plotMat1 = new THREE.MeshStandardMaterial({ color: 0x15221b, roughness: 0.85 });
+    const plotMat2 = new THREE.MeshStandardMaterial({ color: 0x16202c, roughness: 0.85 });
 
     // Open farm plot A (Far East)
     const plotA = new THREE.Mesh(new THREE.PlaneGeometry(35, 75), plotMat1);
@@ -41,8 +41,8 @@ export class ParkEnvironment {
     plotB.position.set(-78, -0.05, -5);
     parkGroup.add(plotB);
 
-    // Ground Grid with luminous cyan coordinate markers
-    const parkGrid = new THREE.GridHelper(240, 48, 0x0284c7, 0x162238);
+    // Architectural subtle reference grid (subdued, non-intrusive)
+    const parkGrid = new THREE.GridHelper(240, 48, 0x1e293b, 0x141d2a);
     parkGrid.position.y = -0.04;
     parkGroup.add(parkGrid);
 
@@ -50,17 +50,17 @@ export class ParkEnvironment {
     // ROAD SYSTEM (Asphalt, Markings, Curbs, Crosswalks)
     // -------------------------------------------------------------
     const asphaltMat = new THREE.MeshStandardMaterial({
-      color: 0x080e18, // Deep sleek cyber asphalt highway
-      roughness: 0.7,
-      metalness: 0.2,
+      color: 0x1a2332, // Realistic matte dark asphalt
+      roughness: 0.82,
+      metalness: 0.12,
     });
     const curbMat = new THREE.MeshStandardMaterial({
       color: 0x334155, // Clean dark slate architectural curb
-      roughness: 0.5,
-      metalness: 0.2,
+      roughness: 0.6,
+      metalness: 0.15,
     });
-    const yellowLineMat = new THREE.MeshBasicMaterial({ color: 0xfbbf24 });
-    const whiteLineMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 }); // High-visibility glowing cyan edge line
+    const yellowLineMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.5 });
+    const whiteLineMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.5 }); // Crisp matte off-white road marking line
 
     // 1. North-South Main Highway (南北主干道: X = 22, Z from -90 to +90, Width 7.2m)
     const mainRoadGeo = new THREE.BoxGeometry(7.2, 0.08, 180);
@@ -280,19 +280,22 @@ export class ParkEnvironment {
     interactiveObjects: THREE.Object3D[]
   ) {
     const steelMat = new THREE.MeshStandardMaterial({
-      color: 0x94a3b8, // Crisp silver-steel truss visible against dark background
-      metalness: 0.85,
-      roughness: 0.25,
+      color: 0xa0aec0, // Realistic hot-dip galvanized steel
+      metalness: 0.75,
+      roughness: 0.32,
     });
 
     const glassMat = new THREE.MeshPhysicalMaterial({
-      color: 0x38bdf8, // High-tech cyan-tinted architectural glass
+      color: 0xe0f2fe, // Clean crystal low-iron architectural glass
       transparent: true,
-      opacity: 0.32,
+      opacity: 0.22,
       roughness: 0.08,
-      metalness: 0.1,
-      transmission: 0.8,
-      ior: 1.45,
+      metalness: 0.05,
+      transmission: 0.88,
+      reflectivity: 0.75,
+      ior: 1.52,
+      depthWrite: false,
+      side: THREE.DoubleSide,
     });
     glassMaterials.push(glassMat);
 
@@ -421,15 +424,16 @@ export class ParkEnvironment {
     const archEave = 3.6;
     const archPeak = 5.6;
 
-    // Arch film material (Translucent frosted agricultural PO film)
+    // Arch film material (Translucent diffuse agricultural PO film)
     const filmMat = new THREE.MeshPhysicalMaterial({
-      color: 0xdcfce7,
+      color: 0xf8fafc,
       transparent: true,
-      opacity: 0.38,
-      roughness: 0.25,
-      metalness: 0.05,
-      transmission: 0.65,
+      opacity: 0.35,
+      roughness: 0.32,
+      metalness: 0.02,
+      transmission: 0.72,
       side: THREE.DoubleSide,
+      depthWrite: false,
     });
     glassMaterials.push(filmMat);
 
@@ -687,19 +691,18 @@ export class ParkEnvironment {
       parkGroup.add(rock);
     }
 
-    // 2. Realistic Animated Water Surface (MeshPhysicalMaterial)
+    // 2. Realistic Natural Reservoir Water Surface (MeshPhysicalMaterial)
     const waterGeo = new THREE.PlaneGeometry(pondWidth - 1.2, pondLength - 1.2, 40, 32);
     const waterMat = new THREE.MeshPhysicalMaterial({
-      color: 0x0284c7, // Vibrant clean cyan-blue
-      emissive: 0x0369a1,
-      emissiveIntensity: 0.15,
-      roughness: 0.06,
-      metalness: 0.1,
-      transmission: 0.75,
+      color: 0x0f4c5c, // Deep natural reservoir water
+      roughness: 0.08,
+      metalness: 0.05,
+      transmission: 0.82,
       transparent: true,
-      opacity: 0.88,
+      opacity: 0.85,
       ior: 1.333,
-      reflectivity: 0.9,
+      reflectivity: 0.85,
+      depthWrite: false,
     });
     const waterMesh = new THREE.Mesh(waterGeo, waterMat);
     waterMesh.rotation.x = -Math.PI / 2;

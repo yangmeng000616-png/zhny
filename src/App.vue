@@ -389,11 +389,12 @@ const handleApplyRadarFrame3D = (frame: RadarEchoFrame | null) => {
   sceneInstance?.setRadarEchoFrame(frame);
 };
 
+const handleToggleWeatherLayer = (layer: 'rain' | 'wind' | 'radar', visible: boolean) => {
+  sceneInstance?.setWeatherLayerVisible(layer, visible);
+};
+
 const handleFocusGreenhouse = (ghId: string) => {
-  if (ghId === 'gh_002') handlePresetChange('gh2');
-  else if (ghId === 'gh_003') handlePresetChange('gh3');
-  else if (ghId === 'gh_004') handlePresetChange('gh4');
-  else handlePresetChange('aerial');
+  sceneInstance?.focusOnObject(ghId);
 };
 
 const handleFocusObject = (targetId: string) => {
@@ -566,6 +567,7 @@ const handleTimeChange = (hourFraction: number) => {
       @apply-radar-frame-3-d="handleApplyRadarFrame3D"
       @focus-greenhouse="handleFocusGreenhouse"
       @mitigate-risk="handleMitigateRisk"
+      @toggle-weather-layer="handleToggleWeatherLayer"
     />
 
     <!-- Unified Alert & Emergency Center -->
@@ -606,7 +608,10 @@ const handleTimeChange = (hourFraction: number) => {
       :crops="crops"
       :agv="agv"
       :pond-water="pondWater"
-      @close="selectedObject = null"
+      @close="() => {
+        selectedObject = null;
+        sceneInstance?.setSelectedObject(null);
+      }"
       @toggle-actuator="handleToggleActuator"
       @update-actuator-value="handleUpdateActuatorValue"
       @focus-camera="() => {
