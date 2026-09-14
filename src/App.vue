@@ -17,6 +17,8 @@ import type {
   EnvironmentFieldType,
   WeatherNowcastPoint,
   RadarEchoFrame,
+  OutdoorWeatherSnapshot,
+  GreenhouseMicroclimate,
 } from './types/digitalTwin';
 import {
   initialEnvironment,
@@ -25,6 +27,8 @@ import {
   initialCropZones,
   initialAGV,
   initialPondWaterData,
+  initialOutdoorWeather,
+  initialGreenhousesMicroclimates,
 } from './data/mockData';
 import { dataService } from './services/dataService';
 import { weatherService } from './services/weatherService';
@@ -41,6 +45,8 @@ import WeatherPanel from './components/WeatherPanel.vue';
 import UnifiedAlertCenter from './components/UnifiedAlertCenter.vue';
 import EnvironmentFieldController from './components/EnvironmentFieldController.vue';
 import HistoryPlaybackBar from './components/HistoryPlaybackBar.vue';
+import GreenhouseStationModal from './components/GreenhouseStationModal.vue';
+import GreenhouseMatrixModal from './components/GreenhouseMatrixModal.vue';
 
 const canvasContainerRef = ref<HTMLDivElement | null>(null);
 let sceneInstance: GreenhouseScene | null = null;
@@ -53,6 +59,16 @@ const crops = ref<CropZone[]>(initialCropZones);
 const agv = ref<AGVRobot>(initialAGV);
 const pondWater = ref<PondWaterQuality>(initialPondWaterData);
 const dataSourceMode = ref<'local' | 'api'>(dataService.getMode());
+
+// Per-Greenhouse Microclimate & Outdoor Weather Separation
+const selectedGreenhouseId = ref<string>('gh_001');
+const outdoorWeather = ref<OutdoorWeatherSnapshot>(initialOutdoorWeather);
+const greenhousesMicroclimates = ref<GreenhouseMicroclimate[]>(initialGreenhousesMicroclimates);
+
+// Dedicated Per-Greenhouse Station & Matrix Views
+const showGreenhouseStation = ref<boolean>(false);
+const stationGreenhouseId = ref<string>('gh_001');
+const showGreenhouseMatrix = ref<boolean>(false);
 
 // Digital Twin Advanced Features & Panels
 const showWeatherPanel = ref<boolean>(false);
@@ -155,6 +171,36 @@ onMounted(() => {
         hoverScreenPos.value = screenPos || null;
       },
       onSelect: (info) => {
+        if (info) {
+          let matchedGhId: string | null = null;
+          if (info.id.includes('gh2') || info.id.includes('greenhouse_2')) {
+            matchedGhId = 'gh_002';
+          } else if (info.id.includes('gh3') || info.id.includes('greenhouse_3')) {
+            matchedGhId = 'gh_003';
+          } else if (info.id.includes('gh4') || info.id.includes('greenhouse_4')) {
+            matchedGhId = 'gh_004';
+          } else if (info.id.includes('gh5') || info.id.includes('greenhouse_5')) {
+            matchedGhId = 'gh_005';
+          } else if (info.id.includes('gh6') || info.id.includes('greenhouse_6')) {
+            matchedGhId = 'gh_006';
+          } else if (info.id.includes('gh7') || info.id.includes('greenhouse_7')) {
+            matchedGhId = 'gh_007';
+          } else if (info.id.includes('gh8') || info.id.includes('greenhouse_8')) {
+            matchedGhId = 'gh_008';
+          } else if (info.id.includes('flux_tower')) {
+            matchedGhId = 'outdoor';
+          } else if (info.id.includes('greenhouse') || info.id.includes('roof') || info.id.includes('glass')) {
+            matchedGhId = 'gh_001';
+          }
+
+          if (matchedGhId) {
+            selectedGreenhouseId.value = matchedGhId;
+            if (matchedGhId !== 'outdoor') {
+              openGreenhouseStation(matchedGhId);
+              return;
+            }
+          }
+        }
         selectedObject.value = info;
       },
       onTagsUpdate: (tags) => {
@@ -195,6 +241,30 @@ onMounted(() => {
       co2: Math.round(prevEnv.co2 + dCo2),
       lightLux: +(prevEnv.lightLux + dLight).toFixed(1),
     };
+
+    // Live microclimates update for each greenhouse
+    greenhousesMicroclimates.value = greenhousesMicroclimates.value.map((gh) => {
+      const dt = (Math.random() - 0.5) * 0.1;
+      const dh = (Math.random() - 0.5) * 0.15;
+      return {
+        ...gh,
+        airTemp: +(gh.airTemp + dt).toFixed(1),
+        airHumidity: +(Math.min(95, Math.max(30, gh.airHumidity + dh))).toFixed(1),
+      };
+    });
+
+    // Live outdoor meteorological weather fluctuations
+    if (outdoorWeather.value) {
+      const odt = (Math.random() - 0.5) * 0.08;
+      const odh = (Math.random() - 0.5) * 0.1;
+      const odw = (Math.random() - 0.5) * 0.05;
+      outdoorWeather.value = {
+        ...outdoorWeather.value,
+        temperature: +(outdoorWeather.value.temperature + odt).toFixed(1),
+        humidity: +(outdoorWeather.value.humidity + odh).toFixed(1),
+        windSpeed: +(Math.max(0.5, outdoorWeather.value.windSpeed + odw)).toFixed(1),
+      };
+    }
 
     // Update sensors values
     sensors.value = sensors.value.map((s) => {
@@ -303,10 +373,137 @@ const handleUpdateActuatorValue = (id: string, value: number) => {
   }
 };
 
-// 5. Camera & Display Presets
+// 5. Camera & Display Presets and Greenhouse Linking
+const presetToGhMap: Record<string, string> = {
+  aerial: 'gh_001',
+  front: 'gh_001',
+  side: 'gh_001',
+  top: 'gh_001',
+  zone1: 'gh_001',
+  zone2: 'gh_001',
+  interior: 'gh_001',
+  gh2: 'gh_002',
+  gh3: 'gh_003',
+  gh4: 'gh_004',
+  gh5: 'gh_005',
+  gh6: 'gh_006',
+  gh7: 'gh_007',
+  gh8: 'gh_008',
+  flux_tower: 'outdoor',
+};
+
+const ghToPresetMap: Record<string, CameraPreset> = {
+  gh_001: 'aerial',
+  gh_002: 'gh2',
+  gh_003: 'gh3',
+  gh_004: 'gh4',
+  gh_005: 'gh5',
+  gh_006: 'gh6',
+  gh_007: 'gh7',
+  gh_008: 'gh8',
+  outdoor: 'flux_tower',
+};
+
 const handlePresetChange = (preset: CameraPreset) => {
   currentPreset.value = preset;
   sceneInstance?.setCameraPreset(preset);
+  if (presetToGhMap[preset]) {
+    selectedGreenhouseId.value = presetToGhMap[preset];
+  }
+};
+
+const handleSelectGreenhouse = (ghId: string) => {
+  selectedGreenhouseId.value = ghId;
+  const targetPreset = ghToPresetMap[ghId];
+  if (targetPreset) {
+    handlePresetChange(targetPreset);
+  }
+};
+
+// Open Dedicated Greenhouse Station Modal
+const openGreenhouseStation = (ghId: string) => {
+  let normalizedId = ghId;
+  if (ghId.includes('02') || ghId.includes('_2') || ghId.includes('gh2')) normalizedId = 'gh_002';
+  else if (ghId.includes('03') || ghId.includes('_3') || ghId.includes('gh3')) normalizedId = 'gh_003';
+  else if (ghId.includes('04') || ghId.includes('_4') || ghId.includes('gh4')) normalizedId = 'gh_004';
+  else if (ghId.includes('05') || ghId.includes('_5') || ghId.includes('gh5')) normalizedId = 'gh_005';
+  else if (ghId.includes('06') || ghId.includes('_6') || ghId.includes('gh6')) normalizedId = 'gh_006';
+  else if (ghId.includes('07') || ghId.includes('_7') || ghId.includes('gh7')) normalizedId = 'gh_007';
+  else if (ghId.includes('08') || ghId.includes('_8') || ghId.includes('gh8')) normalizedId = 'gh_008';
+  else if (ghId.includes('01') || ghId.includes('_1') || ghId.includes('aerial') || ghId.includes('greenhouse')) normalizedId = 'gh_001';
+
+  stationGreenhouseId.value = normalizedId;
+  selectedGreenhouseId.value = normalizedId;
+  showGreenhouseStation.value = true;
+  showGreenhouseMatrix.value = false;
+  selectedObject.value = null;
+
+  const targetPreset = ghToPresetMap[normalizedId];
+  if (targetPreset) {
+    handlePresetChange(targetPreset);
+  }
+};
+
+// Open 8-Greenhouse Cluster Matrix View
+const openGreenhouseMatrix = () => {
+  showGreenhouseMatrix.value = true;
+  showGreenhouseStation.value = false;
+  selectedObject.value = null;
+};
+
+const handleStationSelectGreenhouse = (ghId: string) => {
+  stationGreenhouseId.value = ghId;
+  selectedGreenhouseId.value = ghId;
+  const targetPreset = ghToPresetMap[ghId];
+  if (targetPreset) {
+    handlePresetChange(targetPreset);
+  }
+};
+
+const handleStationActuatorToggle = (ghId: string, actuatorId: string, status: boolean) => {
+  const gh = greenhousesMicroclimates.value.find((g) => g.id === ghId);
+  if (gh && gh.actuators) {
+    const act = gh.actuators.find((a) => a.id === actuatorId);
+    if (act) {
+      act.status = status;
+      if (ghId === 'gh_001') {
+        if (act.type === 'shading') {
+          handleToggleActuator('shade_curtain_001', status);
+        } else if (act.type === 'vent') {
+          handleToggleActuator('vent_roof_001', status);
+        }
+      }
+    }
+  }
+};
+
+const handleStationActuatorValue = (ghId: string, actuatorId: string, value: number) => {
+  const gh = greenhousesMicroclimates.value.find((g) => g.id === ghId);
+  if (gh && gh.actuators) {
+    const act = gh.actuators.find((a) => a.id === actuatorId);
+    if (act) {
+      act.value = value;
+      if (ghId === 'gh_001') {
+        if (act.type === 'shading') {
+          handleUpdateActuatorValue('shade_curtain_001', value);
+        } else if (act.type === 'vent') {
+          handleUpdateActuatorValue('vent_roof_001', value);
+        }
+      }
+    }
+  }
+};
+
+const handleStationFocusCamera = () => {
+  const targetPreset = ghToPresetMap[stationGreenhouseId.value];
+  if (targetPreset) {
+    handlePresetChange(targetPreset);
+  }
+};
+
+const handleMatrixFocusGreenhouse = (preset: CameraPreset) => {
+  handlePresetChange(preset);
+  showGreenhouseMatrix.value = false;
 };
 
 const handleDisplayModeChange = (mode: ViewDisplayMode) => {
@@ -525,16 +722,23 @@ const handleTimeChange = (hourFraction: number) => {
       @toggle-alert-center="showAlertCenter = !showAlertCenter; if (showAlertCenter) showWeatherPanel = false;"
       @toggle-history-bar="showHistoryBar = !showHistoryBar; if (showHistoryBar) bottomPanelCollapsed = true;"
       @toggle-sensors="handleToggleSensors"
+      @open-greenhouse-matrix="openGreenhouseMatrix"
     />
 
     <!-- Left Environment Telemetry Panel -->
     <LeftMetricsPanel
       :environment="environment"
+      :greenhouses-microclimates="greenhousesMicroclimates"
+      :selected-greenhouse-id="selectedGreenhouseId"
+      :outdoor-weather="outdoorWeather"
       :sensors="sensors"
       :pond-water="pondWater"
       v-model:collapsed="leftPanelCollapsed"
+      @select-greenhouse="handleSelectGreenhouse"
       @select-sensor="handleSelectSensor"
       @focus-pond="handlePresetChange('pond')"
+      @open-station="openGreenhouseStation"
+      @open-matrix="openGreenhouseMatrix"
     />
 
     <!-- Right Actuators & Control Center -->
@@ -619,6 +823,31 @@ const handleTimeChange = (hourFraction: number) => {
           sceneInstance.focusOnPosition(selectedObject.worldPosition);
         }
       }"
+      @open-station="openGreenhouseStation"
+    />
+
+    <!-- Dedicated Per-Greenhouse Station Modal -->
+    <GreenhouseStationModal
+      :visible="showGreenhouseStation"
+      :greenhouse-id="stationGreenhouseId"
+      :greenhouses="greenhousesMicroclimates"
+      :outdoor-weather="outdoorWeather"
+      @close="showGreenhouseStation = false"
+      @select-greenhouse="handleStationSelectGreenhouse"
+      @toggle-actuator="handleStationActuatorToggle"
+      @update-actuator-value="handleStationActuatorValue"
+      @focus-camera="handleStationFocusCamera"
+      @open-matrix="openGreenhouseMatrix"
+    />
+
+    <!-- 8-Greenhouse Cluster Matrix Modal -->
+    <GreenhouseMatrixModal
+      :visible="showGreenhouseMatrix"
+      :greenhouses="greenhousesMicroclimates"
+      :outdoor-weather="outdoorWeather"
+      @close="showGreenhouseMatrix = false"
+      @inspect-greenhouse="openGreenhouseStation"
+      @focus-greenhouse="handleMatrixFocusGreenhouse"
     />
 
     <!-- 3D Mouse Hover Tooltip -->

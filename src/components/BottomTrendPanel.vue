@@ -130,8 +130,8 @@ const areaD = computed(() => {
   <div
     :class="[
       'absolute bottom-2.5 z-20 pointer-events-none transition-all duration-300 flex flex-col items-center',
-      leftCollapsed ? 'left-14' : 'left-3 lg:left-[232px]',
-      rightCollapsed ? 'right-14' : 'right-3 lg:right-[304px]'
+      leftCollapsed ? 'left-14' : 'left-3 xl:left-[336px]',
+      rightCollapsed ? 'right-14' : 'right-3 xl:right-[316px]'
     ]"
   >
     <!-- Drawer Toggle Header Button -->

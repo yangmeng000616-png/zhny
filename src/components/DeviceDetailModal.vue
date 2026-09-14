@@ -45,6 +45,7 @@ defineEmits<{
   (e: 'toggleActuator', id: string, power: boolean): void;
   (e: 'updateActuatorValue', id: string, value: number): void;
   (e: 'focusCamera'): void;
+  (e: 'openStation', id: string): void;
 }>();
 
 const sensor = computed(() => {
@@ -596,6 +597,17 @@ const isFluxTower = computed(() => props.info?.type === 'facility_flux_tower' ||
           采用热镀锌轻钢骨架、Venlo双坡屋脊、铝合金专用天沟与排水系统，抗风压与保温密封性能优异。
         </p>
       </div>
+
+      <!-- Action Button: Open Dedicated Station Panel for Greenhouses -->
+      <button
+        v-if="isGreenhouse"
+        id="btn-modal-open-station"
+        @click="$emit('openStation', info.id)"
+        class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all cursor-pointer border border-emerald-400/40"
+      >
+        <Sliders class="w-4 h-4" />
+        <span>打开该棚专属独立测控面板 (Station)</span>
+      </button>
 
       <!-- Action Button: Focus 3D Camera -->
       <button

@@ -22,6 +22,7 @@ import {
   Warehouse,
   Waves,
   Sprout,
+  LayoutGrid,
 } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -50,6 +51,7 @@ const emit = defineEmits<{
   (e: 'toggleAlertCenter'): void;
   (e: 'toggleHistoryBar'): void;
   (e: 'toggleSensors'): void;
+  (e: 'openGreenhouseMatrix'): void;
 }>();
 
 const showGhMenu = ref<boolean>(false);
@@ -97,43 +99,34 @@ const selectPreset = (preset: CameraPreset) => {
 </script>
 
 <template>
-  <header class="absolute top-3 left-3 right-3 z-30 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
+  <header class="absolute top-2.5 left-2.5 right-2.5 z-30 flex items-center justify-between gap-2 pointer-events-none select-none">
     <!-- Brand & Greenhouse Title Card -->
-    <div class="pointer-events-auto flex items-center gap-3 bg-slate-950/80 hover:bg-slate-950/90 backdrop-blur-2xl px-4 py-2 rounded-2xl border border-cyan-500/30 shadow-[0_12px_36px_rgba(0,0,0,0.7)] ring-1 ring-white/10 transition-all duration-300">
-      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-emerald-600 flex items-center justify-center text-white shadow-md shadow-cyan-500/30">
-        <Sparkles class="w-5 h-5 text-cyan-100" />
+    <div class="pointer-events-auto flex items-center gap-2 bg-slate-950/85 hover:bg-slate-950/95 backdrop-blur-2xl px-3 py-1.5 rounded-2xl border border-cyan-500/30 shadow-[0_10px_30px_rgba(0,0,0,0.7)] ring-1 ring-white/10 shrink-0 transition-all duration-200">
+      <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-500 to-emerald-600 flex items-center justify-center text-white shadow-md shadow-cyan-500/30 shrink-0">
+        <Sparkles class="w-4 h-4 text-cyan-100" />
       </div>
       <div>
-        <div class="flex items-center gap-2">
-          <h1 class="text-sm font-bold text-slate-100 tracking-wide">
-            智慧现代农业示范园数字孪生系统
+        <div class="flex items-center gap-1.5">
+          <h1 class="text-xs sm:text-sm font-bold text-slate-100 tracking-wide truncate">
+            智慧农业示范园数字孪生
           </h1>
-          <span class="px-1.5 py-0.5 text-[10px] font-mono font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 rounded-md">
-            8座现代温室集群 · 5大数字设施 · 生态河塘水网
+          <span class="hidden xl:inline-flex px-1.5 py-0.2 text-[9px] font-mono font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded">
+            8座温室·5大设施
           </span>
         </div>
-        <div class="flex items-center gap-3 text-[11px] text-slate-400 font-mono mt-0.5">
+        <div class="flex items-center gap-2 text-[10px] text-slate-400 font-mono mt-0.5">
           <span class="flex items-center gap-1 text-emerald-400 font-semibold">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]"></span>
-            MQTT 5.0 在线
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_#34d399]"></span>
+            MQTT在线
           </span>
-          <span class="text-slate-700">|</span>
-          <button
-            @click="$emit('toggleDataSource')"
-            class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-900/90 hover:bg-slate-800 text-cyan-300 font-medium border border-cyan-500/40 shadow-xs transition-colors cursor-pointer"
-            :title="`当前数据接入架构: DataService -> ${dataSourceMode === 'api' ? 'ApiAdapter (/api)' : 'LocalAdapter (public/data/greenhouse/)'}`"
-          >
-            <Database class="w-3 h-3 text-cyan-400" />
-            <span>{{ dataSourceMode === 'api' ? '后端API接口' : '本地模拟 (public/data)' }}</span>
-          </button>
           <span class="text-slate-700">|</span>
           <button
             @click="$emit('toggleWeatherPanel')"
-            class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-cyan-950/40 hover:bg-cyan-900/50 text-cyan-300 border border-cyan-500/30 cursor-pointer"
+            class="flex items-center gap-1 px-1 py-0.2 rounded bg-cyan-950/50 hover:bg-cyan-900/60 text-cyan-300 border border-cyan-500/30 cursor-pointer"
             title="查看微气象临近预报与雷达回波"
           >
-            <CloudRain class="w-3 h-3 text-cyan-400" />
-            <span>气象雷达临近报</span>
+            <CloudRain class="w-2.5 h-2.5 text-cyan-400" />
+            <span>气象临近报</span>
           </button>
           <span class="text-slate-700">|</span>
           <span class="text-slate-300 font-mono">{{ timeString }}</span>
@@ -350,68 +343,81 @@ const selectPreset = (preset: CameraPreset) => {
       >
         室内漫游
       </button>
+
+      <div class="w-[1px] h-4 bg-slate-800 mx-0.5"></div>
+
+      <!-- 5. 8-Greenhouse Independent Panels Matrix Deck -->
+      <button
+        id="btn-top-matrix"
+        @click="$emit('openGreenhouseMatrix')"
+        class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 hover:text-white font-semibold transition-all cursor-pointer shadow-xs text-xs"
+        title="打开园区8座大棚独立监控面板矩阵"
+      >
+        <LayoutGrid class="w-3.5 h-3.5" />
+        <span>8棚独立面板</span>
+      </button>
     </div>
 
-    <!-- Digital Twin Analysis & System Tools -->
-    <div class="pointer-events-auto flex items-center gap-1.5 bg-slate-950/80 hover:bg-slate-950/90 backdrop-blur-2xl px-2.5 py-1.5 rounded-2xl border border-cyan-500/30 shadow-[0_12px_36px_rgba(0,0,0,0.7)] ring-1 ring-white/10 text-xs transition-all duration-300">
+    <!-- Digital Twin Analysis & System Tools (Right Island) -->
+    <div class="pointer-events-auto flex items-center gap-1 bg-slate-950/85 hover:bg-slate-950/95 backdrop-blur-2xl px-2 py-1 rounded-2xl border border-cyan-500/30 shadow-[0_10px_30px_rgba(0,0,0,0.7)] ring-1 ring-white/10 text-xs shrink-0 transition-all duration-200">
       <!-- 3D Environment Field Analysis Toggle -->
       <button
         @click="$emit('toggleFieldController')"
         :class="[
-          'flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all font-semibold cursor-pointer',
+          'flex items-center gap-1 px-2 py-1 rounded-lg border transition-all font-semibold cursor-pointer text-[11px]',
           showFieldController
-            ? 'bg-cyan-500/25 border-cyan-400/60 text-cyan-200 shadow-[0_0_12px_rgba(6,182,212,0.35)]'
-            : 'bg-slate-900/80 border-slate-750 text-slate-300 hover:bg-slate-800'
+            ? 'bg-cyan-500/25 border-cyan-400/60 text-cyan-200 shadow-[0_0_10px_rgba(6,182,212,0.35)]'
+            : 'bg-slate-900/80 border-slate-800 text-slate-300 hover:bg-slate-800'
         ]"
         title="开启三维空间温度/湿度/CO2连续场分析与水平剖切"
       >
-        <Activity class="w-3.5 h-3.5 text-cyan-400" />
-        <span>3D 连续场</span>
+        <Activity class="w-3 h-3 text-cyan-400" />
+        <span class="hidden sm:inline">3D场</span>
       </button>
 
       <!-- 3D Sensors Spatial Visibility Toggle -->
       <button
         @click="$emit('toggleSensors')"
         :class="[
-          'flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all font-semibold cursor-pointer',
+          'flex items-center gap-1 px-2 py-1 rounded-lg border transition-all font-semibold cursor-pointer text-[11px]',
           showSensors
-            ? 'bg-cyan-500/25 border-cyan-400/60 text-cyan-200 shadow-[0_0_12px_rgba(6,182,212,0.35)]'
-            : 'bg-slate-900/80 border-slate-750 text-slate-300 hover:bg-slate-800'
+            ? 'bg-cyan-500/25 border-cyan-400/60 text-cyan-200 shadow-[0_0_10px_rgba(6,182,212,0.35)]'
+            : 'bg-slate-900/80 border-slate-800 text-slate-300 hover:bg-slate-800'
         ]"
         title="显示/隐藏大棚内部三维传感器空间节点与光晕"
       >
-        <Radio class="w-3.5 h-3.5 text-cyan-400" />
-        <span>传感器定位</span>
+        <Radio class="w-3 h-3 text-cyan-400" />
+        <span class="hidden sm:inline">传感器</span>
       </button>
 
       <!-- 24H History Timeline Scrubber Toggle -->
       <button
         @click="$emit('toggleHistoryBar')"
         :class="[
-          'flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all font-semibold cursor-pointer',
+          'flex items-center gap-1 px-2 py-1 rounded-lg border transition-all font-semibold cursor-pointer text-[11px]',
           showHistoryBar
-            ? 'bg-amber-500/25 border-amber-400/60 text-amber-200 shadow-[0_0_12px_rgba(245,158,11,0.35)]'
-            : 'bg-slate-900/80 border-slate-750 text-slate-300 hover:bg-slate-800'
+            ? 'bg-amber-500/25 border-amber-400/60 text-amber-200 shadow-[0_0_10px_rgba(245,158,11,0.35)]'
+            : 'bg-slate-900/80 border-slate-800 text-slate-300 hover:bg-slate-800'
         ]"
         title="开启24小时日照轨迹与设备运行历史推演时钟"
       >
-        <Clock class="w-3.5 h-3.5 text-amber-400" />
-        <span>24H推演</span>
+        <Clock class="w-3 h-3 text-amber-400" />
+        <span class="hidden md:inline">24H推演</span>
       </button>
 
       <!-- Unified Alarm & Risk Center Button with Badge -->
       <button
         @click="$emit('toggleAlertCenter')"
         :class="[
-          'flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all font-semibold relative cursor-pointer',
+          'flex items-center gap-1 px-2 py-1 rounded-lg border transition-all font-semibold relative cursor-pointer text-[11px]',
           showAlertCenter
-            ? 'bg-rose-500/25 border-rose-400/60 text-rose-200 shadow-[0_0_12px_rgba(244,63,94,0.35)]'
-            : 'bg-slate-900/80 border-slate-750 text-slate-300 hover:bg-slate-800'
+            ? 'bg-rose-500/25 border-rose-400/60 text-rose-200 shadow-[0_0_10px_rgba(244,63,94,0.35)]'
+            : 'bg-slate-900/80 border-slate-800 text-slate-300 hover:bg-slate-800'
         ]"
         title="综合异常告警与风险防控中心"
       >
-        <ShieldAlert class="w-3.5 h-3.5 text-rose-400" />
-        <span>告警中心</span>
+        <ShieldAlert class="w-3 h-3 text-rose-400" />
+        <span class="hidden lg:inline">告警</span>
         <span
           v-if="(totalAlertCount || 0) > 0"
           class="px-1.5 py-0.2 rounded-full text-[9px] font-mono font-bold bg-rose-500 text-white animate-pulse"
@@ -420,21 +426,21 @@ const selectPreset = (preset: CameraPreset) => {
         </span>
       </button>
 
-      <div class="w-[1px] h-4 bg-slate-800 mx-0.5"></div>
+      <div class="w-[1px] h-3.5 bg-slate-800 mx-0.5"></div>
 
       <!-- 3D Spatial Tags Button -->
       <button
         @click="$emit('toggleSpatialTags')"
         :class="[
-          'flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-colors font-semibold cursor-pointer',
+          'flex items-center gap-1 px-1.5 py-1 rounded-lg border transition-colors font-semibold cursor-pointer text-[11px]',
           showSpatialTags
-            ? 'bg-cyan-500/25 border-cyan-400/60 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.35)]'
-            : 'bg-slate-900/80 border-slate-750 text-slate-300 hover:bg-slate-800'
+            ? 'bg-cyan-500/25 border-cyan-400/60 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.35)]'
+            : 'bg-slate-900/80 border-slate-800 text-slate-300 hover:bg-slate-800'
         ]"
         title="开启/隐藏三维全景空间标识"
       >
-        <MapPin class="w-3.5 h-3.5 text-cyan-400" />
-        <span>3D 标牌</span>
+        <MapPin class="w-3 h-3 text-cyan-400" />
+        <span class="hidden xl:inline">标牌</span>
       </button>
 
       <!-- Glass / X-Ray Display Modes -->
@@ -449,34 +455,34 @@ const selectPreset = (preset: CameraPreset) => {
               : 'standard'
           )
         "
-        class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900/80 text-cyan-300 hover:bg-slate-800 border border-slate-700/80 transition-colors font-semibold cursor-pointer"
+        class="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-slate-900/80 text-cyan-300 hover:bg-slate-800 border border-slate-700/80 transition-colors font-semibold cursor-pointer text-[11px]"
         title="切换覆盖层透视/X-Ray/实体模式"
       >
-        <Layers class="w-3.5 h-3.5 text-cyan-400" />
-        <span>
-          <template v-if="displayMode === 'standard'">标准外观</template>
-          <template v-else-if="displayMode === 'xray'">X-Ray透视</template>
-          <template v-else-if="displayMode === 'structure_only'">隐藏覆盖层</template>
-          <template v-else-if="displayMode === 'thermal'">热力分布</template>
+        <Layers class="w-3 h-3 text-cyan-400" />
+        <span class="hidden lg:inline">
+          <template v-if="displayMode === 'standard'">外观</template>
+          <template v-else-if="displayMode === 'xray'">X-Ray</template>
+          <template v-else-if="displayMode === 'structure_only'">骨架</template>
+          <template v-else-if="displayMode === 'thermal'">热力</template>
         </span>
       </button>
 
       <!-- Reset Camera -->
       <button
         @click="$emit('resetCamera')"
-        class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+        class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
         title="重置镜头中心"
       >
-        <RotateCcw class="w-4 h-4" />
+        <RotateCcw class="w-3.5 h-3.5" />
       </button>
 
       <!-- Help Guide -->
       <button
         @click="$emit('toggleGuide')"
-        class="p-1.5 rounded-lg text-slate-400 hover:text-cyan-300 hover:bg-slate-800 transition-colors cursor-pointer"
+        class="p-1 rounded-lg text-slate-400 hover:text-cyan-300 hover:bg-slate-800 transition-colors cursor-pointer"
         title="操作手势指引"
       >
-        <HelpCircle class="w-4 h-4" />
+        <HelpCircle class="w-3.5 h-3.5" />
       </button>
     </div>
   </header>

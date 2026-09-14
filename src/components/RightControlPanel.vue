@@ -55,7 +55,7 @@ const totalPowerKw = computed(() => {
 <template>
   <div
     :class="[
-      'absolute top-20 right-3 bottom-12 z-20 transition-all duration-300 pointer-events-none flex items-start',
+      'absolute top-[68px] right-3 bottom-6 z-20 transition-all duration-300 pointer-events-none flex items-start',
       isCollapsed ? 'translate-x-[calc(100%-12px)]' : 'translate-x-0'
     ]"
   >

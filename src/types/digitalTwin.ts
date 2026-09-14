@@ -65,6 +65,65 @@ export interface EnvironmentSnapshot {
   waterLevel: number;
 }
 
+export interface OutdoorWeatherSnapshot {
+  temperature: number; // e.g. 23.8 ℃
+  humidity: number; // e.g. 54.2 %
+  windSpeed: number; // e.g. 3.2 m/s
+  windDirection: string; // e.g. '东南风'
+  solarRadiation: number; // e.g. 820 W/m²
+  par: number; // e.g. 1650 µmol/m²·s
+  pressure: number; // e.g. 1012.8 hPa
+  rainRate: number; // e.g. 0.0 mm/h
+  airQualityAqi: number; // e.g. 28 (优)
+}
+
+export interface GreenhouseActuatorControl {
+  id: string;
+  name: string;
+  type: 'vent' | 'shading' | 'curtain' | 'fan' | 'light' | 'irrigation' | 'co2' | 'special';
+  status: boolean;
+  value?: number; // 0-100% or level
+  unit?: string;
+}
+
+export interface GreenhouseAgronomyInfo {
+  variety: string;
+  transplantDate: string;
+  growthDays: number;
+  harvestCountdownDays: number;
+  expectedYieldKgPerM2: number;
+  healthIndex: number; // 0 - 100
+  diseaseRisk: '极低' | '低' | '中等' | '需注意';
+  aiAdvice: string;
+  areaM2: number;
+  plantDensity: string;
+}
+
+export interface GreenhouseMicroclimate {
+  id: string; // 'gh_001', 'gh_002', ..., 'gh_008'
+  presetKey: CameraPreset; // 'aerial', 'gh2', 'gh3', etc.
+  name: string; // '1# Venlo核心示范玻璃大棚'
+  shortName: string; // '1# 示范棚'
+  cropName: string; // '荷兰粉果番茄'
+  growthStage: string; // '开花坐果期'
+  structureType: string; // 'Venlo三联栋超白玻璃'
+  airTemp: number; // e.g. 28.6
+  airHumidity: number; // e.g. 74.6
+  co2: number; // e.g. 725
+  lightLux: number; // e.g. 46.9
+  tempRange: [number, number]; // [22, 30]
+  humidityRange: [number, number]; // [60, 80]
+  co2Status: string; // '充足'
+  lightStatus: string; // '自然光+外遮阳'
+  rootzoneType: string; // '椰糠基质' | '高架基质' | 'NFT水培' | '人工光立体' | '相变土壤' | '生态鱼水' | '气雾喷雾' | '菌棒基质'
+  rootMoisture: number; // %
+  rootEc: number; // mS/cm
+  rootPh: number;
+  specialMetric?: { label: string; value: string; hint?: string };
+  agronomy?: GreenhouseAgronomyInfo;
+  actuators?: GreenhouseActuatorControl[];
+}
+
 export interface PondWaterQuality {
   id: string;
   name: string;
