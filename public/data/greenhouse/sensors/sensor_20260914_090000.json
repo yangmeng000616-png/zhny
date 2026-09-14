@@ -1,0 +1,93 @@
+{
+  "code": 200,
+  "message": "success",
+  "dataType": "greenhouse_sensor_timeseries",
+  "timestamp": "2026-09-14T09:00:00.000Z",
+  "greenhouseId": "gh_001",
+  "data": [
+    {
+      "id": "sensor_temp_001",
+      "type": "temperature",
+      "name": "1号区环境温湿度传感节点",
+      "zone": "A区·串番茄栽培区",
+      "position": [-6, 2.5, -4],
+      "status": "normal",
+      "value": 28.6,
+      "unit": "℃",
+      "targetRange": [22, 30],
+      "history": [27.2, 27.5, 28.0, 28.4, 28.6, 28.7, 28.6]
+    },
+    {
+      "id": "sensor_temp_002",
+      "type": "temperature",
+      "name": "2号区环境温湿度传感节点",
+      "zone": "B区·水培绿叶生菜区",
+      "position": [6, 2.5, -4],
+      "status": "normal",
+      "value": 27.9,
+      "unit": "℃",
+      "targetRange": [20, 28],
+      "history": [26.8, 27.1, 27.4, 27.6, 27.8, 28.0, 27.9]
+    },
+    {
+      "id": "sensor_co2_001",
+      "type": "co2",
+      "name": "高精度红外二氧化碳分析仪",
+      "zone": "中央桁架监测站",
+      "position": [0, 4.0, 0],
+      "status": "normal",
+      "value": 680,
+      "unit": "ppm",
+      "targetRange": [600, 1000],
+      "history": [620, 640, 660, 675, 680, 682, 680]
+    },
+    {
+      "id": "sensor_light_001",
+      "type": "light",
+      "name": "全光谱量子光合有效辐射仪(PAR)",
+      "zone": "屋顶采光基准点",
+      "position": [0, 6.2, 0],
+      "status": "normal",
+      "value": 31.2,
+      "unit": "klux",
+      "targetRange": [25, 45],
+      "history": [24.0, 26.5, 29.0, 30.5, 31.2, 31.4, 31.2]
+    },
+    {
+      "id": "sensor_soil_001",
+      "type": "soil_moisture",
+      "name": "根区多深度水肥一体化土壤探针",
+      "zone": "A区·基质槽1号位",
+      "position": [-6, 0.8, 4],
+      "status": "normal",
+      "value": 65.4,
+      "unit": "%",
+      "targetRange": [60, 75],
+      "history": [63.0, 63.8, 64.5, 65.0, 65.2, 65.5, 65.4]
+    },
+    {
+      "id": "sensor_soil_002",
+      "type": "soil_ec",
+      "name": "基质含盐量EC/电导率传感器",
+      "zone": "C区·草莓高架栽培区",
+      "position": [-6, 0.8, -10],
+      "status": "normal",
+      "value": 1.2,
+      "unit": "mS/cm",
+      "targetRange": [1.0, 1.8],
+      "history": [1.18, 1.19, 1.20, 1.21, 1.20, 1.21, 1.2]
+    },
+    {
+      "id": "sensor_ph_001",
+      "type": "soil_ph",
+      "name": "根际精准酸碱度微探针(pH)",
+      "zone": "B区·营养液回流池",
+      "position": [6, 0.8, 4],
+      "status": "normal",
+      "value": 6.75,
+      "unit": "pH",
+      "targetRange": [6.2, 7.2],
+      "history": [6.8, 6.78, 6.76, 6.75, 6.74, 6.75, 6.75]
+    }
+  ]
+}

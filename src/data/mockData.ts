@@ -84,6 +84,30 @@ export const initialSensors: SensorData[] = [
     targetRange: [1.0, 1.8],
     history: [1.18, 1.19, 1.20, 1.21, 1.20, 1.21, 1.2],
   },
+  {
+    id: 'sensor_hum_001',
+    type: 'humidity',
+    name: '大棚空间相对湿度传感器',
+    zone: '中央桁架监测站',
+    position: [0, 3.5, -4],
+    status: 'normal',
+    value: 72.3,
+    unit: '%',
+    targetRange: [60, 80],
+    history: [70.5, 71.0, 71.8, 72.0, 72.2, 72.5, 72.3],
+  },
+  {
+    id: 'sensor_ph_001',
+    type: 'soil_ph',
+    name: '水肥营养液与基质pH酸碱度探针',
+    zone: 'B区·营养液供给池',
+    position: [6, 0.8, 4],
+    status: 'normal',
+    value: 6.8,
+    unit: 'pH',
+    targetRange: [6.0, 7.2],
+    history: [6.75, 6.78, 6.80, 6.82, 6.81, 6.80, 6.8],
+  },
 ];
 
 export const initialActuators: ActuatorDevice[] = [

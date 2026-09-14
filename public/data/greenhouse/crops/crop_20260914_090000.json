@@ -1,0 +1,69 @@
+{
+  "code": 200,
+  "message": "success",
+  "dataType": "greenhouse_crop_timeseries",
+  "timestamp": "2026-09-14T09:00:00.000Z",
+  "greenhouseId": "gh_001",
+  "data": [
+    {
+      "id": "crop_zone_01",
+      "name": "A区·粉番茄高产吊蔓栽培区",
+      "cropType": "粉果番茄 (普罗旺斯系)",
+      "plantingDate": "2026-06-15",
+      "expectedHarvest": "2026-10-20",
+      "growthProgress": 78,
+      "health": "optimal",
+      "areaSqMeters": 180,
+      "stemCount": 720,
+      "soilMoisture": 65.4,
+      "soilEc": 1.35,
+      "soilTemp": 23.4,
+      "centerPos": [-6, 1.2, 5]
+    },
+    {
+      "id": "crop_zone_02",
+      "name": "B区·水培多层管道生菜区",
+      "cropType": "意大利散叶生菜 / 奶油生菜",
+      "plantingDate": "2026-08-01",
+      "expectedHarvest": "2026-09-25",
+      "growthProgress": 92,
+      "health": "optimal",
+      "areaSqMeters": 140,
+      "stemCount": 1600,
+      "soilMoisture": 85.0,
+      "soilEc": 1.6,
+      "soilTemp": 21.8,
+      "centerPos": [6, 1.2, 5]
+    },
+    {
+      "id": "crop_zone_03",
+      "name": "C区·红颜草莓高架立体栽培区",
+      "cropType": "红颜优质草莓",
+      "plantingDate": "2026-07-20",
+      "expectedHarvest": "2026-11-10",
+      "growthProgress": 64,
+      "health": "good",
+      "areaSqMeters": 150,
+      "stemCount": 950,
+      "soilMoisture": 68.2,
+      "soilEc": 1.2,
+      "soilTemp": 22.1,
+      "centerPos": [-6, 1.2, -7]
+    },
+    {
+      "id": "crop_zone_04",
+      "name": "D区·集约化自动化育苗苗床区",
+      "cropType": "甜椒/黄瓜优质穴盘种苗",
+      "plantingDate": "2026-08-25",
+      "expectedHarvest": "2026-09-30",
+      "growthProgress": 45,
+      "health": "optimal",
+      "areaSqMeters": 110,
+      "stemCount": 3200,
+      "soilMoisture": 72.0,
+      "soilEc": 1.1,
+      "soilTemp": 24.0,
+      "centerPos": [6, 1.2, -7]
+    }
+  ]
+}

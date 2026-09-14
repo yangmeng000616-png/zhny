@@ -1,0 +1,113 @@
+{
+  "code": 200,
+  "message": "success",
+  "dataType": "greenhouse_device_timeseries",
+  "timestamp": "2026-09-14T09:00:00.000Z",
+  "greenhouseId": "gh_001",
+  "data": [
+    {
+      "id": "fan_001",
+      "type": "fan",
+      "name": "1号山墙负压风机",
+      "zone": "北端山墙",
+      "position": [-10.8, 3.2, 14.8],
+      "status": "running",
+      "power": true,
+      "value": 78,
+      "metricUnit": "%转速",
+      "operatingHours": 1420,
+      "powerConsumptionKw": 1.5
+    },
+    {
+      "id": "fan_002",
+      "type": "fan",
+      "name": "2号山墙负压风机",
+      "zone": "北端山墙",
+      "position": [10.8, 3.2, 14.8],
+      "status": "running",
+      "power": true,
+      "value": 82,
+      "metricUnit": "%转速",
+      "operatingHours": 1390,
+      "powerConsumptionKw": 1.5
+    },
+    {
+      "id": "vent_roof_001",
+      "type": "roof_vent",
+      "name": "屋脊双向电动排气天窗群",
+      "zone": "屋顶南脊/北脊",
+      "position": [0, 6.8, -2],
+      "status": "running",
+      "power": true,
+      "value": 45,
+      "metricUnit": "°开启角度",
+      "operatingHours": 850,
+      "powerConsumptionKw": 0.75
+    },
+    {
+      "id": "shade_curtain_001",
+      "type": "shade_curtain",
+      "name": "内保温遮阳反光铝箔拉幕",
+      "zone": "桁架下弦层",
+      "position": [0, 5.2, 0],
+      "status": "idle",
+      "power": false,
+      "value": 0,
+      "metricUnit": "%闭合率",
+      "operatingHours": 640,
+      "powerConsumptionKw": 0.55
+    },
+    {
+      "id": "pump_irrigation_001",
+      "type": "irrigation_pump",
+      "name": "变频恒压微滴灌水肥一体泵",
+      "zone": "设备间与储水站",
+      "position": [11.5, 1.2, -13],
+      "status": "running",
+      "power": true,
+      "value": 65,
+      "metricUnit": "L/min流量",
+      "operatingHours": 980,
+      "powerConsumptionKw": 2.2
+    },
+    {
+      "id": "light_grow_001",
+      "type": "grow_light",
+      "name": "LED植物生长特定波长补光灯组",
+      "zone": "A/B/C种植区吊装层",
+      "position": [0, 4.4, 0],
+      "status": "idle",
+      "power": false,
+      "value": 0,
+      "metricUnit": "%光强",
+      "operatingHours": 410,
+      "powerConsumptionKw": 3.6
+    },
+    {
+      "id": "wet_curtain_001",
+      "type": "wet_curtain",
+      "name": "进风端高效水帘蒸发降温幕墙",
+      "zone": "南端山墙进风口",
+      "position": [0, 2.5, -14.8],
+      "status": "running",
+      "power": true,
+      "value": 60,
+      "metricUnit": "%循环水流",
+      "operatingHours": 1100,
+      "powerConsumptionKw": 0.9
+    },
+    {
+      "id": "heater_001",
+      "type": "heater",
+      "name": "空气源热泵变频恒温加热系统",
+      "zone": "中央循环温控区",
+      "position": [0, 1.5, 8],
+      "status": "idle",
+      "power": false,
+      "value": 24,
+      "metricUnit": "℃恒温目标",
+      "operatingHours": 340,
+      "powerConsumptionKw": 4.2
+    }
+  ]
+}

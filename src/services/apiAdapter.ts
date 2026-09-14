@@ -145,6 +145,60 @@ export class ApiAdapter implements IDataAdapter {
       return localAdapter.updateDeviceStatus(deviceId, power, value);
     }
   }
+
+  async getWeatherNowcast(): Promise<any> {
+    try {
+      return await this.request<any>('/weather/nowcast');
+    } catch {
+      return localAdapter.getWeatherNowcast();
+    }
+  }
+
+  async getWeatherRadar(): Promise<any> {
+    try {
+      return await this.request<any>('/weather/radar');
+    } catch {
+      return localAdapter.getWeatherRadar();
+    }
+  }
+
+  async getAgroRiskAlerts(): Promise<any> {
+    try {
+      return await this.request<any>('/weather/alerts');
+    } catch {
+      return localAdapter.getAgroRiskAlerts();
+    }
+  }
+
+  async getUnifiedAlarms(): Promise<any> {
+    try {
+      return await this.request<any>('/greenhouse/alarms');
+    } catch {
+      return localAdapter.getUnifiedAlarms();
+    }
+  }
+
+  async acknowledgeAlarm(alarmId: string): Promise<boolean> {
+    try {
+      await this.request<{ success: boolean }>(`/greenhouse/alarms/${alarmId}/ack`, { method: 'POST' });
+      return localAdapter.acknowledgeAlarm(alarmId);
+    } catch {
+      return localAdapter.acknowledgeAlarm(alarmId);
+    }
+  }
+
+  async executeDeviceLinkage(actions: any[]): Promise<boolean> {
+    try {
+      await this.request<{ success: boolean }>('/greenhouse/linkage/execute', {
+        method: 'POST',
+        body: JSON.stringify({ actions }),
+      });
+      await localAdapter.executeDeviceLinkage(actions);
+      return true;
+    } catch {
+      return localAdapter.executeDeviceLinkage(actions);
+    }
+  }
 }
 
 export const apiAdapter = new ApiAdapter();

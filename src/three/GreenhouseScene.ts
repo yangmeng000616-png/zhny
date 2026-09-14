@@ -1,6 +1,15 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { CameraPreset, ViewDisplayMode, SpatialTagAnchor, ProjectedTag } from '../types/digitalTwin';
+import {
+  CameraPreset,
+  ViewDisplayMode,
+  SpatialTagAnchor,
+  ProjectedTag,
+  EnvironmentFieldType,
+  WeatherNowcastPoint,
+  RadarEchoFrame,
+  AgroRiskWarning,
+} from '../types/digitalTwin';
 import { ParkEnvironment } from './ParkEnvironment';
 
 export interface PickedObjectInfo {
@@ -59,6 +68,33 @@ export class GreenhouseScene {
   private agvRobot: { group: THREE.Group; lidarPuck: THREE.Mesh; zDir: number } | null = null;
   private sensorNodes: { id: string; group: THREE.Group; halo: THREE.Mesh }[] = [];
   private anemometerMesh: THREE.Group | null = null;
+
+  // Scene Lighting References
+  private ambientLight: THREE.AmbientLight | null = null;
+  private sunLight: THREE.DirectionalLight | null = null;
+  private hemiLight: THREE.HemisphereLight | null = null;
+
+  // Digital Twin Weather Nowcasting & 3D Meteorological Fields
+  private rainParticles: THREE.Points | null = null;
+  private rainCount = 3500;
+  private isRaining = false;
+  private rainIntensity = 0;
+  private windSpeedMs = 3.2;
+  private windDirectionRad = (135 * Math.PI) / 180;
+  private radarEchoMesh: THREE.Mesh | null = null;
+  private lightningLight: THREE.DirectionalLight | null = null;
+  private lightningTimer = 0;
+
+  // 3D Continuous Environmental Field (Slices & Particle Grid)
+  private envFieldGroup: THREE.Group | null = null;
+  private envFieldSliceMesh: THREE.Mesh | null = null;
+  private envFieldParticlePoints: THREE.Points | null = null;
+  private activeFieldType: EnvironmentFieldType = 'none';
+  private fieldSliceY = 2.5;
+  private fieldOpacity = 0.75;
+
+  // 3D Spatial Anomaly Alert Beacons & Greenhouse Risk Markers
+  private riskWarningBeacons: Map<string, THREE.Group> = new Map();
 
   // 3D Spatial Anchored Badges
   private spatialTags: SpatialTagAnchor[] = [];
@@ -216,6 +252,8 @@ export class GreenhouseScene {
     this.buildControlRoomAndEnergy();
     this.buildWeatherStation();
     this.buildCampusAmenities();
+    this.buildWeatherEffects();
+    this.buildContinuousEnvironmentField();
     this.initSpatialTags();
 
     // 8.5 Build Agricultural Park Infrastructure: Roads, Additional Greenhouses, River/Pond
@@ -239,6 +277,7 @@ export class GreenhouseScene {
   private setupLighting() {
     const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.75);
     this.scene.add(ambientLight);
+    this.ambientLight = ambientLight;
 
     const sunLight = new THREE.DirectionalLight(0xe0f2fe, 2.2);
     sunLight.position.set(50, 70, 45);
@@ -254,10 +293,18 @@ export class GreenhouseScene {
     sunLight.shadow.camera.bottom = -d;
     sunLight.shadow.bias = -0.0003;
     this.scene.add(sunLight);
+    this.sunLight = sunLight;
 
     // Deep architectural hemisphere light: cool sky glow + subtle warm ground bounce
     const hemiLight = new THREE.HemisphereLight(0x38bdf8, 0x0f172a, 0.9);
     this.scene.add(hemiLight);
+    this.hemiLight = hemiLight;
+
+    // Lightning Flash Light for storm nowcasting
+    const lightning = new THREE.DirectionalLight(0xdbeafe, 0);
+    lightning.position.set(0, 150, 0);
+    this.scene.add(lightning);
+    this.lightningLight = lightning;
   }
 
   private buildGroundAndSite() {
@@ -1182,6 +1229,7 @@ export class GreenhouseScene {
       { id: 'sensor_light_001', name: '全光谱量子光合有效辐射仪(PAR)', pos: [0, 6.2, 0], type: 'sensor' },
       { id: 'sensor_soil_001', name: '根区多深度水肥一体化土壤探针', pos: [-6, 0.8, 4], type: 'sensor' },
       { id: 'sensor_soil_002', name: '基质含盐量EC/电导率传感器', pos: [-6, 0.8, -10], type: 'sensor' },
+      { id: 'sensor_ph_001', name: '根际精准酸碱度微探针(pH)', pos: [6, 0.8, 4], type: 'sensor' },
     ];
 
     const bodyMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.7, roughness: 0.2 });
@@ -2015,6 +2063,386 @@ export class GreenhouseScene {
   }
 
   // -------------------------------------------------------------
+  // WEATHER NOWCASTING & 3D METEOROLOGICAL EFFECTS
+  // -------------------------------------------------------------
+  private buildWeatherEffects() {
+    // 1. Rain Particle System
+    const rainGeo = new THREE.BufferGeometry();
+    const rainPos = new Float32Array(this.rainCount * 3);
+    for (let i = 0; i < this.rainCount; i++) {
+      rainPos[i * 3] = (Math.random() - 0.5) * 160;
+      rainPos[i * 3 + 1] = Math.random() * 55;
+      rainPos[i * 3 + 2] = (Math.random() - 0.5) * 160;
+    }
+    rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
+    const rainMat = new THREE.PointsMaterial({
+      color: 0x93c5fd,
+      size: 0.35,
+      transparent: true,
+      opacity: 0.7,
+      blending: THREE.AdditiveBlending,
+    });
+    this.rainParticles = new THREE.Points(rainGeo, rainMat);
+    this.rainParticles.visible = false;
+    this.scene.add(this.rainParticles);
+
+    // 2. Weather Radar Atmospheric Echo Plane
+    const radarGeo = new THREE.PlaneGeometry(160, 160, 32, 32);
+    const radarMat = new THREE.MeshBasicMaterial({
+      color: 0xef4444,
+      transparent: true,
+      opacity: 0.32,
+      side: THREE.DoubleSide,
+      wireframe: true,
+    });
+    this.radarEchoMesh = new THREE.Mesh(radarGeo, radarMat);
+    this.radarEchoMesh.rotation.x = -Math.PI / 2;
+    this.radarEchoMesh.position.y = 48;
+    this.radarEchoMesh.visible = false;
+    this.scene.add(this.radarEchoMesh);
+  }
+
+  public setWeatherEffect(point: WeatherNowcastPoint) {
+    this.windSpeedMs = point.windSpeed;
+    this.windDirectionRad = (point.windDirectionDegrees * Math.PI) / 180;
+    this.isRaining = point.precipitationMmPerHour > 0;
+    this.rainIntensity = Math.min(1.0, point.precipitationMmPerHour / 30.0);
+
+    if (this.rainParticles) {
+      this.rainParticles.visible = this.isRaining;
+    }
+
+    // Dynamic environmental sky and light adjustment based on real-time nowcast
+    if (point.condition === 'storm' || point.precipitationMmPerHour >= 15) {
+      this.scene.background = new THREE.Color(0x060913);
+      if (this.scene.fog) (this.scene.fog as THREE.Fog).color = new THREE.Color(0x060913);
+      if (this.ambientLight) this.ambientLight.intensity = 0.35;
+      if (this.sunLight) this.sunLight.intensity = 0.4;
+    } else if (point.condition === 'heavy_rain' || point.condition === 'moderate_rain') {
+      this.scene.background = new THREE.Color(0x0a101e);
+      if (this.scene.fog) (this.scene.fog as THREE.Fog).color = new THREE.Color(0x0a101e);
+      if (this.ambientLight) this.ambientLight.intensity = 0.55;
+      if (this.sunLight) this.sunLight.intensity = 0.9;
+    } else {
+      this.scene.background = new THREE.Color(0x0a101d);
+      if (this.scene.fog) (this.scene.fog as THREE.Fog).color = new THREE.Color(0x0a101d);
+      if (this.ambientLight) this.ambientLight.intensity = 0.75;
+      if (this.sunLight) this.sunLight.intensity = 2.2;
+    }
+  }
+
+  public setRadarEchoFrame(frame: RadarEchoFrame | null) {
+    if (!this.radarEchoMesh) return;
+    if (!frame) {
+      this.radarEchoMesh.visible = false;
+      return;
+    }
+    this.radarEchoMesh.visible = true;
+    const mat = this.radarEchoMesh.material as THREE.MeshBasicMaterial;
+    mat.opacity = Math.min(0.85, 0.2 + (frame.maxDbz / 65) * 0.65);
+    if (frame.maxDbz >= 50) {
+      mat.color.setHex(0xdc2626);
+    } else if (frame.maxDbz >= 40) {
+      mat.color.setHex(0xf97316);
+    } else if (frame.maxDbz >= 30) {
+      mat.color.setHex(0xeab308);
+    } else {
+      mat.color.setHex(0x10b981);
+    }
+  }
+
+  // -------------------------------------------------------------
+  // CONTINUOUS 3D ENVIRONMENT FIELD VISUALIZATION
+  // -------------------------------------------------------------
+  private buildContinuousEnvironmentField() {
+    this.envFieldGroup = new THREE.Group();
+    this.envFieldGroup.name = 'Continuous_Environment_Field';
+    this.envFieldGroup.visible = false;
+
+    // 1. Horizontal continuous interpolated slice plane
+    const planeGeo = new THREE.PlaneGeometry(23, 29, 32, 32);
+    const planeMat = new THREE.MeshBasicMaterial({
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.75,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    this.envFieldSliceMesh = new THREE.Mesh(planeGeo, planeMat);
+    this.envFieldSliceMesh.rotation.x = -Math.PI / 2;
+    this.envFieldSliceMesh.position.set(0, this.fieldSliceY, 0);
+    this.envFieldGroup.add(this.envFieldSliceMesh);
+
+    // 2. Volumetric 3D spatial points cloud
+    const count = 1200;
+    const ptGeo = new THREE.BufferGeometry();
+    const ptPos = new Float32Array(count * 3);
+    const ptColors = new Float32Array(count * 3);
+
+    for (let i = 0; i < count; i++) {
+      ptPos[i * 3] = (Math.random() - 0.5) * 22;
+      ptPos[i * 3 + 1] = 0.8 + Math.random() * 4.8;
+      ptPos[i * 3 + 2] = (Math.random() - 0.5) * 28;
+
+      ptColors[i * 3] = 0.2;
+      ptColors[i * 3 + 1] = 0.8;
+      ptColors[i * 3 + 2] = 0.9;
+    }
+    ptGeo.setAttribute('position', new THREE.BufferAttribute(ptPos, 3));
+    ptGeo.setAttribute('color', new THREE.BufferAttribute(ptColors, 3));
+
+    const ptMat = new THREE.PointsMaterial({
+      size: 0.35,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.6,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    this.envFieldParticlePoints = new THREE.Points(ptGeo, ptMat);
+    this.envFieldGroup.add(this.envFieldParticlePoints);
+
+    this.scene.add(this.envFieldGroup);
+  }
+
+  public setEnvironmentField(type: EnvironmentFieldType, sliceHeight: number = 2.5, opacity: number = 0.75) {
+    this.activeFieldType = type;
+    this.fieldSliceY = sliceHeight;
+    this.fieldOpacity = opacity;
+
+    if (!this.envFieldGroup) return;
+
+    if (type === 'none') {
+      this.envFieldGroup.visible = false;
+      return;
+    }
+
+    this.envFieldGroup.visible = true;
+    this.rebuildEnvironmentFieldMesh(type, sliceHeight, opacity);
+  }
+
+  private rebuildEnvironmentFieldMesh(type: EnvironmentFieldType, sliceHeight: number, opacity: number) {
+    if (!this.envFieldSliceMesh || !this.envFieldParticlePoints) return;
+
+    this.envFieldSliceMesh.position.y = sliceHeight;
+    (this.envFieldSliceMesh.material as THREE.MeshBasicMaterial).opacity = opacity;
+
+    // Update Plane vertex colors
+    const planeGeo = this.envFieldSliceMesh.geometry as THREE.PlaneGeometry;
+    const posAttr = planeGeo.attributes.position;
+    const vertexCount = posAttr.count;
+    let colors = planeGeo.attributes.color as THREE.BufferAttribute;
+
+    if (!colors || colors.count !== vertexCount) {
+      colors = new THREE.BufferAttribute(new Float32Array(vertexCount * 3), 3);
+      planeGeo.setAttribute('color', colors);
+    }
+
+    const cArr = colors.array as Float32Array;
+
+    for (let i = 0; i < vertexCount; i++) {
+      const vx = posAttr.getX(i);
+      const vz = posAttr.getY(i); // In PlaneGeometry, Y is the Z axis after rotation
+      const vy = sliceHeight;
+
+      const rgb = this.computeFieldColor(type, vx, vy, vz);
+      cArr[i * 3] = rgb.r;
+      cArr[i * 3 + 1] = rgb.g;
+      cArr[i * 3 + 2] = rgb.b;
+    }
+    colors.needsUpdate = true;
+
+    // Update 3D points colors
+    const ptGeo = this.envFieldParticlePoints.geometry as THREE.BufferGeometry;
+    const ptPosAttr = ptGeo.attributes.position;
+    const ptColorsAttr = ptGeo.attributes.color as THREE.BufferAttribute;
+    const ptColorArr = ptColorsAttr.array as Float32Array;
+    const ptCount = ptPosAttr.count;
+
+    for (let i = 0; i < ptCount; i++) {
+      const px = ptPosAttr.getX(i);
+      const py = ptPosAttr.getY(i);
+      const pz = ptPosAttr.getZ(i);
+
+      const rgb = this.computeFieldColor(type, px, py, pz);
+      ptColorArr[i * 3] = rgb.r;
+      ptColorArr[i * 3 + 1] = rgb.g;
+      ptColorArr[i * 3 + 2] = rgb.b;
+    }
+    ptColorsAttr.needsUpdate = true;
+  }
+
+  private computeFieldColor(type: EnvironmentFieldType, x: number, y: number, z: number): THREE.Color {
+    const color = new THREE.Color();
+
+    if (type === 'temp') {
+      // Temperature field: cooler near north wet wall (z = -14), warmer at high ridge (y > 4.5)
+      const simulatedTemp = 24.5 + (y / 6.5) * 4.5 - (Math.abs(x) / 12) * 1.5 + (z / 15) * 2.0;
+      const tNorm = Math.max(0, Math.min(1, (simulatedTemp - 20) / 14)); // 20 - 34 C
+      if (tNorm < 0.25) {
+        color.setRGB(0.1, 0.5, 0.95); // cool blue
+      } else if (tNorm < 0.5) {
+        color.setRGB(0.1, 0.85, 0.8); // cyan
+      } else if (tNorm < 0.75) {
+        color.setRGB(0.95, 0.75, 0.1); // warm amber
+      } else {
+        color.setRGB(0.95, 0.25, 0.2); // hot crimson
+      }
+    } else if (type === 'humidity') {
+      // Humidity field: highest near wet curtain (z = -14) and irrigation lines
+      const simulatedHum = 80 - (y / 6.5) * 16 + (z < -5 ? 12 : 0) + (y < 1.5 ? 8 : 0);
+      const hNorm = Math.max(0, Math.min(1, (simulatedHum - 50) / 45)); // 50 - 95 %
+      if (hNorm < 0.3) {
+        color.setRGB(0.85, 0.65, 0.2); // dry amber
+      } else if (hNorm < 0.65) {
+        color.setRGB(0.2, 0.85, 0.4); // pleasant green
+      } else {
+        color.setRGB(0.1, 0.45, 0.95); // humid deep blue
+      }
+    } else if (type === 'co2') {
+      // CO2 field: higher near ground plant beds, lower near open ridge vents
+      const simulatedCo2 = 720 - (y > 4.5 ? 120 : 0) + (Math.cos(x * 0.4) * 60);
+      const cNorm = Math.max(0, Math.min(1, (simulatedCo2 - 500) / 400));
+      color.setRGB(0.2 + cNorm * 0.2, 0.5 + cNorm * 0.45, 0.8 - cNorm * 0.5);
+    } else if (type === 'light') {
+      // PAR Solar radiation field: highest at top center bay
+      const simulatedPar = Math.max(0.1, (y / 6.5) * (1.0 - Math.abs(x) * 0.04));
+      color.setRGB(1.0, 0.9 * simulatedPar + 0.1, 0.2 * simulatedPar);
+    } else if (type === 'soil_moisture') {
+      // Soil moisture layer
+      const sNorm = Math.max(0, Math.min(1, (65 + Math.sin(x) * 10) / 100));
+      color.setRGB(0.1, 0.75 * sNorm + 0.2, 0.45 + sNorm * 0.5);
+    } else {
+      color.setRGB(0.2, 0.8, 0.9);
+    }
+
+    return color;
+  }
+
+  // -------------------------------------------------------------
+  // RISK WARNING HIGHLIGHTING & SPATIAL ANOMALY BEACONS
+  // -------------------------------------------------------------
+  public setRiskWarnings(warnings: AgroRiskWarning[]) {
+    this.riskWarningBeacons.forEach((b) => {
+      this.scene.remove(b);
+    });
+    this.riskWarningBeacons.clear();
+
+    warnings.forEach((warn) => {
+      if (warn.isMitigated) return;
+      warn.impactedGreenhouses.forEach((ghId) => {
+        let center = new THREE.Vector3(0, 0.2, 0);
+        if (ghId === 'gh_002') center.set(-58, 0.2, 0);
+        else if (ghId === 'gh_003') center.set(58, 0.2, 0);
+
+        const beaconGroup = new THREE.Group();
+        beaconGroup.position.copy(center);
+
+        // Warning pulsating ground perimeter halo
+        const ringGeo = new THREE.RingGeometry(13.5, 15.0, 32);
+        const ringMat = new THREE.MeshBasicMaterial({
+          color: warn.severity === 'critical' ? 0xef4444 : 0xf59e0b,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.85,
+        });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = -Math.PI / 2;
+        beaconGroup.add(ring);
+
+        // Warning vertical alert beacon beam
+        const beamGeo = new THREE.CylinderGeometry(1.2, 1.2, 32, 16);
+        const beamMat = new THREE.MeshBasicMaterial({
+          color: warn.severity === 'critical' ? 0xef4444 : 0xf59e0b,
+          transparent: true,
+          opacity: 0.22,
+          side: THREE.DoubleSide,
+        });
+        const beam = new THREE.Mesh(beamGeo, beamMat);
+        beam.position.y = 16;
+        beaconGroup.add(beam);
+
+        this.scene.add(beaconGroup);
+        this.riskWarningBeacons.set(`${ghId}_${warn.id}`, beaconGroup);
+      });
+    });
+  }
+
+  // -------------------------------------------------------------
+  // SENSOR VISIBILITY TOGGLE & CAMERA FOCUS
+  // -------------------------------------------------------------
+  public setSensorsVisible(visible: boolean) {
+    if (this.sensorsGroup) {
+      this.sensorsGroup.visible = visible;
+    }
+  }
+
+  public focusOnObject(objectId: string) {
+    const obj = this.interactiveObjects.find((o) => o.userData && o.userData.id === objectId);
+    if (obj) {
+      const worldPos = new THREE.Vector3();
+      obj.getWorldPosition(worldPos);
+      this.animateCameraTo(
+        new THREE.Vector3(worldPos.x + 8, worldPos.y + 6, worldPos.z + 10),
+        worldPos
+      );
+    }
+  }
+
+  // -------------------------------------------------------------
+  // HISTORICAL TIMELINE PLAYBACK STATE
+  // -------------------------------------------------------------
+  public setHistoricalState(hourFraction: number, envSnapshot?: any, devices?: any[]) {
+    // 1. Sun & ambient lighting based on 24h clock
+    const sunAngle = ((hourFraction - 6) / 12) * Math.PI;
+    const isDay = hourFraction >= 6 && hourFraction <= 18;
+
+    if (this.sunLight) {
+      const radius = 90;
+      this.sunLight.position.set(Math.cos(sunAngle) * radius, Math.max(8, Math.sin(sunAngle) * radius), 45);
+      if (isDay) {
+        const elevation = Math.sin(sunAngle);
+        this.sunLight.intensity = Math.max(0.3, elevation * 2.4);
+        if (elevation < 0.25) {
+          this.sunLight.color.setHex(0xfba260);
+          if (this.ambientLight) this.ambientLight.color.setHex(0xfed7aa);
+        } else {
+          this.sunLight.color.setHex(0xe0f2fe);
+          if (this.ambientLight) this.ambientLight.color.setHex(0xdbeafe);
+        }
+      } else {
+        this.sunLight.intensity = 0.15;
+        this.sunLight.color.setHex(0x38bdf8);
+        if (this.ambientLight) {
+          this.ambientLight.intensity = 0.25;
+          this.ambientLight.color.setHex(0x1e293b);
+        }
+      }
+    }
+
+    // 2. Sync devices if provided
+    if (devices && Array.isArray(devices)) {
+      devices.forEach((dev) => {
+        if (dev.type === 'fan') {
+          this.updateFanSpeed(dev.id, dev.power ? dev.value : 0);
+        } else if (dev.type === 'roof_vent') {
+          this.updateRoofVentAngle(dev.power ? dev.value : 0);
+        } else if (dev.type === 'grow_light') {
+          this.updateGrowLights(dev.power, dev.value);
+        } else if (dev.type === 'shade_curtain') {
+          this.updateShadeCurtainRatio(dev.value / 100);
+        }
+      });
+    }
+
+    // 3. AGV movement along corridor
+    if (this.agvRobot) {
+      const posRatio = (Math.sin(hourFraction * Math.PI * 4) + 1) / 2;
+      this.agvRobot.group.position.z = -12 + posRatio * 24;
+    }
+  }
+
+  // -------------------------------------------------------------
   // MAIN ANIMATION LOOP
   // -------------------------------------------------------------
   private animate = () => {
@@ -2090,14 +2518,12 @@ export class GreenhouseScene {
     }
 
     if (this.pondBuoy) {
-      // Buoy floating heave and pitch on waves
       this.pondBuoy.position.y = -0.1 + Math.sin(elapsedTime * 2.0) * 0.06;
       this.pondBuoy.rotation.z = Math.sin(elapsedTime * 1.5) * 0.03;
       this.pondBuoy.rotation.x = Math.cos(elapsedTime * 1.7) * 0.03;
     }
 
     if (this.pondBeaconLight) {
-      // Blinking 5G telemetry beacon light
       this.pondBeaconLight.intensity = Math.sin(elapsedTime * 5.0) > 0 ? 1.8 : 0.2;
     }
 
@@ -2115,9 +2541,51 @@ export class GreenhouseScene {
       }
     }
 
-    // 8.5 Rotate weather anemometer cups
+    // 8.5 Rotate weather anemometer cups modulated by wind speed
     if (this.anemometerMesh) {
-      this.anemometerMesh.rotation.y += 3.5 * delta;
+      this.anemometerMesh.rotation.y += Math.max(1.0, this.windSpeedMs * 0.8) * delta;
+    }
+
+    // 8.6 Digital Twin Rain & Weather Animation
+    if (this.isRaining && this.rainParticles) {
+      const posAttr = this.rainParticles.geometry.attributes.position;
+      const positions = posAttr.array as Float32Array;
+      const fallSpeed = (22 + this.rainIntensity * 28) * delta;
+      const windOffset = Math.sin(this.windDirectionRad) * this.windSpeedMs * delta * 0.6;
+      for (let i = 0; i < this.rainCount; i++) {
+        positions[i * 3 + 1] -= fallSpeed;
+        positions[i * 3] += windOffset;
+        if (positions[i * 3 + 1] < 0) {
+          positions[i * 3 + 1] = 48 + Math.random() * 8;
+        }
+      }
+      posAttr.needsUpdate = true;
+    }
+
+    // 8.7 Storm Lightning Flash
+    if (this.lightningLight) {
+      this.lightningTimer += delta;
+      if (this.lightningTimer > 4.5 && Math.random() < 0.05) {
+        this.lightningLight.intensity = 3.2 + Math.random() * 2.0;
+        this.lightningTimer = 0;
+      } else if (this.lightningLight.intensity > 0) {
+        this.lightningLight.intensity = Math.max(0, this.lightningLight.intensity - 12 * delta);
+      }
+    }
+
+    // 8.8 Pulsate Agro-Risk Warning Beacons
+    this.riskWarningBeacons.forEach((beacon) => {
+      beacon.rotation.y += 1.2 * delta;
+      const halo = beacon.children[0];
+      if (halo) {
+        const s = 1.0 + Math.sin(elapsedTime * 4.0) * 0.12;
+        halo.scale.set(s, s, s);
+      }
+    });
+
+    // 8.9 Continuous Environment Field Particles Shimmer
+    if (this.envFieldGroup && this.envFieldGroup.visible && this.envFieldParticlePoints) {
+      this.envFieldParticlePoints.rotation.y = Math.sin(elapsedTime * 0.2) * 0.03;
     }
 
     // 9. Update 3D projected spatial tags

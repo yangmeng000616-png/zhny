@@ -11,6 +11,11 @@ import type {
   CropZone,
   EnvironmentSnapshot,
   PondWaterQuality,
+  WeatherNowcastData,
+  RadarEchoFrame,
+  AgroRiskWarning,
+  UnifiedAlarm,
+  DeviceLinkageAction,
 } from '../types/digitalTwin';
 import {
   initialEnvironment,
@@ -25,14 +30,15 @@ export class LocalAdapter implements IDataAdapter {
   private basePath: string;
   private localDevices: ActuatorDevice[] = [...initialActuators];
   private localEnvironment: EnvironmentSnapshot = { ...initialEnvironment };
+  private activeRisks: AgroRiskWarning[] = [];
 
   constructor() {
     this.basePath = dataConfig.local.basePath || '/data';
   }
 
-  private async fetchJson<T>(relativePath: string, fallback: T): Promise<T> {
+  private async fetchJson<T>(fullPath: string, fallback: T): Promise<T> {
     try {
-      const url = `${this.basePath}/greenhouse/${relativePath}`;
+      const url = `${this.basePath}/${fullPath}`;
       const res = await fetch(url);
       if (!res.ok) {
         return fallback;
@@ -71,41 +77,42 @@ export class LocalAdapter implements IDataAdapter {
       ],
       zones: ['A区·高端水果番茄', 'B区·欧洲水果黄瓜', 'C区·无土栽培水培生菜', 'D区·草莓立体多层高架'],
     };
-    return this.fetchJson<GreenhouseInfo>('model/greenhouse.json', fallback);
+    return this.fetchJson<GreenhouseInfo>('greenhouse/model/greenhouse.json', fallback);
   }
 
-  async getSensorData(): Promise<SensorData[]> {
-    return this.fetchJson<SensorData[]>('sensors/greenhouse_sensor_latest.json', initialSensors);
+  async getSensorData(timestamp?: string): Promise<SensorData[]> {
+    const targetFile = timestamp ? `greenhouse/sensors/sensor_${timestamp}.json` : 'greenhouse/sensors/sensor_20260914_090000.json';
+    return this.fetchJson<SensorData[]>(targetFile, initialSensors);
   }
 
   async getDeviceStatus(): Promise<ActuatorDevice[]> {
-    const fetched = await this.fetchJson<ActuatorDevice[]>('devices/greenhouse_device_latest.json', this.localDevices);
-    // Merge with any runtime modifications
     if (this.localDevices.length > 0) {
       return this.localDevices;
     }
+    const fetched = await this.fetchJson<ActuatorDevice[]>('greenhouse/devices/device_20260914_090000.json', initialActuators);
     this.localDevices = fetched;
     return fetched;
   }
 
   async getCropStatus(): Promise<CropZone[]> {
-    return this.fetchJson<CropZone[]>('crops/greenhouse_crop_latest.json', initialCropZones);
+    return this.fetchJson<CropZone[]>('greenhouse/crops/crop_20260914_090000.json', initialCropZones);
   }
 
   async getEnvironmentSnapshot(): Promise<EnvironmentSnapshot> {
-    return this.fetchJson<EnvironmentSnapshot>('environment/greenhouse_environment_latest.json', this.localEnvironment);
+    return this.fetchJson<EnvironmentSnapshot>('greenhouse/environment/greenhouse_environment_latest.json', this.localEnvironment);
   }
 
   async getEnvironmentHistory(): Promise<EnvironmentHistory> {
     const fallback: EnvironmentHistory = {
-      timestamps: ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00'],
-      airTemp: [22.4, 24.1, 26.5, 27.8, 28.9, 29.2, 28.4],
-      airHumidity: [85.0, 80.2, 76.5, 73.0, 70.8, 71.5, 73.5],
-      co2: [890, 840, 780, 730, 690, 710, 715],
-      lightLux: [15.2, 28.4, 42.0, 52.5, 58.0, 53.2, 47.8],
-      irrigationAccumulatedM3: [0, 4.5, 11.2, 19.8, 26.5, 34.0, 42.8],
+      timestamps: ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00', '24:00'],
+      airTemp: [18.2, 17.5, 17.1, 18.0, 22.4, 26.5, 29.2, 28.8, 27.2, 24.1, 21.5, 19.8, 18.5],
+      airHumidity: [92.0, 93.5, 94.0, 91.2, 82.5, 74.0, 68.5, 70.2, 75.0, 82.0, 87.5, 90.0, 91.5],
+      co2: [920, 950, 980, 890, 780, 690, 640, 660, 710, 790, 850, 890, 910],
+      lightLux: [0.0, 0.0, 0.0, 2.5, 18.4, 42.0, 58.5, 54.0, 32.5, 8.0, 0.0, 0.0, 0.0],
+      soilMoisture: [68.0, 67.8, 67.5, 67.2, 66.5, 65.0, 64.2, 70.5, 69.2, 68.5, 68.2, 68.0, 67.9],
+      irrigationAccumulatedM3: [0, 0, 0, 0, 3.2, 11.5, 19.8, 32.5, 38.0, 42.0, 42.0, 42.0, 42.0],
     };
-    return this.fetchJson<EnvironmentHistory>('history/greenhouse_history.json', fallback);
+    return this.fetchJson<EnvironmentHistory>('greenhouse/history/history_20260914_090000.json', fallback);
   }
 
   async getDeviceHistory(deviceId?: string): Promise<any> {
@@ -151,11 +158,11 @@ export class LocalAdapter implements IDataAdapter {
         payloadKg: 12.5,
       },
     };
-    return this.fetchJson<AGVTrajectoryData>('trajectories/greenhouse_trajectory_latest.json', fallback);
+    return this.fetchJson<AGVTrajectoryData>('greenhouse/trajectories/greenhouse_trajectory_latest.json', fallback);
   }
 
   async getPondWaterQuality(): Promise<PondWaterQuality> {
-    return this.fetchJson<PondWaterQuality>('pond/pond_water_latest.json', initialPondWaterData);
+    return this.fetchJson<PondWaterQuality>('greenhouse/pond/pond_water_latest.json', initialPondWaterData);
   }
 
   async updateDeviceStatus(deviceId: string, power: boolean, value?: number): Promise<boolean> {
@@ -169,6 +176,220 @@ export class LocalAdapter implements IDataAdapter {
         };
       }
       return dev;
+    });
+    return true;
+  }
+
+  // -------------------------------------------------------------
+  // Weather & Agro-Risk APIs
+  // -------------------------------------------------------------
+  async getWeatherNowcast(): Promise<WeatherNowcastData> {
+    const fallbackRaw = {
+      current: {
+        timeOffsetMinutes: 0,
+        isoTime: '2026-09-14T09:00:00Z',
+        displayTime: '09:00 (实况)',
+        isForecast: false,
+        precipitationMmPerHour: 0.0,
+        accumulatedRainMm: 0.0,
+        temperature: 28.6,
+        relativeHumidity: 72.3,
+        windSpeed: 3.2,
+        windDirectionDegrees: 135,
+        windDirectionText: '东南风 2级',
+        windGust: 5.1,
+        radarReflectivityDbz: 18,
+        solarRadiationWm2: 680,
+        condition: 'cloudy' as const,
+        conditionText: '多云转阴',
+      },
+      timeline: [
+        { timeOffsetMinutes: 0, isoTime: '2026-09-14T09:00:00Z', displayTime: '09:00 (实况)', isForecast: false, precipitationMmPerHour: 0.0, accumulatedRainMm: 0.0, temperature: 28.6, relativeHumidity: 72.3, windSpeed: 3.2, windDirectionDegrees: 135, windDirectionText: '东南风 2级', windGust: 5.1, radarReflectivityDbz: 18, solarRadiationWm2: 680, condition: 'cloudy' as const, conditionText: '多云转阴' },
+        { timeOffsetMinutes: 15, isoTime: '2026-09-14T09:15:00Z', displayTime: '09:15 (+15m)', isForecast: true, precipitationMmPerHour: 1.2, accumulatedRainMm: 0.3, temperature: 27.8, relativeHumidity: 76.5, windSpeed: 5.6, windDirectionDegrees: 145, windDirectionText: '东南风 3级', windGust: 8.4, radarReflectivityDbz: 28, solarRadiationWm2: 420, condition: 'light_rain' as const, conditionText: '局地零星小阵雨' },
+        { timeOffsetMinutes: 30, isoTime: '2026-09-14T09:30:00Z', displayTime: '09:30 (+30m)', isForecast: true, precipitationMmPerHour: 18.5, accumulatedRainMm: 4.9, temperature: 25.4, relativeHumidity: 88.0, windSpeed: 11.2, windDirectionDegrees: 160, windDirectionText: '偏南大风 6级', windGust: 15.8, radarReflectivityDbz: 45, solarRadiationWm2: 180, condition: 'heavy_rain' as const, conditionText: '强对流短时强降水' },
+        { timeOffsetMinutes: 45, isoTime: '2026-09-14T09:45:00Z', displayTime: '09:45 (+45m)', isForecast: true, precipitationMmPerHour: 28.0, accumulatedRainMm: 11.9, temperature: 24.1, relativeHumidity: 94.5, windSpeed: 13.8, windDirectionDegrees: 170, windDirectionText: '偏南大风 7级', windGust: 18.2, radarReflectivityDbz: 52, solarRadiationWm2: 110, condition: 'storm' as const, conditionText: '暴雨大风雷暴云团过境' },
+        { timeOffsetMinutes: 60, isoTime: '2026-09-14T10:00:00Z', displayTime: '10:00 (+60m)', isForecast: true, precipitationMmPerHour: 14.2, accumulatedRainMm: 15.4, temperature: 24.5, relativeHumidity: 92.0, windSpeed: 8.5, windDirectionDegrees: 190, windDirectionText: '南风 5级', windGust: 12.0, radarReflectivityDbz: 38, solarRadiationWm2: 240, condition: 'moderate_rain' as const, conditionText: '降雨强度减弱为中雨' },
+        { timeOffsetMinutes: 90, isoTime: '2026-09-14T10:30:00Z', displayTime: '10:30 (+90m)', isForecast: true, precipitationMmPerHour: 3.5, accumulatedRainMm: 17.2, temperature: 25.8, relativeHumidity: 85.0, windSpeed: 5.0, windDirectionDegrees: 210, windDirectionText: '西南风 3级', windGust: 7.5, radarReflectivityDbz: 24, solarRadiationWm2: 390, condition: 'light_rain' as const, conditionText: '小阵雨逐渐转停' },
+        { timeOffsetMinutes: 120, isoTime: '2026-09-14T11:00:00Z', displayTime: '11:00 (+120m)', isForecast: true, precipitationMmPerHour: 0.0, accumulatedRainMm: 17.5, temperature: 27.2, relativeHumidity: 78.0, windSpeed: 3.8, windDirectionDegrees: 220, windDirectionText: '西南风 2级', windGust: 5.2, radarReflectivityDbz: 12, solarRadiationWm2: 580, condition: 'cloudy' as const, conditionText: '云开转阴到多云' },
+      ],
+    };
+
+    const fetched = await this.fetchJson<any>('weather/rain_nowcast_20260914_090000.json', fallbackRaw);
+    const radFrames = await this.getWeatherRadar();
+
+    return {
+      stationId: 'AGRO_WX_001',
+      stationName: '国家农业科技示范园微距气象站',
+      coordinate: [120.15, 30.28],
+      issueTime: '2026-09-14T09:00:00Z',
+      forecastRangeHours: 2,
+      timeStepMinutes: 15,
+      currentObservation: fetched.current || fallbackRaw.current,
+      timeline: fetched.timeline || fallbackRaw.timeline,
+      radarFrames: radFrames,
+    };
+  }
+
+  async getWeatherRadar(): Promise<RadarEchoFrame[]> {
+    const fallback = {
+      frames: [
+        { timestamp: '2026-09-14T08:30:00Z', timeOffsetMinutes: -30, isExtrapolation: false, maxDbz: 22, coverageCenter: [120.15, 30.28] as [number, number] },
+        { timestamp: '2026-09-14T08:45:00Z', timeOffsetMinutes: -15, isExtrapolation: false, maxDbz: 26, coverageCenter: [120.15, 30.28] as [number, number] },
+        { timestamp: '2026-09-14T09:00:00Z', timeOffsetMinutes: 0, isExtrapolation: false, maxDbz: 30, coverageCenter: [120.15, 30.28] as [number, number] },
+        { timestamp: '2026-09-14T09:15:00Z', timeOffsetMinutes: 15, isExtrapolation: true, maxDbz: 40, coverageCenter: [120.15, 30.28] as [number, number] },
+        { timestamp: '2026-09-14T09:30:00Z', timeOffsetMinutes: 30, isExtrapolation: true, maxDbz: 48, coverageCenter: [120.15, 30.28] as [number, number] },
+        { timestamp: '2026-09-14T09:45:00Z', timeOffsetMinutes: 45, isExtrapolation: true, maxDbz: 54, coverageCenter: [120.15, 30.28] as [number, number] },
+        { timestamp: '2026-09-14T10:00:00Z', timeOffsetMinutes: 60, isExtrapolation: true, maxDbz: 42, coverageCenter: [120.15, 30.28] as [number, number] },
+        { timestamp: '2026-09-14T10:30:00Z', timeOffsetMinutes: 90, isExtrapolation: true, maxDbz: 28, coverageCenter: [120.15, 30.28] as [number, number] },
+        { timestamp: '2026-09-14T11:00:00Z', timeOffsetMinutes: 120, isExtrapolation: true, maxDbz: 18, coverageCenter: [120.15, 30.28] as [number, number] },
+      ],
+    };
+    const res = await this.fetchJson<any>('weather/radar_20260914_090000.json', fallback);
+    return res.frames || fallback.frames;
+  }
+
+  async getAgroRiskAlerts(): Promise<AgroRiskWarning[]> {
+    if (this.activeRisks.length > 0) {
+      return this.activeRisks;
+    }
+    const defaultRisks: AgroRiskWarning[] = [
+      {
+        id: 'risk_rain_001',
+        type: 'heavy_rain',
+        severity: 'critical',
+        title: '短临强降水与屋顶排水倒灌红警',
+        summary: '预测未来30-45分钟降水强度达28mm/h，累积降水量超15mm',
+        triggerCondition: '短临雨量≥20mm/h 且 蓄水塘水位>2.4m',
+        forecastLeadMinutes: 30,
+        impactedGreenhouses: ['gh_001', 'gh_002', 'gh_003'],
+        impactedCropZones: ['crop_zone_01', 'crop_zone_02'],
+        impactDescription: '天沟承载负荷骤增，文洛式屋面若开启天窗将导致雨水直接冲淋番茄花穗与生菜苗床，诱发灰霉病；园区主排水沟有壅水顶托风险。',
+        aiRecommendation: '建议紧急关闭所有脊顶双向电动天窗，同时启动取水泵站与防汛强排泵降低内河水位。',
+        linkageActions: [
+          {
+            actionId: 'act_close_vent',
+            title: '紧急关闭屋脊电动天窗群',
+            targetDeviceId: 'vent_roof_001',
+            targetDeviceName: '屋脊双向电动排气天窗群',
+            targetPower: false,
+            targetValue: 0,
+            reason: '阻断雨水直接淋入棚内破坏作物植株',
+          },
+          {
+            actionId: 'act_retract_shade',
+            title: '收拢外遮阳铝箔保温拉幕',
+            targetDeviceId: 'shade_curtain_001',
+            targetDeviceName: '内保温遮阳反光铝箔拉幕',
+            targetPower: false,
+            targetValue: 0,
+            reason: '防范雨水积聚压垮铝箔幕布桁架',
+          },
+        ],
+        isMitigated: false,
+        timestamp: '2026-09-14T09:00:00Z',
+      },
+      {
+        id: 'risk_wind_002',
+        type: 'strong_wind',
+        severity: 'warning',
+        title: '突发性强阵风撕裂与风压预警',
+        summary: '预测未来45分钟伴随7-8级强阵风 (18.2 m/s)',
+        triggerCondition: '阵风预报值≥15m/s',
+        forecastLeadMinutes: 45,
+        impactedGreenhouses: ['gh_001', 'gh_003'],
+        impactedCropZones: ['crop_zone_03', 'crop_zone_04'],
+        impactDescription: '迎风面山墙及大棚端面产生剧烈空气动压，未闭合的侧窗和天窗易出现负压掀翻效应，造成玻璃碎裂或减反射膜撕脱。',
+        aiRecommendation: '立即协同关闭侧窗、天窗，停止负压风机全速运转，开启风机转速防护保护模式。',
+        linkageActions: [
+          {
+            actionId: 'act_slow_fans',
+            title: '调节端山墙负压风机至安全转速',
+            targetDeviceId: 'fan_001',
+            targetDeviceName: '1号山墙负压风机',
+            targetPower: true,
+            targetValue: 35,
+            reason: '防止强风逆灌损坏风机叶片电驱总成',
+          },
+        ],
+        isMitigated: false,
+        timestamp: '2026-09-14T09:00:00Z',
+      },
+    ];
+
+    const fetched = await this.fetchJson<AgroRiskWarning[]>('weather/alerts_20260914_090000.json', defaultRisks);
+    this.activeRisks = fetched;
+    return fetched;
+  }
+
+  async getUnifiedAlarms(): Promise<UnifiedAlarm[]> {
+    const risks = await this.getAgroRiskAlerts();
+    const alarms: UnifiedAlarm[] = [];
+
+    // Map active agro-risks into alarms
+    risks.forEach((risk) => {
+      if (!risk.isMitigated) {
+        alarms.push({
+          id: `alarm_${risk.id}`,
+          timestamp: risk.timestamp,
+          level: risk.severity,
+          sourceType: 'weather',
+          sourceId: risk.id,
+          sourceName: risk.title,
+          location: `大棚群 (${risk.impactedGreenhouses.join(', ')})`,
+          metricName: risk.type === 'heavy_rain' ? '降水外推率' : '阵风预报',
+          currentValue: risk.type === 'heavy_rain' ? '28.0 mm/h' : '18.2 m/s',
+          thresholdValue: risk.type === 'heavy_rain' ? '20.0 mm/h' : '15.0 m/s',
+          unit: risk.type === 'heavy_rain' ? 'mm/h' : 'm/s',
+          message: risk.summary,
+          status: 'active',
+          recommendedAction: risk.aiRecommendation,
+          linkageActions: risk.linkageActions,
+        });
+      }
+    });
+
+    // Check device anomalies
+    this.localDevices.forEach((dev) => {
+      if (dev.status === 'warning') {
+        alarms.push({
+          id: `alarm_dev_${dev.id}`,
+          timestamp: '2026-09-14T09:05:00Z',
+          level: 'warning',
+          sourceType: 'device',
+          sourceId: dev.id,
+          sourceName: dev.name,
+          location: dev.zone,
+          metricName: '设备工况',
+          currentValue: '异常负载',
+          thresholdValue: '额定载荷',
+          unit: dev.metricUnit,
+          message: `${dev.name} 运行电流微幅超出额定区间 (108%)`,
+          status: 'active',
+          recommendedAction: '建议降低转速或切换备用机组进行电气检修',
+        });
+      }
+    });
+
+    return alarms.map((a) =>
+      this.acknowledgedAlarmIds.has(a.id) ? { ...a, status: 'acknowledged' as const } : a
+    );
+  }
+
+  private acknowledgedAlarmIds: Set<string> = new Set();
+
+  async acknowledgeAlarm(alarmId: string): Promise<boolean> {
+    this.acknowledgedAlarmIds.add(alarmId);
+    return true;
+  }
+
+  async executeDeviceLinkage(actions: DeviceLinkageAction[]): Promise<boolean> {
+    for (const action of actions) {
+      await this.updateDeviceStatus(action.targetDeviceId, action.targetPower, action.targetValue);
+    }
+    // Mark risks that share these actions as mitigated
+    this.activeRisks = this.activeRisks.map((r) => {
+      const hasAction = r.linkageActions.some((la) => actions.some((a) => a.actionId === la.actionId));
+      return hasAction ? { ...r, isMitigated: true } : r;
     });
     return true;
   }

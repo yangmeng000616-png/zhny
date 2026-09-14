@@ -4,6 +4,11 @@ import type {
   CropZone,
   EnvironmentSnapshot,
   PondWaterQuality,
+  WeatherNowcastData,
+  RadarEchoFrame,
+  AgroRiskWarning,
+  UnifiedAlarm,
+  DeviceLinkageAction,
 } from '../types/digitalTwin';
 
 export interface GreenhouseInfo {
@@ -30,6 +35,7 @@ export interface EnvironmentHistory {
   airHumidity: number[];
   co2: number[];
   lightLux: number[];
+  soilMoisture?: number[];
   irrigationAccumulatedM3: number[];
 }
 
@@ -52,8 +58,9 @@ export interface AGVTrajectoryData {
 }
 
 export interface IDataAdapter {
+  // Greenhouse core APIs
   getGreenhouseInfo(): Promise<GreenhouseInfo>;
-  getSensorData(): Promise<SensorData[]>;
+  getSensorData(timestamp?: string): Promise<SensorData[]>;
   getDeviceStatus(): Promise<ActuatorDevice[]>;
   getCropStatus(): Promise<CropZone[]>;
   getEnvironmentSnapshot(): Promise<EnvironmentSnapshot>;
@@ -63,4 +70,12 @@ export interface IDataAdapter {
   getTrajectory(): Promise<AGVTrajectoryData>;
   getPondWaterQuality(): Promise<PondWaterQuality>;
   updateDeviceStatus(deviceId: string, power: boolean, value?: number): Promise<boolean>;
+
+  // Weather & Agro-Risk APIs
+  getWeatherNowcast(): Promise<WeatherNowcastData>;
+  getWeatherRadar(): Promise<RadarEchoFrame[]>;
+  getAgroRiskAlerts(): Promise<AgroRiskWarning[]>;
+  getUnifiedAlarms(): Promise<UnifiedAlarm[]>;
+  acknowledgeAlarm(alarmId: string): Promise<boolean>;
+  executeDeviceLinkage(actions: DeviceLinkageAction[]): Promise<boolean>;
 }

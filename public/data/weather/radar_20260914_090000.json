@@ -1,0 +1,24 @@
+{
+  "code": 200,
+  "message": "success",
+  "dataType": "radar_nowcast",
+  "issueTime": "2026-09-14T09:00:00.000Z",
+  "radarId": "RD_EAST_718",
+  "radarType": "双偏振S波段全相控阵多普勒天气雷达",
+  "data": {
+    "center": [120.15, 30.28],
+    "resolutionKm": 1.0,
+    "maxEchoDbz": 54,
+    "frames": [
+      { "timestamp": "2026-09-14T08:30:00Z", "timeOffsetMinutes": -30, "isExtrapolation": false, "maxDbz": 22 },
+      { "timestamp": "2026-09-14T08:45:00Z", "timeOffsetMinutes": -15, "isExtrapolation": false, "maxDbz": 26 },
+      { "timestamp": "2026-09-14T09:00:00Z", "timeOffsetMinutes": 0, "isExtrapolation": false, "maxDbz": 30 },
+      { "timestamp": "2026-09-14T09:15:00Z", "timeOffsetMinutes": 15, "isExtrapolation": true, "maxDbz": 40 },
+      { "timestamp": "2026-09-14T09:30:00Z", "timeOffsetMinutes": 30, "isExtrapolation": true, "maxDbz": 48 },
+      { "timestamp": "2026-09-14T09:45:00Z", "timeOffsetMinutes": 45, "isExtrapolation": true, "maxDbz": 54 },
+      { "timestamp": "2026-09-14T10:00:00Z", "timeOffsetMinutes": 60, "isExtrapolation": true, "maxDbz": 42 },
+      { "timestamp": "2026-09-14T10:30:00Z", "timeOffsetMinutes": 90, "isExtrapolation": true, "maxDbz": 28 },
+      { "timestamp": "2026-09-14T11:00:00Z", "timeOffsetMinutes": 120, "isExtrapolation": true, "maxDbz": 18 }
+    ]
+  }
+}

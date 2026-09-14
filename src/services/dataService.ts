@@ -74,6 +74,30 @@ class DataService {
   async updateDeviceStatus(deviceId: string, power: boolean, value?: number): Promise<boolean> {
     return this.adapter.updateDeviceStatus(deviceId, power, value);
   }
+
+  async getWeatherNowcast(): Promise<any> {
+    return this.adapter.getWeatherNowcast();
+  }
+
+  async getWeatherRadar(): Promise<any> {
+    return this.adapter.getWeatherRadar();
+  }
+
+  async getAgroRiskAlerts(): Promise<any> {
+    return this.adapter.getAgroRiskAlerts();
+  }
+
+  async getUnifiedAlarms(): Promise<any> {
+    return this.adapter.getUnifiedAlarms();
+  }
+
+  async acknowledgeAlarm(alarmId: string): Promise<boolean> {
+    return this.adapter.acknowledgeAlarm(alarmId);
+  }
+
+  async executeDeviceLinkage(actions: any[]): Promise<boolean> {
+    return this.adapter.executeDeviceLinkage(actions);
+  }
 }
 
 export const dataService = new DataService();

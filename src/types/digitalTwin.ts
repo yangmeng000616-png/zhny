@@ -119,3 +119,134 @@ export interface ProjectedTag extends SpatialTagAnchor {
   isVisible: boolean;
   distance: number;
 }
+
+// -------------------------------------------------------------
+// METEOROLOGICAL NOWCASTING & RADAR DATA TYPES (0-2H / 0-3H)
+// -------------------------------------------------------------
+export type WeatherConditionType = 'sunny' | 'cloudy' | 'overcast' | 'light_rain' | 'moderate_rain' | 'heavy_rain' | 'storm' | 'gale';
+
+export interface WeatherNowcastPoint {
+  timeOffsetMinutes: number; // e.g. 0, 15, 30, 45, 60, 90, 120
+  isoTime: string; // e.g. "2026-09-14T09:30:00"
+  displayTime: string; // e.g. "09:30 (+30m)"
+  isForecast: boolean;
+  precipitationMmPerHour: number; // mm/h
+  accumulatedRainMm: number; // accumulated mm
+  temperature: number; // ℃
+  relativeHumidity: number; // %
+  windSpeed: number; // m/s
+  windDirectionDegrees: number; // 0-360
+  windDirectionText: string; // e.g. '东南风 4级'
+  windGust: number; // m/s
+  radarReflectivityDbz: number; // 0 - 65 dBZ
+  solarRadiationWm2: number; // W/m²
+  condition: WeatherConditionType;
+  conditionText: string;
+}
+
+export interface RadarEchoFrame {
+  timestamp: string;
+  timeOffsetMinutes: number;
+  isExtrapolation: boolean; // false = observation, true = extrapolated nowcast
+  maxDbz: number;
+  coverageCenter: [number, number]; // lat, lng or local x, z
+  echoImageUri?: string; // synthetic or heatmap texture
+}
+
+export interface WeatherNowcastData {
+  stationId: string;
+  stationName: string;
+  coordinate: [number, number];
+  issueTime: string;
+  forecastRangeHours: number; // 2 or 3
+  timeStepMinutes: number; // 15
+  currentObservation: WeatherNowcastPoint;
+  timeline: WeatherNowcastPoint[];
+  radarFrames: RadarEchoFrame[];
+}
+
+// -------------------------------------------------------------
+// AGRICULTURAL IMPACT ANALYSIS & RISK WARNINGS
+// -------------------------------------------------------------
+export type AgroRiskType =
+  | 'heavy_rain'
+  | 'strong_wind'
+  | 'high_temperature'
+  | 'low_temperature'
+  | 'high_humidity_mold'
+  | 'intense_solar'
+  | 'low_radiation';
+
+export type RiskSeverity = 'critical' | 'warning' | 'info';
+
+export interface DeviceLinkageAction {
+  actionId: string;
+  title: string;
+  targetDeviceId: string;
+  targetDeviceName: string;
+  targetPower: boolean;
+  targetValue?: number;
+  reason: string;
+}
+
+export interface AgroRiskWarning {
+  id: string;
+  type: AgroRiskType;
+  severity: RiskSeverity;
+  title: string;
+  summary: string;
+  triggerCondition: string;
+  forecastLeadMinutes: number; // Lead time in minutes, e.g. 30
+  impactedGreenhouses: string[]; // e.g. ['gh_001', 'gh_002']
+  impactedCropZones: string[]; // e.g. ['crop_zone_01', 'crop_zone_03']
+  impactDescription: string;
+  aiRecommendation: string;
+  linkageActions: DeviceLinkageAction[];
+  isMitigated: boolean;
+  timestamp: string;
+}
+
+// -------------------------------------------------------------
+// UNIFIED ALARM SYSTEM (统一告警中心)
+// -------------------------------------------------------------
+export interface UnifiedAlarm {
+  id: string;
+  timestamp: string;
+  level: RiskSeverity;
+  sourceType: 'sensor' | 'device' | 'crop' | 'weather' | 'agv' | 'pond';
+  sourceId: string;
+  sourceName: string;
+  location: string;
+  metricName: string;
+  currentValue: string | number;
+  thresholdValue: string | number;
+  unit: string;
+  message: string;
+  status: 'active' | 'acknowledged' | 'resolved';
+  recommendedAction?: string;
+  linkageActions?: DeviceLinkageAction[];
+}
+
+// -------------------------------------------------------------
+// 3D CONTINUOUS ENVIRONMENT FIELD (三维连续空间场)
+// -------------------------------------------------------------
+export type EnvironmentFieldType = 'none' | 'temp' | 'humidity' | 'co2' | 'light' | 'soil_moisture';
+
+export interface EnvironmentFieldConfig {
+  activeType: EnvironmentFieldType;
+  sliceHeight: number; // 0 to 6.5 meters
+  opacity: number; // 0.1 to 1.0
+  showSlicePlane: boolean;
+  show3DParticles: boolean;
+}
+
+// -------------------------------------------------------------
+// TIMELINE & HISTORICAL PLAYBACK (时间轴与历史回放)
+// -------------------------------------------------------------
+export interface HistoryPlaybackState {
+  isPlaybackMode: boolean; // true = playback, false = live
+  isPlaying: boolean;
+  currentTimeString: string; // "10:30:00"
+  currentHourIndex: number; // 0 - 23 or fractional
+  playbackSpeed: number; // 1, 2, 5, 10
+}
