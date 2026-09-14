@@ -267,7 +267,7 @@ export type ViewDisplayMode = 'standard' | 'xray' | 'thermal' | 'structure_only'
 export interface SpatialTagAnchor {
   id: string;
   name: string;
-  category: 'weather' | 'fan' | 'light' | 'sensor' | 'control' | 'irrigation' | 'pond' | 'agv' | 'drone' | 'logistics' | 'tank' | 'field' | 'tower';
+  category: 'weather' | 'fan' | 'light' | 'sensor' | 'control' | 'irrigation' | 'pond' | 'agv' | 'drone' | 'logistics' | 'tank' | 'field' | 'tower' | 'gate';
   worldPos: [number, number, number];
   icon: string;
   statusText: string;

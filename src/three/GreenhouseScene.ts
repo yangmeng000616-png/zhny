@@ -12,6 +12,7 @@ import {
 } from '../types/digitalTwin';
 import { ParkEnvironment } from './ParkEnvironment';
 import { DynamicActorsManager } from './DynamicActorsManager';
+import { gateService } from '../services/gateService';
 
 export interface PickedObjectInfo {
   id: string;
@@ -38,9 +39,13 @@ export interface PickedObjectInfo {
     | 'coldchain'
     | 'fertigation'
     | 'smart_field'
-    | 'flux_tower';
+    | 'flux_tower'
+    | 'gate'
+    | 'vehicle'
+    | 'worker';
   name: string;
   dataRef?: any;
+  extra?: any;
   worldPosition: THREE.Vector3;
 }
 
@@ -144,6 +149,14 @@ export class GreenhouseScene {
   private animationFrameId: number | null = null;
   private clock = new THREE.Clock();
 
+  // Intelligent Boom Barrier & Entrance Gate
+  private barrierPivot: THREE.Group | null = null;
+  private isBarrierRaised: boolean = false;
+  private barrierCurrentAngle: number = 0;
+  private barrierTargetAngle: number = 0;
+  private barrierSignalLight: THREE.Mesh | null = null;
+  public onGateStateChange?: (isRaised: boolean) => void;
+
   // State flags
   public isIrrigating = true;
   public shadeCurtainOpenRatio = 0; // 0 = retracted, 1 = closed
@@ -155,6 +168,7 @@ export class GreenhouseScene {
       onSelect?: (info: PickedObjectInfo) => void;
       onTagsUpdate?: (tags: ProjectedTag[]) => void;
       onCameraOrbit?: () => void;
+      onGateStateChange?: (isRaised: boolean) => void;
     }
   ) {
     this.container = container;
@@ -162,6 +176,7 @@ export class GreenhouseScene {
     this.onObjectSelect = callbacks?.onSelect;
     this.onTagsUpdate = callbacks?.onTagsUpdate;
     this.onCameraOrbit = callbacks?.onCameraOrbit;
+    this.onGateStateChange = callbacks?.onGateStateChange;
 
     const width = container.clientWidth || 800;
     const height = container.clientHeight || 600;
@@ -291,6 +306,32 @@ export class GreenhouseScene {
     // 8.6 Initialize Dynamic Actors (Vehicles & Farm Personnel)
     this.dynamicActorsManager = new DynamicActorsManager();
     this.parkGroup.add(this.dynamicActorsManager.actorsGroup);
+    this.interactiveObjects.push(...this.dynamicActorsManager.interactiveObjects);
+
+    // Automatic Gate Recognition & Auto-pass for whitelisted vehicles
+    this.dynamicActorsManager.onApproachGate = (plateNumber: string) => {
+      const mode = gateService.getGateStatus().mode;
+      if (mode === 'always_open') {
+        this.setGateBarrierRaised(true);
+        return;
+      }
+      if (mode === 'locked') {
+        return;
+      }
+      if (mode === 'auto_whitelist') {
+        const check = gateService.checkPlateWhitelist(plateNumber);
+        if (check.isWhitelisted) {
+          this.setGateBarrierRaised(true);
+        }
+      }
+    };
+
+    this.dynamicActorsManager.onLeaveGate = () => {
+      const mode = gateService.getGateStatus().mode;
+      if (mode === 'auto_whitelist') {
+        this.setGateBarrierRaised(false);
+      }
+    };
 
     // 9. Event Listeners
     this.setupEvents();
@@ -1562,16 +1603,141 @@ export class GreenhouseScene {
     windowPnl.position.set(1.1, 1.8, 2.12);
     controlBuilding.add(windowPnl);
 
-    // Security Boom Barrier Gate at entrance driveway
-    const gatePostMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.5 });
-    const gatePost = new THREE.Mesh(new THREE.BoxGeometry(0.35, 1.1, 0.35), gatePostMat);
-    gatePost.position.set(12.8 - 16.5, 0.55, 15.6 - 13.5);
-    controlBuilding.add(gatePost);
+    // =========================================================
+    // ENTRANCE GATE & INTELLIGENT BOOM BARRIER (X = 12.8, Z = 14.5)
+    // =========================================================
+    const gateGroup = new THREE.Group();
+    gateGroup.position.set(12.8 - 16.5, 0, 14.5 - 13.5);
+    gateGroup.name = 'Entrance_Gate_Facility';
 
-    const barrierMat = new THREE.MeshStandardMaterial({ color: 0xef4444 });
-    const barrierArm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 3.6), barrierMat);
-    barrierArm.position.set(12.8 - 16.5, 0.95, (15.6 - 13.5) - 1.8);
-    controlBuilding.add(barrierArm);
+    // 1. Entrance Road Gantry Archway
+    const archMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.6, roughness: 0.3 });
+    // Left Pillar
+    const leftPillar = new THREE.Mesh(new THREE.BoxGeometry(0.35, 3.8, 0.35), archMat);
+    leftPillar.position.set(0, 1.9, 2.2);
+    gateGroup.add(leftPillar);
+    // Right Pillar
+    const rightPillar = new THREE.Mesh(new THREE.BoxGeometry(0.35, 3.8, 0.35), archMat);
+    rightPillar.position.set(0, 1.9, -2.2);
+    gateGroup.add(rightPillar);
+    // Top Arch Beam
+    const topBeam = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.5, 4.8), archMat);
+    topBeam.position.set(0, 3.8, 0);
+    gateGroup.add(topBeam);
+
+    // Gantry Signboard Canvas
+    const gantryCanvas = document.createElement('canvas');
+    gantryCanvas.width = 512;
+    gantryCanvas.height = 128;
+    const gCtx = gantryCanvas.getContext('2d');
+    if (gCtx) {
+      gCtx.fillStyle = '#0f172a';
+      gCtx.fillRect(0, 0, 512, 128);
+      gCtx.strokeStyle = '#38bdf8';
+      gCtx.lineWidth = 6;
+      gCtx.strokeRect(6, 6, 500, 116);
+      gCtx.fillStyle = '#38bdf8';
+      gCtx.font = 'bold 32px "PingFang SC", "Microsoft YaHei", sans-serif';
+      gCtx.textAlign = 'center';
+      gCtx.textBaseline = 'middle';
+      gCtx.fillText('现代农业示范园 · 主大门出入口', 256, 64);
+    }
+    const gantryTex = new THREE.CanvasTexture(gantryCanvas);
+    const gantrySignMat = new THREE.MeshBasicMaterial({ map: gantryTex });
+    const gantrySignMesh = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 0.46), gantrySignMat);
+    gantrySignMesh.position.set(0.24, 3.8, 0);
+    gantrySignMesh.rotation.y = Math.PI / 2;
+    gateGroup.add(gantrySignMesh);
+
+    // 2. Security Boom Barrier Housing Box (Pedestal)
+    const gatePostMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.6, roughness: 0.3 });
+    const gatePost = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.15, 0.4), gatePostMat);
+    gatePost.position.set(0, 0.58, 1.8);
+    gateGroup.add(gatePost);
+
+    // Barrier Status Indicator Light (Red = closed, Green = raised)
+    const lightMat = new THREE.MeshStandardMaterial({
+      color: 0xef4444,
+      emissive: 0xef4444,
+      emissiveIntensity: 0.9,
+      roughness: 0.2,
+    });
+    this.barrierSignalLight = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 12), lightMat);
+    this.barrierSignalLight.position.set(0, 1.22, 1.8);
+    gateGroup.add(this.barrierSignalLight);
+
+    // 3. Animated Boom Barrier Pivot & Arm
+    this.barrierPivot = new THREE.Group();
+    this.barrierPivot.position.set(0, 0.96, 1.7);
+
+    // Arm extending 3.5m across lane (-Z direction)
+    const armGroup = new THREE.Group();
+    const stripeColors = [0xef4444, 0xffffff, 0xef4444, 0xffffff, 0xef4444, 0xffffff, 0xef4444];
+    const segLen = 3.5 / stripeColors.length;
+    stripeColors.forEach((col, idx) => {
+      const segMat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.4 });
+      const seg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.09, segLen), segMat);
+      seg.position.set(0, 0, -(idx * segLen + segLen / 2));
+      armGroup.add(seg);
+    });
+    const bumperMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
+    const bumper = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.02, 3.5), bumperMat);
+    bumper.position.set(0, -0.05, -1.75);
+    armGroup.add(bumper);
+
+    this.barrierPivot.add(armGroup);
+    gateGroup.add(this.barrierPivot);
+
+    // 4. ALPR Camera & Electronic LED Info Display Pillar
+    const camPoleMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.7 });
+    const camPole = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.8, 8), camPoleMat);
+    camPole.position.set(0.6, 0.9, 1.9);
+    gateGroup.add(camPole);
+
+    const camHeadMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.8 });
+    const camHead = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, 0.22), camHeadMat);
+    camHead.position.set(0.6, 1.7, 1.9);
+    camHead.rotation.y = -0.4;
+    camHead.rotation.x = 0.2;
+    gateGroup.add(camHead);
+
+    // Electronic LED Display Canvas
+    const ledCanvas = document.createElement('canvas');
+    ledCanvas.width = 256;
+    ledCanvas.height = 128;
+    const lCtx = ledCanvas.getContext('2d');
+    if (lCtx) {
+      lCtx.fillStyle = '#050a14';
+      lCtx.fillRect(0, 0, 256, 128);
+      lCtx.fillStyle = '#10b981';
+      lCtx.font = 'bold 20px monospace';
+      lCtx.fillText('AUTO-ALPR OK', 18, 36);
+      lCtx.fillStyle = '#38bdf8';
+      lCtx.font = 'bold 22px "PingFang SC", sans-serif';
+      lCtx.fillText('苏E·A886F', 18, 70);
+      lCtx.fillStyle = '#f59e0b';
+      lCtx.font = '16px "PingFang SC", sans-serif';
+      lCtx.fillText('白名单自动放行', 18, 102);
+    }
+    const ledTex = new THREE.CanvasTexture(ledCanvas);
+    const ledScreenMat = new THREE.MeshBasicMaterial({ map: ledTex });
+    const ledScreenMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.36), ledScreenMat);
+    ledScreenMesh.position.set(0.6, 1.25, 1.9);
+    ledScreenMesh.rotation.y = Math.PI / 2;
+    gateGroup.add(ledScreenMesh);
+
+    // 5. Dedicated Hit Box for the Gate Facility
+    const gateHit = new THREE.Mesh(new THREE.BoxGeometry(3.6, 4.2, 5.2), new THREE.MeshBasicMaterial({ visible: false }));
+    gateHit.position.set(0, 1.9, 0);
+    gateHit.userData = {
+      id: 'facility_entrance_gate',
+      type: 'gate',
+      name: '园区主大门 · 智能车牌识别出入道闸',
+    };
+    gateGroup.add(gateHit);
+    this.interactiveObjects.push(gateHit);
+
+    controlBuilding.add(gateGroup);
 
     // Signboard on control center
     const signMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, emissive: 0x0284c7, emissiveIntensity: 0.3 });
@@ -1809,6 +1975,16 @@ export class GreenhouseScene {
         targetId: 'control_center_01',
       },
       {
+        id: 'tag_entrance_gate',
+        name: '主出入口·智能道闸',
+        category: 'gate',
+        worldPos: [12.8, 4.0, 14.5],
+        icon: 'ShieldCheck',
+        statusText: '园区主大门 · 智能车牌识别出入道闸',
+        subtext: '自动车牌比对 · 白名单放行 · 往来台账',
+        targetId: 'facility_entrance_gate',
+      },
+      {
         id: 'tag_irrigation',
         name: '灌溉系统',
         category: 'irrigation',
@@ -1990,6 +2166,7 @@ export class GreenhouseScene {
             id: obj.userData.id,
             type: obj.userData.type,
             name: obj.userData.name,
+            extra: obj.userData,
             worldPosition: topHit.point,
           };
           this.onObjectHover?.(info, { x: screenX, y: screenY });
@@ -2020,6 +2197,7 @@ export class GreenhouseScene {
           id: obj.userData.id,
           type: obj.userData.type,
           name: obj.userData.name,
+          extra: obj.userData,
           worldPosition: intersects[0].point,
         };
         // Select object to inspect details in modal without snatching user's camera viewpoint
@@ -2190,6 +2368,32 @@ export class GreenhouseScene {
     if (this.waterFlowParticles) {
       this.waterFlowParticles.visible = isRunning;
     }
+  }
+
+  // -------------------------------------------------------------
+  // INTELLIGENT BOOM BARRIER & ACCESS CONTROL
+  // -------------------------------------------------------------
+  public setGateBarrierRaised(raised: boolean) {
+    this.isBarrierRaised = raised;
+    this.barrierTargetAngle = raised ? -Math.PI * 0.42 : 0;
+    if (this.barrierSignalLight) {
+      const mat = this.barrierSignalLight.material as THREE.MeshStandardMaterial;
+      if (mat) {
+        mat.color.setHex(raised ? 0x10b981 : 0xef4444);
+        mat.emissive.setHex(raised ? 0x10b981 : 0xef4444);
+      }
+    }
+    this.onGateStateChange?.(raised);
+  }
+
+  public isGateBarrierRaised(): boolean {
+    return this.isBarrierRaised;
+  }
+
+  public toggleGateBarrier(): boolean {
+    const nextState = !this.isBarrierRaised;
+    this.setGateBarrierRaised(nextState);
+    return nextState;
   }
 
   // -------------------------------------------------------------
@@ -2720,6 +2924,7 @@ export class GreenhouseScene {
       facility_fertigation_tanks: { x: 42, z: -48, r: 11 },
       facility_smart_field: { x: -36, z: 74, r: 18 },
       facility_flux_tower: { x: 72, z: 34, r: 5 },
+      facility_entrance_gate: { x: 12.8, z: 14.5, r: 5.5 },
     };
 
     let cx = 0;
@@ -2844,6 +3049,10 @@ export class GreenhouseScene {
     }
     if (objectId === 'facility_flux_tower') {
       this.animateCameraTo(new THREE.Vector3(72, 22, 54), new THREE.Vector3(72, 10.0, 34));
+      return;
+    }
+    if (objectId === 'facility_entrance_gate') {
+      this.animateCameraTo(new THREE.Vector3(12.8 + 10, 8.5, 14.5 + 12), new THREE.Vector3(12.8, 1.8, 14.5));
       return;
     }
 
@@ -3091,6 +3300,16 @@ export class GreenhouseScene {
     // 8.8b Rotate Interactive Selection Ring
     if (this.selectionRingMesh) {
       this.selectionRingMesh.rotation.y += 0.4 * delta;
+    }
+
+    // 8.8c Boom Barrier Gate Arm Animation
+    if (this.barrierPivot) {
+      this.barrierCurrentAngle = THREE.MathUtils.lerp(
+        this.barrierCurrentAngle,
+        this.barrierTargetAngle,
+        delta * 6.0
+      );
+      this.barrierPivot.rotation.x = this.barrierCurrentAngle;
     }
 
     // 8.9 Continuous Environment Field Particles Shimmer

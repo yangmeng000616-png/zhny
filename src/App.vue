@@ -76,6 +76,9 @@ import PondFeedingModal from './components/PondFeedingModal.vue';
 import TemperatureHistoryModal from './components/TemperatureHistoryModal.vue';
 import EnterpriseOwnerHubModal from './components/EnterpriseOwnerHubModal.vue';
 import LogisticsLedgerModal from './components/LogisticsLedgerModal.vue';
+import ParkGateLedgerModal from './components/ParkGateLedgerModal.vue';
+import VehicleMissionModal from './components/VehicleMissionModal.vue';
+import { gateService } from './services/gateService';
 
 const canvasContainerRef = ref<HTMLDivElement | null>(null);
 let sceneInstance: GreenhouseScene | null = null;
@@ -88,6 +91,75 @@ const crops = ref<CropZone[]>(initialCropZones);
 const agv = ref<AGVRobot>(initialAGV);
 const pondWater = ref<PondWaterQuality>(initialPondWaterData);
 const dataSourceMode = ref<'local' | 'api'>(dataService.getMode());
+
+// Gate Access Control & Vehicle Mission States
+const showGateModal = ref<boolean>(false);
+const gateBarrierRaised = ref<boolean>(false);
+const showVehicleMissionModal = ref<boolean>(false);
+const selectedVehicleMission = ref<any>(null);
+
+const openVehicleDetails = (plateNumber: string) => {
+  const record = gateService.getRecords().find((r) => r.plateNumber === plateNumber);
+  const plateInfo = gateService.getPlates().find((p) => p.plateNumber === plateNumber);
+
+  if (record) {
+    selectedVehicleMission.value = {
+      plateNumber: record.plateNumber,
+      plateColor: record.plateColor || 'green',
+      categoryName: record.vehicleCategory === 'reefer' ? '新能源冷链冷藏货车' : record.vehicleCategory === 'utility' ? '园区电动巡视转运车' : '农资物资运输货车',
+      model: record.vehicleModel || (record.vehicleCategory === 'reefer' ? 'BYD T5A 4.5T 智能电驱冷藏车' : '绿源 AGV-EP04 园区多功能作业车'),
+      driverName: record.driverName,
+      driverPhone: record.driverPhone,
+      company: record.company,
+      mission: record.mission,
+      destination: record.targetArea,
+      entryTime: record.timestamp,
+      status: record.clearanceType !== 'blocked' ? '已核验入园·任务执行中' : '待闸机核验',
+      cargo: record.cargoDescription || '冷藏高品质有机果蔬',
+      isWhitelisted: record.clearanceType === 'auto_whitelist',
+    };
+  } else if (plateInfo) {
+    selectedVehicleMission.value = {
+      plateNumber: plateInfo.plateNumber,
+      plateColor: plateInfo.plateColor || 'green',
+      categoryName: plateInfo.vehicleCategory === 'reefer' ? '新能源冷链冷藏货车' : plateInfo.vehicleCategory === 'utility' ? '园区电动巡视转运车' : '农资物资运输货车',
+      model: plateInfo.vehicleCategory === 'reefer' ? 'BYD T5A 4.5T 智能电驱冷藏车' : '绿源 AGV-EP04 园区多功能作业车',
+      driverName: plateInfo.driverName,
+      driverPhone: plateInfo.driverPhone,
+      company: plateInfo.company,
+      mission: plateInfo.defaultMission,
+      destination: '园区冷链物流分选中心 & 各大棚装货泊位',
+      entryTime: '当日登记在册',
+      status: '白名单授权车辆',
+      cargo: '保鲜冷链果蔬及农资原料',
+      isWhitelisted: plateInfo.autoPass,
+    };
+  } else {
+    selectedVehicleMission.value = {
+      plateNumber: plateNumber || '苏A·E8866',
+      plateColor: 'green',
+      categoryName: '新能源冷链冷藏货车',
+      model: 'BYD T5A 4.5T 智能电驱冷藏车',
+      driverName: '张建军',
+      driverPhone: '13812345678',
+      company: '鲜达农业冷链供应链（南京）有限公司',
+      mission: '装载3号棚高品质绿蝶生菜并转运冷链分选中心',
+      destination: '冷链物流中心1号装卸泊位',
+      entryTime: '09:22:15',
+      status: '已核验入园·任务执行中',
+      cargo: '优质有机绿蝶生菜 2.4吨（温控 2-4℃）',
+      isWhitelisted: true,
+    };
+  }
+  showVehicleMissionModal.value = true;
+};
+
+const handleToggleGateBarrier = (open: boolean) => {
+  gateBarrierRaised.value = open;
+  if (sceneInstance) {
+    sceneInstance.setGateBarrierRaised(open);
+  }
+};
 
 // Per-Greenhouse Microclimate & Outdoor Weather Separation
 const selectedGreenhouseId = ref<string>('gh_001');
@@ -254,6 +326,15 @@ onMounted(() => {
       onSelect: (info) => {
         if (info) {
           // Direct facility modal triggers
+          if (info.id.includes('gate') || info.id.includes('barrier') || info.type === 'gate') {
+            showGateModal.value = true;
+            return;
+          }
+          if (info.type === 'vehicle' || info.id.includes('vehicle')) {
+            const plate = info.extra?.plateNumber || (info.id.includes('cart') ? '绿源-A028' : '苏A·E8866');
+            openVehicleDetails(plate);
+            return;
+          }
           if (info.id.includes('coldchain') || info.id.includes('truck') || info.id.includes('loader')) {
             showLogisticsLedger.value = true;
             return;
@@ -299,6 +380,9 @@ onMounted(() => {
       },
       onCameraOrbit: () => {
         currentPreset.value = 'custom' as any;
+      },
+      onGateStateChange: (isRaised) => {
+        gateBarrierRaised.value = isRaised;
       },
     });
   }
@@ -696,6 +780,10 @@ const handleFocusDevice = (deviceId: string) => {
 
 // 7. Spatial Tag click navigation
 const handleSelectTag = (tag: ProjectedTag) => {
+  if (tag.category === 'gate' || tag.targetId === 'facility_entrance_gate') {
+    showGateModal.value = true;
+    return;
+  }
   if (!sceneInstance) return;
   const targetPos = new THREE.Vector3(tag.worldPos[0], tag.worldPos[1], tag.worldPos[2]);
   sceneInstance.focusOnPosition(targetPos);
@@ -873,6 +961,7 @@ const handleTimeChange = (hourFraction: number) => {
       @open-temp-modal="showTempHistoryModal = true"
       @open-owner-hub-modal="showOwnerHubModal = true"
       @open-logistics-modal="showLogisticsLedger = true"
+      @open-gate-modal="showGateModal = true"
     />
 
     <!-- Left Environment Telemetry Panel -->
@@ -1082,6 +1171,26 @@ const handleTimeChange = (hourFraction: number) => {
       v-if="showLogisticsLedger"
       :visible="showLogisticsLedger"
       @close="showLogisticsLedger = false"
+    />
+
+    <!-- Entrance Gate Access Control & Vehicle Ledger Modal -->
+    <ParkGateLedgerModal
+      v-if="showGateModal"
+      :visible="showGateModal"
+      :barrier-raised="gateBarrierRaised"
+      @close="showGateModal = false"
+      @toggle-barrier="handleToggleGateBarrier"
+      @open-vehicle-details="openVehicleDetails"
+    />
+
+    <!-- Vehicle Mission & Driver Identification Modal -->
+    <VehicleMissionModal
+      v-if="showVehicleMissionModal"
+      :visible="showVehicleMissionModal"
+      :vehicle="selectedVehicleMission"
+      @close="showVehicleMissionModal = false"
+      @open-gate-ledger="showVehicleMissionModal = false; showGateModal = true"
+      @open-logistics-ledger="showVehicleMissionModal = false; showLogisticsLedger = true"
     />
 
     <!-- 3D Mouse Hover Tooltip -->

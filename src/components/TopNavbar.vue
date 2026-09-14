@@ -9,6 +9,7 @@ import {
   CloudRain,
   Activity,
   ShieldAlert,
+  ShieldCheck,
   Clock,
   Radio,
   ChevronDown,
@@ -61,6 +62,7 @@ const emit = defineEmits<{
   (e: 'openTempModal'): void;
   (e: 'openOwnerHubModal'): void;
   (e: 'openLogisticsModal'): void;
+  (e: 'openGateModal'): void;
   (e: 'toggleZenMode'): void;
 }>();
 
@@ -342,6 +344,17 @@ const selectPreset = (preset: CameraPreset) => {
               </div>
               <span class="text-[10px] text-slate-500 font-mono">水质浮标</span>
             </button>
+            <button
+              id="btn-top-facility-gate"
+              @click="$emit('openGateModal'); showFacilityMenu = false;"
+              class="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between text-slate-300 hover:bg-slate-900 transition-colors cursor-pointer"
+            >
+              <div class="flex items-center gap-1.5">
+                <ShieldCheck class="w-3.5 h-3.5 text-amber-400" />
+                <span>园区主大门·车牌道闸</span>
+              </div>
+              <span class="text-[10px] text-amber-400/80 font-mono">出入口</span>
+            </button>
           </div>
         </div>
 
@@ -465,6 +478,19 @@ const selectPreset = (preset: CameraPreset) => {
                 <span class="font-medium">果蔬出货/农资进货台账</span>
               </div>
               <span class="text-[9px] text-emerald-400/80 font-mono">冷链物流</span>
+            </button>
+
+            <button
+              id="btn-top-gate-ledger"
+              @click="$emit('openGateModal'); showLedgerMenu = false;"
+              class="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between text-slate-200 hover:bg-amber-500/15 hover:text-amber-200 transition-colors cursor-pointer group"
+              title="园区大门出入道闸控制与车辆往来台账（白名单自动放行与车牌记录）"
+            >
+              <div class="flex items-center gap-2">
+                <ShieldCheck class="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
+                <span class="font-medium">大门出入与车牌道闸</span>
+              </div>
+              <span class="text-[9px] text-amber-400/80 font-mono">车辆道闸</span>
             </button>
           </div>
         </div>

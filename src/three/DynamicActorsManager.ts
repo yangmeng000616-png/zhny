@@ -10,6 +10,12 @@ interface RoadWaypoint {
 
 export class DynamicActorsManager {
   public actorsGroup: THREE.Group;
+  public interactiveObjects: THREE.Object3D[] = [];
+
+  // Gate proximity callbacks
+  public onApproachGate?: (plateNumber: string) => void;
+  public onLeaveGate?: (plateNumber: string) => void;
+  private isNearGate: boolean = false;
 
   // 1. Vehicles
   private reeferTruck: {
@@ -203,6 +209,33 @@ export class DynamicActorsManager {
       truckGroup.add(wheel);
     });
 
+    // Interactive Hitbox for License Plate & Mission Inspection
+    const truckHit = new THREE.Mesh(
+      new THREE.BoxGeometry(2.8, 3.4, 7.8),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    truckHit.position.set(0, 1.7, -1.0);
+    truckHit.userData = {
+      id: 'dynamic_actor_truck',
+      type: 'vehicle',
+      plateNumber: '苏E·A886F',
+      plateColor: 'green',
+      name: '新能源冷链物流货车 [苏E·A886F]',
+      categoryName: '4.2米 纯电动恒温冷藏货车',
+      model: '福田智蓝 新能源冷链专用',
+      driverName: '陈志强',
+      driverPhone: '138-1234-5678',
+      company: '盒马鲜生华东冷链直运车队',
+      mission: '5#高糖番茄温室采收提货，发往盒马鲜生华东中心仓',
+      destination: '5#智能化温室 / 冷链物流中心',
+      entryTime: '09:42:15',
+      status: '在园作业装运中',
+      cargo: '5#棚高糖串收番茄 1850kg',
+      isWhitelisted: true,
+    };
+    truckGroup.add(truckHit);
+    this.interactiveObjects.push(truckHit);
+
     // Initial positioning
     truckGroup.position.set(-36, 0.04, -24);
     this.actorsGroup.add(truckGroup);
@@ -326,6 +359,33 @@ export class DynamicActorsManager {
       cartGroup.add(w);
     });
 
+    // Interactive Hitbox for Utility Cart
+    const cartHit = new THREE.Mesh(
+      new THREE.BoxGeometry(2.0, 2.2, 3.6),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    cartHit.position.set(0, 1.1, 0);
+    cartHit.userData = {
+      id: 'dynamic_actor_cart',
+      type: 'vehicle',
+      plateNumber: '苏E·F0116',
+      plateColor: 'green',
+      name: '园区电动果蔬转运车 [苏E·F0116]',
+      categoryName: '纯电动农业平板转运电瓶车',
+      model: '绿友农用电动平板车',
+      driverName: '赵海峰',
+      driverPhone: '135-2233-4455',
+      company: '园区内部生产运维班组',
+      mission: '果蔬转运与熊蜂授粉箱/生物农药换装配送',
+      destination: '1#~8#温室主通道 / 配肥站',
+      entryTime: '07:15:00',
+      status: '在园转运中',
+      cargo: '食品级采收周转筐 120只',
+      isWhitelisted: true,
+    };
+    cartGroup.add(cartHit);
+    this.interactiveObjects.push(cartHit);
+
     cartGroup.position.set(0, 0.04, 20); // On Central Avenue (Z = 20)
     this.actorsGroup.add(cartGroup);
 
@@ -426,6 +486,16 @@ export class DynamicActorsManager {
     // Set initial spot: Pedestrian path near Greenhouse 1 south entrance
     personGroup.position.set(8.5, 0, 10);
     personGroup.rotation.y = 0;
+
+    const techHit = new THREE.Mesh(
+      new THREE.BoxGeometry(1.0, 2.0, 1.0),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    techHit.position.set(0, 1.0, 0);
+    techHit.userData = { id: 'worker_technician', type: 'worker', name: '大棚物联网巡检农艺师' };
+    personGroup.add(techHit);
+    this.interactiveObjects.push(techHit);
+
     this.actorsGroup.add(personGroup);
 
     this.technicianWorker = {
@@ -548,6 +618,16 @@ export class DynamicActorsManager {
 
     // Set initial position: On crosswalk / service road between GH1 & GH3
     loaderGroup.position.set(-15, 0, 16.5);
+
+    const loaderHit = new THREE.Mesh(
+      new THREE.BoxGeometry(1.4, 2.0, 2.2),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    loaderHit.position.set(0, 1.0, 0.2);
+    loaderHit.userData = { id: 'worker_loader', type: 'worker', name: '果蔬采收装卸搬运员' };
+    loaderGroup.add(loaderHit);
+    this.interactiveObjects.push(loaderHit);
+
     this.actorsGroup.add(loaderGroup);
 
     this.logisticsLoader = {
@@ -617,6 +697,16 @@ export class DynamicActorsManager {
     const basePos = new THREE.Vector3(28, 0.25, 36);
     personGroup.position.copy(basePos);
     personGroup.rotation.y = -Math.PI / 4; // Facing the pond water & buoy
+
+    const pondHit = new THREE.Mesh(
+      new THREE.BoxGeometry(0.9, 1.9, 0.9),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    pondHit.position.set(0, 0.9, 0);
+    pondHit.userData = { id: 'worker_pond_inspector', type: 'worker', name: '生态鱼塘水质巡检与投喂技术员' };
+    personGroup.add(pondHit);
+    this.interactiveObjects.push(pondHit);
+
     this.actorsGroup.add(personGroup);
 
     this.pondInspector = {
@@ -638,6 +728,21 @@ export class DynamicActorsManager {
       const curWp = truck.waypoints[truck.currentSegment];
       const nextIdx = (truck.currentSegment + 1) % truck.waypoints.length;
       const nextWp = truck.waypoints[nextIdx];
+
+      // Gate proximity detection (Main Entrance gate is near X = 16.5, Z = 14.5)
+      const tPos = truck.group.position;
+      const distToGate = Math.hypot(tPos.x - 16.5, tPos.z - 14.5);
+      if (distToGate < 18.0) {
+        if (!this.isNearGate) {
+          this.isNearGate = true;
+          this.onApproachGate?.('苏E·A886F');
+        }
+      } else if (distToGate > 25.0) {
+        if (this.isNearGate) {
+          this.isNearGate = false;
+          this.onLeaveGate?.('苏E·A886F');
+        }
+      }
 
       const dx = nextWp.x - curWp.x;
       const dz = nextWp.z - curWp.z;
