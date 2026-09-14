@@ -29,6 +29,9 @@ import {
   Zap,
   Gauge,
   ThermometerSnowflake,
+  FileSpreadsheet,
+  Bug,
+  Thermometer,
 } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -46,6 +49,9 @@ defineEmits<{
   (e: 'updateActuatorValue', id: string, value: number): void;
   (e: 'focusCamera'): void;
   (e: 'openStation', id: string): void;
+  (e: 'openFeedingModal'): void;
+  (e: 'openTempModal'): void;
+  (e: 'openPestModal'): void;
 }>();
 
 const sensor = computed(() => {
@@ -303,6 +309,24 @@ const isFluxTower = computed(() => props.info?.type === 'facility_flux_tower' ||
             <span class="text-slate-500 block text-[9px] mt-0.5">泥沙沉淀良好</span>
           </div>
         </div>
+
+        <!-- Direct Quick Actions for Fish Pond Feeding & Temperature -->
+        <div class="pt-2 border-t border-slate-800/80 flex flex-col sm:flex-row gap-2">
+          <button
+            @click="$emit('openFeedingModal')"
+            class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs transition-all shadow-md cursor-pointer"
+          >
+            <Waves class="w-3.5 h-3.5" />
+            <span>🐟 登记投喂与查看鱼塘台账 (Excel)</span>
+          </button>
+          <button
+            @click="$emit('openTempModal')"
+            class="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-amber-600/30 hover:bg-amber-600/40 border border-amber-500/50 text-amber-200 text-xs font-semibold transition-all cursor-pointer"
+          >
+            <Thermometer class="w-3.5 h-3.5 text-amber-400" />
+            <span>水体温度历史</span>
+          </button>
+        </div>
       </div>
 
       <!-- 6. Water Pump Station -->
@@ -489,6 +513,23 @@ const isFluxTower = computed(() => props.info?.type === 'facility_flux_tower' ||
             <span class="text-slate-200 font-bold text-base">3个 轮灌组</span>
             <span class="text-slate-500 block text-[9px] mt-0.5">电磁阀LoRa无线受控</span>
           </div>
+        </div>
+
+        <div class="pt-2 border-t border-slate-800/80 flex flex-col sm:flex-row gap-2">
+          <button
+            @click="$emit('openPestModal')"
+            class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition-all shadow-md cursor-pointer"
+          >
+            <Bug class="w-3.5 h-3.5" />
+            <span>🦗 诱虫灯捕获录入与虫情周报</span>
+          </button>
+          <button
+            @click="$emit('openTempModal')"
+            class="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-amber-600/30 hover:bg-amber-600/40 border border-amber-500/50 text-amber-200 text-xs font-semibold transition-all cursor-pointer"
+          >
+            <Thermometer class="w-3.5 h-3.5 text-amber-400" />
+            <span>大田地温历史</span>
+          </button>
         </div>
       </div>
 

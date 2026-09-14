@@ -27,6 +27,9 @@ import {
   ShieldCheck,
   Sliders,
   LayoutGrid,
+  FileSpreadsheet,
+  Bug,
+  Briefcase,
 } from 'lucide-vue-next';
 
 const props = withDefaults(
@@ -52,6 +55,10 @@ const emit = defineEmits<{
   (e: 'update:collapsed', val: boolean): void;
   (e: 'openStation', ghId: string): void;
   (e: 'openMatrix'): void;
+  (e: 'openFeedingModal'): void;
+  (e: 'openTempModal'): void;
+  (e: 'openPestModal'): void;
+  (e: 'openOwnerHubModal'): void;
 }>();
 
 const localCollapsed = ref(false);
@@ -565,6 +572,26 @@ const selectGreenhouse = (ghId: string) => {
                   </span>
                 </span>
               </div>
+
+              <!-- Quick Actions: Temperature History & Pest Monitoring -->
+              <div class="grid grid-cols-2 gap-1.5 pt-1">
+                <button
+                  @click="$emit('openTempModal')"
+                  class="flex items-center justify-center gap-1 px-2 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-semibold text-[11px] transition-all cursor-pointer shadow-xs"
+                  title="查看全区各点位温度历史记录及曲线并导出Excel"
+                >
+                  <Thermometer class="w-3.5 h-3.5 text-amber-400" />
+                  <span>各地温度历史</span>
+                </button>
+                <button
+                  @click="$emit('openPestModal')"
+                  class="flex items-center justify-center gap-1 px-2 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-semibold text-[11px] transition-all cursor-pointer shadow-xs"
+                  title="智能诱虫灯与虫情测报看板（支持录入及周走势分析）"
+                >
+                  <Bug class="w-3.5 h-3.5 text-emerald-400" />
+                  <span>诱虫灯测报</span>
+                </button>
+              </div>
             </div>
           </template>
 
@@ -786,6 +813,26 @@ const selectGreenhouse = (ghId: string) => {
                 <span>管网静压: 0.38 MPa</span>
               </div>
             </div>
+
+            <!-- Water Tab: Fish Feeding Ledger & Temperature History -->
+            <div class="space-y-1.5 pt-1">
+              <button
+                @click="$emit('openFeedingModal')"
+                class="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 text-white font-semibold text-xs transition-all shadow-md cursor-pointer"
+                title="鱼塘每次喂食记录留痕、投前测温溶氧与Excel导出"
+              >
+                <Waves class="w-3.5 h-3.5" />
+                <span>🐟 登记鱼塘投喂 / 投喂台账 (Excel)</span>
+              </button>
+              <button
+                @click="$emit('openTempModal')"
+                class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-amber-500/40 text-amber-300 text-[11px] font-semibold transition-all cursor-pointer"
+                title="查看各点位温度历史记录及曲线并导出Excel"
+              >
+                <Thermometer class="w-3.5 h-3.5 text-amber-400" />
+                <span>水体与全园区温度历史曲线 (Excel)</span>
+              </button>
+            </div>
           </div>
         </template>
 
@@ -825,8 +872,15 @@ const selectGreenhouse = (ghId: string) => {
 
       <!-- Panel Footer -->
       <div class="p-2 bg-slate-950/90 backdrop-blur-md border-t border-white/10 text-[9px] text-slate-400 flex items-center justify-between">
-        <span class="font-mono">采样频率: 1000ms</span>
-        <span class="text-emerald-300 font-medium">● 8座大棚独立生境测控中</span>
+        <button
+          @click="$emit('openOwnerHubModal')"
+          class="flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-semibold cursor-pointer transition-colors"
+          title="打开农业老板经营决策中枢（营收/库存/用工/能耗总表）"
+        >
+          <Briefcase class="w-3 h-3" />
+          <span>老板决策中枢</span>
+        </button>
+        <span class="text-emerald-300 font-medium">● 8棚+鱼塘生境在线</span>
       </div>
     </div>
 

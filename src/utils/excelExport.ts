@@ -12,6 +12,7 @@ import type {
   FarmInventoryItem,
   FarmLaborRecord,
   FarmHarvestSalesRecord,
+  PestMonitoringRecord,
 } from '../types/digitalTwin';
 
 /**
@@ -42,7 +43,7 @@ function escapeCsvField(field: unknown): string {
     return `"${str.replace(/"/g, '""')}"`;
   }
   return `"${str}"`;
-}ye
+}
 
 /**
  * 1. 导出生态鱼塘喂食与水质监测历史台账 (Excel CSV)
@@ -334,7 +335,56 @@ export function exportFarmSalesCsv(records: FarmHarvestSalesRecord[]): void {
 }
 
 /**
- * 8. 农场负责人综合生产经营一键总导出 (整合多表合一的高管报表)
+ * 8. 导出智能诱虫灯与虫情测报数据报表 (Excel CSV)
+ */
+export function exportPestMonitoringCsv(records: PestMonitoringRecord[]): void {
+  const headers = [
+    '测报记录号',
+    '诱捕日期时间',
+    '监测诱虫灯编号',
+    '设备名称',
+    '所属温室/点位',
+    '靶标害虫种类',
+    '诱捕头数',
+    '预警等级',
+    '监测时气温(℃)',
+    '监测时相对湿度(%)',
+    'AI图像识别置信度(%)',
+    '绿色防控方案建议',
+    '处置状态',
+    '记录人/上传源',
+    '现场备忘',
+  ];
+
+  const rows = records.map((r) => [
+    escapeCsvField(r.id),
+    escapeCsvField(r.timestamp),
+    escapeCsvField(r.trapId),
+    escapeCsvField(r.trapName),
+    escapeCsvField(r.location),
+    escapeCsvField(r.targetPest),
+    escapeCsvField(r.capturedCount),
+    escapeCsvField(
+      r.warningLevel === 'high' ? '严重爆发' :
+      r.warningLevel === 'medium' ? '中度预警' :
+      r.warningLevel === 'low' ? '轻度关注' : '正常安全'
+    ),
+    escapeCsvField(r.envTemp),
+    escapeCsvField(r.envHumidity),
+    escapeCsvField(r.aiIdentificationRate),
+    escapeCsvField(r.controlRecommendation),
+    escapeCsvField(r.status),
+    escapeCsvField(r.reporter),
+    escapeCsvField(r.notes || '-'),
+  ]);
+
+  const csv = [headers.join(','), ...rows.map((row) => row.join(','))].join('\r\n');
+  const now = new Date().toISOString().slice(0, 10);
+  downloadCsv(`现代农业园区_智能诱虫灯与虫情测报台账_${now}.csv`, csv);
+}
+
+/**
+ * 9. 农场负责人综合生产经营一键总导出 (整合多表合一的高管报表)
  */
 export function exportMasterEnterpriseReportCsv(options: {
   feedingRecords: PondFeedingRecord[];
@@ -342,6 +392,7 @@ export function exportMasterEnterpriseReportCsv(options: {
   historyLogs: EnvironmentalHistoryLog[];
   energyRecords: FarmEnergyRecord[];
   salesRecords: FarmHarvestSalesRecord[];
+  pestRecords?: PestMonitoringRecord[];
 }): void {
   const now = new Date().toISOString().slice(0, 10);
   const sections: string[] = [];
@@ -350,11 +401,33 @@ export function exportMasterEnterpriseReportCsv(options: {
   sections.push('=== 现代智能温室农业示范园区 - 生产经营综合管理决策总报表 ===');
   sections.push(`生成时间,${new Date().toLocaleString('zh-CN')}`);
   sections.push(`总大棚数,8座智能温室`);
-  sections.push(`配套设施,生态河塘鱼塘 / 冷链物流分选中心 / 光伏发电站 / 智能机巢 / 水肥中控`);
+  sections.push(`配套设施,智能诱虫灯阵列 / 生态河塘鱼塘 / 冷链物流分选中心 / 光伏发电站 / 智能机巢 / 水肥中控`);
   sections.push('');
 
-  // SECTION 2: 鱼塘喂食近况
-  sections.push('--- [第一部分] 生态鱼塘与水产投喂监控记录 ---');
+  // SECTION 2: 虫情测报与绿色植保预警
+  if (options.pestRecords && options.pestRecords.length > 0) {
+    sections.push('--- [第一部分] 智能诱虫灯监测与虫情预警防务 ---');
+    sections.push('时间,诱虫灯点位,点位所属大棚,靶标害虫,诱捕头数,预警等级,AI置信度,绿色防控对策,处置状态');
+    options.pestRecords.forEach((p) => {
+      sections.push(
+        [
+          escapeCsvField(p.timestamp),
+          escapeCsvField(p.trapName),
+          escapeCsvField(p.location),
+          escapeCsvField(p.targetPest),
+          escapeCsvField(p.capturedCount),
+          escapeCsvField(p.warningLevel),
+          escapeCsvField(`${p.aiIdentificationRate}%`),
+          escapeCsvField(p.controlRecommendation),
+          escapeCsvField(p.status),
+        ].join(',')
+      );
+    });
+    sections.push('');
+  }
+
+  // SECTION 3: 鱼塘喂食近况
+  sections.push('--- [第二部分] 生态鱼塘与水产投喂监控记录 ---');
   sections.push('时间,区域,鱼种,饲料,投喂量(kg),摄食活力,水温(℃),溶氧DO(mg/L),氨氮(mg/L),pH,操作人');
   options.feedingRecords.forEach((f) => {
     sections.push(
@@ -375,8 +448,8 @@ export function exportMasterEnterpriseReportCsv(options: {
   });
   sections.push('');
 
-  // SECTION 3: 近期农事水肥药
-  sections.push('--- [第二部分] 智能温室水肥药作业台账 ---');
+  // SECTION 4: 近期农事水肥药
+  sections.push('--- [第三部分] 智能温室水肥药作业台账 ---');
   sections.push('时间,大棚,作物,农事类型,作业标题,用水(L),用肥(kg),药剂品名,操作人');
   options.farmingRecords.slice(0, 30).forEach((r) => {
     sections.push(
@@ -395,8 +468,8 @@ export function exportMasterEnterpriseReportCsv(options: {
   });
   sections.push('');
 
-  // SECTION 4: 采收与销售营收
-  sections.push('--- [第三部分] 采收出库与订单销售业绩 ---');
+  // SECTION 5: 采收与销售营收
+  sections.push('--- [第四部分] 采收出库与订单销售业绩 ---');
   sections.push('采收日期,批次号,作物,产出大棚,重量(kg),客户渠道,单价(元/kg),总金额(元)');
   options.salesRecords.forEach((s) => {
     sections.push(
@@ -416,3 +489,8 @@ export function exportMasterEnterpriseReportCsv(options: {
   const fullCsv = sections.join('\r\n');
   downloadCsv(`现代农业园区_负责人综合生产经营决策总台账_${now}.csv`, fullCsv);
 }
+
+// Aliases for unified naming
+export const exportFarmingRecordsCsv = exportFarmingOperationsCsv;
+export const exportFarmHarvestSalesCsv = exportFarmSalesCsv;
+

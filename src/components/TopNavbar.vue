@@ -24,6 +24,9 @@ import {
   Sprout,
   LayoutGrid,
   FileSpreadsheet,
+  Bug,
+  Thermometer,
+  Briefcase,
 } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -54,6 +57,10 @@ const emit = defineEmits<{
   (e: 'toggleSensors'): void;
   (e: 'openGreenhouseMatrix'): void;
   (e: 'openFarmingCenter'): void;
+  (e: 'openPestModal'): void;
+  (e: 'openFeedingModal'): void;
+  (e: 'openTempModal'): void;
+  (e: 'openOwnerHubModal'): void;
 }>();
 
 const showGhMenu = ref<boolean>(false);
@@ -363,11 +370,55 @@ const selectPreset = (preset: CameraPreset) => {
       <button
         id="btn-top-farming-center"
         @click="$emit('openFarmingCenter')"
-        class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-300 hover:text-white font-semibold transition-all cursor-pointer shadow-xs text-xs"
-        title="打开全园8座大棚农事作业记录(浇水/施肥/打药)与种植周期台账"
+        class="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-300 hover:text-white font-semibold transition-all cursor-pointer shadow-xs text-xs"
+        title="全园8座大棚农事作业台账(浇水/施肥/打药)与种植周期"
       >
         <FileSpreadsheet class="w-3.5 h-3.5 text-cyan-400" />
-        <span>8棚农事台账</span>
+        <span class="hidden sm:inline">8棚农事</span>
+      </button>
+
+      <!-- 7. Smart Pest Monitoring & Insect Trap Deck -->
+      <button
+        id="btn-top-pest-modal"
+        @click="$emit('openPestModal')"
+        class="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 hover:text-white font-semibold transition-all cursor-pointer shadow-xs text-xs"
+        title="智能诱虫灯与虫情测报看板（支持录入捕获数据、周度趋势图与Excel导出）"
+      >
+        <Bug class="w-3.5 h-3.5 text-emerald-400" />
+        <span class="hidden sm:inline">虫情测报</span>
+      </button>
+
+      <!-- 8. Fish Pond Feeding Ledger Deck -->
+      <button
+        id="btn-top-feeding-modal"
+        @click="$emit('openFeedingModal')"
+        class="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 border border-teal-500/40 text-teal-300 hover:text-white font-semibold transition-all cursor-pointer shadow-xs text-xs"
+        title="生态鱼塘喂食台账与水质监测（每次投喂记录与Excel导出）"
+      >
+        <Waves class="w-3.5 h-3.5 text-teal-400" />
+        <span class="hidden sm:inline">鱼塘喂食</span>
+      </button>
+
+      <!-- 9. Regional Temperature History Deck -->
+      <button
+        id="btn-top-temp-history"
+        @click="$emit('openTempModal')"
+        class="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 hover:text-white font-semibold transition-all cursor-pointer shadow-xs text-xs"
+        title="各区域温度历史记录与微环境时序台账（支持Excel导出）"
+      >
+        <Thermometer class="w-3.5 h-3.5 text-amber-400" />
+        <span class="hidden md:inline">温度历史</span>
+      </button>
+
+      <!-- 10. Agricultural Enterprise Owner Hub Deck -->
+      <button
+        id="btn-top-owner-hub"
+        @click="$emit('openOwnerHubModal')"
+        class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-emerald-600/30 to-teal-600/30 hover:from-emerald-600/50 hover:to-teal-600/50 border border-emerald-400/50 text-emerald-200 hover:text-white font-bold transition-all cursor-pointer shadow-sm text-xs"
+        title="农业老板与园区负责人经营决策中枢（六大生产命脉与Excel综合总报表导出）"
+      >
+        <Briefcase class="w-3.5 h-3.5 text-emerald-400" />
+        <span>老板中枢</span>
       </button>
     </div>
 

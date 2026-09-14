@@ -34,6 +34,7 @@ import {
   Scissors,
   Plus,
   ChevronRight,
+  Bug,
 } from 'lucide-vue-next';
 import type {
   GreenhouseMicroclimate,
@@ -62,6 +63,8 @@ const emit = defineEmits<{
   (e: 'openAddRecordModal', ghId: string): void;
   (e: 'toggleActuator', ghId: string, actuatorId: string, status: boolean): void;
   (e: 'updateActuatorValue', ghId: string, actuatorId: string, value: number): void;
+  (e: 'openTempModal'): void;
+  (e: 'openPestModal'): void;
 }>();
 
 // Current active greenhouse
@@ -234,6 +237,27 @@ const handleFocus = () => {
             >
               <Crosshair class="w-3.5 h-3.5" />
               <span>3D空间聚焦</span>
+            </button>
+
+            <!-- Temperature History & Pest Monitoring for this greenhouse -->
+            <button
+              id="btn-station-temp-history"
+              @click="emit('openTempModal')"
+              class="px-2.5 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 hover:text-white text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+              title="查看全区/该大棚历史温度并导出Excel"
+            >
+              <Thermometer class="w-3.5 h-3.5 text-amber-400" />
+              <span>温度历史(Excel)</span>
+            </button>
+
+            <button
+              id="btn-station-pest-monitor"
+              @click="emit('openPestModal')"
+              class="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 hover:text-white text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+              title="诱虫灯数据录入与周度虫情分析"
+            >
+              <Bug class="w-3.5 h-3.5 text-emerald-400" />
+              <span>诱虫灯测报</span>
             </button>
 
             <!-- 8 Greenhouse Matrix Deck Switcher -->

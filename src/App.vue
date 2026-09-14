@@ -21,6 +21,14 @@ import type {
   GreenhouseMicroclimate,
   FarmingRecord,
   GreenhousePlantingCycle,
+  PestMonitoringRecord,
+  PestWeeklyTrendItem,
+  PondFeedingRecord,
+  EnvironmentalHistoryLog,
+  FarmEnergyRecord,
+  FarmInventoryItem,
+  FarmLaborRecord,
+  FarmHarvestSalesRecord,
 } from './types/digitalTwin';
 import {
   initialEnvironment,
@@ -32,7 +40,18 @@ import {
   initialOutdoorWeather,
   initialGreenhousesMicroclimates,
 } from './data/mockData';
-import { initialFarmingRecords, initialPlantingCycles } from './data/farmingData';
+import {
+  initialFarmingRecords,
+  initialPlantingCycles,
+  initialFishPondFeedingRecords,
+  initialPestMonitoringRecords,
+  initialPestWeeklyTrend,
+  initialEnvironmentalHistoryLogs,
+  initialFarmEnergyRecords,
+  initialFarmInventoryItems,
+  initialFarmLaborRecords,
+  initialFarmSalesRecords,
+} from './data/farmingData';
 import { dataService } from './services/dataService';
 import { weatherService } from './services/weatherService';
 
@@ -52,6 +71,10 @@ import GreenhouseStationModal from './components/GreenhouseStationModal.vue';
 import GreenhouseMatrixModal from './components/GreenhouseMatrixModal.vue';
 import UnifiedFarmingCenterModal from './components/UnifiedFarmingCenterModal.vue';
 import FarmingRecordAddModal from './components/FarmingRecordAddModal.vue';
+import PestMonitoringModal from './components/PestMonitoringModal.vue';
+import PondFeedingModal from './components/PondFeedingModal.vue';
+import TemperatureHistoryModal from './components/TemperatureHistoryModal.vue';
+import EnterpriseOwnerHubModal from './components/EnterpriseOwnerHubModal.vue';
 
 const canvasContainerRef = ref<HTMLDivElement | null>(null);
 let sceneInstance: GreenhouseScene | null = null;
@@ -81,6 +104,34 @@ const plantingCycles = ref<Record<string, GreenhousePlantingCycle>>(initialPlant
 const showFarmingCenter = ref<boolean>(false);
 const showAddRecordModal = ref<boolean>(false);
 const targetAddRecordGhId = ref<string>('gh_001');
+
+// Smart Pest Monitoring & Trap System
+const pestRecords = ref<PestMonitoringRecord[]>(initialPestMonitoringRecords);
+const pestWeeklyTrend = ref<PestWeeklyTrendItem[]>(initialPestWeeklyTrend);
+const showPestMonitoring = ref<boolean>(false);
+
+// Fish Pond Feeding & Micro-ecology Water Quality Records
+const feedingRecords = ref<PondFeedingRecord[]>(initialFishPondFeedingRecords);
+const showFeedingModal = ref<boolean>(false);
+
+// Regional Temperature History & Time-Series Microclimate Logs
+const historyLogs = ref<EnvironmentalHistoryLog[]>(initialEnvironmentalHistoryLogs);
+const showTempHistoryModal = ref<boolean>(false);
+
+// Agricultural Enterprise Owner Hub States (Energy, Inventory, Labor, Sales)
+const energyRecords = ref<FarmEnergyRecord[]>(initialFarmEnergyRecords);
+const inventoryItems = ref<FarmInventoryItem[]>(initialFarmInventoryItems);
+const laborRecords = ref<FarmLaborRecord[]>(initialFarmLaborRecords);
+const salesRecords = ref<FarmHarvestSalesRecord[]>(initialFarmSalesRecords);
+const showOwnerHubModal = ref<boolean>(false);
+
+const handleAddPestRecord = (record: PestMonitoringRecord) => {
+  pestRecords.value.unshift(record);
+};
+
+const handleAddFeedingRecord = (record: PondFeedingRecord) => {
+  feedingRecords.value.unshift(record);
+};
 
 // Digital Twin Advanced Features & Panels
 const showWeatherPanel = ref<boolean>(false);
@@ -787,6 +838,10 @@ const handleTimeChange = (hourFraction: number) => {
       @toggle-sensors="handleToggleSensors"
       @open-greenhouse-matrix="openGreenhouseMatrix"
       @open-farming-center="openFarmingCenter"
+      @open-pest-modal="showPestMonitoring = true"
+      @open-feeding-modal="showFeedingModal = true"
+      @open-temp-modal="showTempHistoryModal = true"
+      @open-owner-hub-modal="showOwnerHubModal = true"
     />
 
     <!-- Left Environment Telemetry Panel -->
@@ -803,6 +858,10 @@ const handleTimeChange = (hourFraction: number) => {
       @focus-pond="handlePresetChange('pond')"
       @open-station="openGreenhouseStation"
       @open-matrix="openGreenhouseMatrix"
+      @open-feeding-modal="showFeedingModal = true"
+      @open-temp-modal="showTempHistoryModal = true"
+      @open-pest-modal="showPestMonitoring = true"
+      @open-owner-hub-modal="showOwnerHubModal = true"
     />
 
     <!-- Right Actuators & Control Center -->
@@ -888,6 +947,9 @@ const handleTimeChange = (hourFraction: number) => {
         }
       }"
       @open-station="openGreenhouseStation"
+      @open-feeding-modal="showFeedingModal = true"
+      @open-temp-modal="showTempHistoryModal = true"
+      @open-pest-modal="showPestMonitoring = true"
     />
 
     <!-- Dedicated Per-Greenhouse Station Modal -->
@@ -906,6 +968,8 @@ const handleTimeChange = (hourFraction: number) => {
       @open-matrix="openGreenhouseMatrix"
       @open-farming-center="openFarmingCenter"
       @open-add-record-modal="openAddFarmingRecordModal"
+      @open-temp-modal="showTempHistoryModal = true"
+      @open-pest-modal="showPestMonitoring = true"
     />
 
     <!-- 8-Greenhouse Cluster Matrix Modal -->
@@ -936,6 +1000,48 @@ const handleTimeChange = (hourFraction: number) => {
       :default-greenhouse-id="targetAddRecordGhId"
       @close="showAddRecordModal = false"
       @add-record="handleAddFarmingRecord"
+    />
+
+    <!-- Smart Pest Monitoring & Insect Trap Modal -->
+    <PestMonitoringModal
+      v-if="showPestMonitoring"
+      :records="pestRecords"
+      :weekly-trend="pestWeeklyTrend"
+      @close="showPestMonitoring = false"
+      @add-record="handleAddPestRecord"
+    />
+
+    <!-- Fish Pond Feeding Ledger Modal -->
+    <PondFeedingModal
+      v-if="showFeedingModal"
+      :records="feedingRecords"
+      @close="showFeedingModal = false"
+      @add-record="handleAddFeedingRecord"
+    />
+
+    <!-- Regional Temperature & Environmental History Modal -->
+    <TemperatureHistoryModal
+      v-if="showTempHistoryModal"
+      :logs="historyLogs"
+      @close="showTempHistoryModal = false"
+    />
+
+    <!-- Agricultural Enterprise Owner & Executive Hub Modal -->
+    <EnterpriseOwnerHubModal
+      v-if="showOwnerHubModal"
+      :pest-records="pestRecords"
+      :feeding-records="feedingRecords"
+      :history-logs="historyLogs"
+      :farming-records="farmingRecords"
+      :energy-records="energyRecords"
+      :inventory-items="inventoryItems"
+      :labor-records="laborRecords"
+      :sales-records="salesRecords"
+      @close="showOwnerHubModal = false"
+      @open-pest-modal="showOwnerHubModal = false; showPestMonitoring = true"
+      @open-feeding-modal="showOwnerHubModal = false; showFeedingModal = true"
+      @open-temp-modal="showOwnerHubModal = false; showTempHistoryModal = true"
+      @open-farming-modal="showOwnerHubModal = false; showFarmingCenter = true"
     />
 
     <!-- 3D Mouse Hover Tooltip -->

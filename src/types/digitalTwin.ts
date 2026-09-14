@@ -502,3 +502,35 @@ export interface FarmHarvestSalesRecord {
   traceabilityCode: string;
 }
 
+// -------------------------------------------------------------
+// PEST MONITORING & SMART INSECT TRAP (智能虫情测报与诱虫灯台账)
+// -------------------------------------------------------------
+export interface PestMonitoringRecord {
+  id: string;
+  date: string; // '2026-09-13'
+  timestamp: string; // '2026-09-13 06:30'
+  trapId: string;
+  trapName: string;
+  location: string;
+  targetPest: '白粉虱' | '斜纹夜蛾' | '西花蓟马' | '甜菜夜蛾' | '蚜虫' | '棉铃虫' | '茶黄螨';
+  capturedCount: number; // 诱捕头数
+  warningLevel: 'safe' | 'low' | 'medium' | 'high'; // 安全/轻度/中度预警/重度爆发
+  envTemp: number; // 环境气温 ℃
+  envHumidity: number; // 湿度 %
+  aiIdentificationRate: number; // AI图像识别置信度 %
+  controlRecommendation: string; // 绿色防控与天敌释放方案建议
+  reporter: string; // 记录人 / 智能设备编号
+  status: '已处置' | '处置中' | '待处理';
+  notes?: string;
+}
+
+export interface PestWeeklyTrendItem {
+  day: string; // '周一 (09-07)'
+  date: string;
+  whitefly: number; // 白粉虱
+  armyworm: number; // 夜蛾类
+  thrips: number; // 蓟马
+  aphid: number; // 蚜虫
+  total: number;
+}
+

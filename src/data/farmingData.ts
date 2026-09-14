@@ -1,6 +1,14 @@
 import {
   FarmingRecord,
   GreenhousePlantingCycle,
+  PondFeedingRecord,
+  EnvironmentalHistoryLog,
+  FarmEnergyRecord,
+  FarmInventoryItem,
+  FarmLaborRecord,
+  FarmHarvestSalesRecord,
+  PestMonitoringRecord,
+  PestWeeklyTrendItem,
 } from '../types/digitalTwin';
 
 export const initialFarmingRecords: FarmingRecord[] = [
@@ -1082,3 +1090,318 @@ export const initialPlantingCycles: Record<string, GreenhousePlantingCycle> = {
     },
   },
 };
+
+// -------------------------------------------------------------
+// 1. 生态鱼塘喂食台账与水质监测 (每次投喂均详实记录)
+// -------------------------------------------------------------
+export const initialFishPondFeedingRecords: PondFeedingRecord[] = [
+  {
+    id: 'FEED-20260913-001',
+    timestamp: '2026-09-13 07:30',
+    pondZone: '生态循环主鱼塘 (生态河塘)',
+    species: '加州鲈鱼',
+    feedType: '42%粗蛋白膨化浮水配合颗粒饲料',
+    feedAmountKg: 45.0,
+    feedingMethod: '自动投饵机定时投射',
+    appetiteRating: '旺盛 (10分钟内摄食完毕)',
+    waterTemp: 23.4,
+    dissolvedOxygen: 7.2,
+    ammoniaNitrogen: 0.08,
+    ph: 7.6,
+    feedRemainingStatus: '无残饵 (水质清澈)',
+    operator: '老王 (水产养殖工)',
+    notes: '清晨溶氧充足，鲈鱼集群抢食迅速，水面无油膜残饵。',
+  },
+  {
+    id: 'FEED-20260913-002',
+    timestamp: '2026-09-13 11:30',
+    pondZone: '6# 鱼菜共生微藻养殖槽',
+    species: '红罗非鱼',
+    feedType: '高钙微藻膨化沉水配合料',
+    feedAmountKg: 18.5,
+    feedingMethod: '人工精准观察撒喂',
+    appetiteRating: '旺盛 (10分钟内摄食完毕)',
+    waterTemp: 25.1,
+    dissolvedOxygen: 6.8,
+    ammoniaNitrogen: 0.12,
+    ph: 7.4,
+    feedRemainingStatus: '无残饵 (水质清澈)',
+    operator: '李师傅 (共生主管)',
+    notes: '鱼菜共生硝化过滤系统循环正常，出水透明度45cm。',
+  },
+  {
+    id: 'FEED-20260913-003',
+    timestamp: '2026-09-13 17:00',
+    pondZone: '生态循环主鱼塘 (生态河塘)',
+    species: '优质草鱼',
+    feedType: '天然黑麦草浆粒复合料',
+    feedAmountKg: 60.0,
+    feedingMethod: '自动投饵机定时投射',
+    appetiteRating: '良好 (适中摄食)',
+    waterTemp: 24.0,
+    dissolvedOxygen: 6.5,
+    ammoniaNitrogen: 0.15,
+    ph: 7.8,
+    feedRemainingStatus: '无残饵 (水质清澈)',
+    operator: '老王 (水产养殖工)',
+    notes: '傍晚投喂配合微孔曝气增氧机低频运转，水体溶氧稳定。',
+  },
+  {
+    id: 'FEED-20260912-004',
+    timestamp: '2026-09-12 08:00',
+    pondZone: '生态循环主鱼塘 (西区浅水湾)',
+    species: '中华绒螯蟹',
+    feedType: '冻鲜低杂小杂鱼配合膨化料',
+    feedAmountKg: 25.0,
+    feedingMethod: '人工精准观察撒喂',
+    appetiteRating: '良好 (适中摄食)',
+    waterTemp: 22.8,
+    dissolvedOxygen: 7.5,
+    ammoniaNitrogen: 0.05,
+    ph: 7.5,
+    feedRemainingStatus: '微量悬浮',
+    operator: '老王 (水产养殖工)',
+    notes: '水草伊乐藻长势茂盛，蟹苗爬草脱壳顺利，无死蟹上浮。',
+  },
+  {
+    id: 'FEED-20260912-005',
+    timestamp: '2026-09-12 16:30',
+    pondZone: '6# 鱼菜共生微藻养殖槽',
+    species: '红罗非鱼',
+    feedType: '高钙微藻膨化沉水配合料',
+    feedAmountKg: 20.0,
+    feedingMethod: '自动投饵机定时投射',
+    appetiteRating: '旺盛 (10分钟内摄食完毕)',
+    waterTemp: 24.6,
+    dissolvedOxygen: 6.9,
+    ammoniaNitrogen: 0.11,
+    ph: 7.3,
+    feedRemainingStatus: '无残饵 (水质清澈)',
+    operator: '李师傅 (共生主管)',
+    notes: '叶菜收割后生物负荷正常，氨氮指标平稳。',
+  },
+  {
+    id: 'FEED-20260911-006',
+    timestamp: '2026-09-11 07:45',
+    pondZone: '生态循环主鱼塘 (生态河塘)',
+    species: '加州鲈鱼',
+    feedType: '42%粗蛋白膨化浮水配合颗粒饲料',
+    feedAmountKg: 42.0,
+    feedingMethod: '自动投饵机定时投射',
+    appetiteRating: '旺盛 (10分钟内摄食完毕)',
+    waterTemp: 23.0,
+    dissolvedOxygen: 7.0,
+    ammoniaNitrogen: 0.09,
+    ph: 7.7,
+    feedRemainingStatus: '无残饵 (水质清澈)',
+    operator: '老王 (水产养殖工)',
+    notes: '秋季育肥期生长势良好，预计10月中旬达上市规格(0.6kg/尾)。',
+  },
+];
+
+// -------------------------------------------------------------
+// 2. 智能虫情监测与诱虫灯捕获记录 (病虫害绿色测报)
+// -------------------------------------------------------------
+export const initialPestMonitoringRecords: PestMonitoringRecord[] = [
+  {
+    id: 'PEST-TRAP-20260913-001',
+    date: '2026-09-13',
+    timestamp: '2026-09-13 06:15',
+    trapId: 'TRAP-GH01-N',
+    trapName: '1#温室北区全光谱智能杀虫灯',
+    location: '1# Venlo核心示范玻璃大棚',
+    targetPest: '白粉虱',
+    capturedCount: 18,
+    warningLevel: 'low',
+    envTemp: 21.8,
+    envHumidity: 72,
+    aiIdentificationRate: 98.4,
+    controlRecommendation: '当前处于安全阈值内，维持黄板诱杀（每亩挂25张），建议结合丽蚜小蜂定点释放。',
+    reporter: 'AI视觉自动识别中枢',
+    status: '已处置',
+    notes: '番茄坐果期注意下部老叶粉虱产卵情况。',
+  },
+  {
+    id: 'PEST-TRAP-20260913-002',
+    date: '2026-09-13',
+    timestamp: '2026-09-13 06:20',
+    trapId: 'TRAP-GH02-E',
+    trapName: '2#草莓大棚高空色板与诱捕器',
+    location: '2# 高架草莓立体栽培棚',
+    targetPest: '西花蓟马',
+    capturedCount: 42,
+    warningLevel: 'medium',
+    envTemp: 22.4,
+    envHumidity: 68,
+    aiIdentificationRate: 95.7,
+    controlRecommendation: '蓟马密度上升超警戒阈值(≥30头/日)，启动巴氏钝绥螨天敌袋挂设(每米垄2袋)，补充蓝板诱捕。',
+    reporter: '植保技术员·刘工',
+    status: '处置中',
+    notes: '花期禁止化学杀虫剂，严格采用生物天敌控害。',
+  },
+  {
+    id: 'PEST-TRAP-20260913-003',
+    date: '2026-09-13',
+    timestamp: '2026-09-13 06:05',
+    trapId: 'TRAP-OUTDOOR-01',
+    trapName: '园区生态河塘太阳能风吸式杀虫灯',
+    location: '生态鱼塘外围风障绿化带',
+    targetPest: '斜纹夜蛾',
+    capturedCount: 86,
+    warningLevel: 'high',
+    envTemp: 24.2,
+    envHumidity: 78,
+    aiIdentificationRate: 99.1,
+    controlRecommendation: '外围杂草带夜蛾成虫爆发，开启外围风吸式电网诱杀，结合性信息素诱捕器阻隔飞入大棚。',
+    reporter: 'AI视觉自动识别中枢',
+    status: '处置中',
+    notes: '夜蛾趋光性强，已将外围杀虫灯工作时间延展至拂晓5:00。',
+  },
+  {
+    id: 'PEST-TRAP-20260912-004',
+    date: '2026-09-12',
+    timestamp: '2026-09-12 06:10',
+    trapId: 'TRAP-GH04-S',
+    trapName: '4#彩椒棚智能波长诱虫仪',
+    location: '4# 高产彩色甜椒实验棚',
+    targetPest: '蚜虫',
+    capturedCount: 15,
+    warningLevel: 'safe',
+    envTemp: 23.1,
+    envHumidity: 65,
+    aiIdentificationRate: 97.2,
+    controlRecommendation: '蚜虫基数平稳，保护本地瓢虫群落，未达防治指标。',
+    reporter: 'AI视觉自动识别中枢',
+    status: '已处置',
+    notes: '嫩梢抽发健壮，未见卷叶或煤污病。',
+  },
+  {
+    id: 'PEST-TRAP-20260912-005',
+    date: '2026-09-12',
+    timestamp: '2026-09-12 06:30',
+    trapId: 'TRAP-GH03-C',
+    trapName: '3#小黄瓜棚性诱捕测报箱',
+    location: '3# 密刺水果黄瓜棚',
+    targetPest: '甜菜夜蛾',
+    capturedCount: 28,
+    warningLevel: 'low',
+    envTemp: 22.0,
+    envHumidity: 75,
+    aiIdentificationRate: 96.0,
+    controlRecommendation: '及时摘除下部带卵块老叶集中深埋，夜间开启黄绿双光诱虫。',
+    reporter: '植保技术员·刘工',
+    status: '已处置',
+    notes: '黄瓜正处初果期，保持通风透光降低卵孵化率。',
+  },
+  {
+    id: 'PEST-TRAP-20260911-006',
+    date: '2026-09-11',
+    timestamp: '2026-09-11 06:00',
+    trapId: 'TRAP-GH07-W',
+    trapName: '7#哈密瓜棚微距识别诱捕站',
+    location: '7# 新疆特种哈密瓜甜瓜棚',
+    targetPest: '西花蓟马',
+    capturedCount: 22,
+    warningLevel: 'low',
+    envTemp: 25.4,
+    envHumidity: 58,
+    aiIdentificationRate: 94.8,
+    controlRecommendation: '补充挂设加粘蓝板，检查防虫网有无破损缺口。',
+    reporter: '巡检班·小赵',
+    status: '已处置',
+    notes: '棚门风幕阻隔正常，未发现幼虫钻蛀花器。',
+  },
+];
+
+// 智能虫情周度走势数据 (用于图表渲染)
+export const initialPestWeeklyTrend: PestWeeklyTrendItem[] = [
+  { day: '09-07 (周一)', date: '2026-09-07', whitefly: 12, armyworm: 35, thrips: 18, aphid: 10, total: 75 },
+  { day: '09-08 (周二)', date: '2026-09-08', whitefly: 15, armyworm: 42, thrips: 24, aphid: 14, total: 95 },
+  { day: '09-09 (周三)', date: '2026-09-09', whitefly: 22, armyworm: 60, thrips: 31, aphid: 12, total: 125 },
+  { day: '09-10 (周四)', date: '2026-09-10', whitefly: 18, armyworm: 75, thrips: 36, aphid: 16, total: 145 },
+  { day: '09-11 (周五)', date: '2026-09-11', whitefly: 20, armyworm: 88, thrips: 40, aphid: 15, total: 163 },
+  { day: '09-12 (周六)', date: '2026-09-12', whitefly: 16, armyworm: 80, thrips: 45, aphid: 11, total: 152 },
+  { day: '09-13 (周日)', date: '2026-09-13', whitefly: 14, armyworm: 52, thrips: 38, aphid: 9, total: 113 },
+];
+
+// -------------------------------------------------------------
+// 3. 各大棚与各区域全天温湿度历史数据 (支持按地点筛选与导出)
+// -------------------------------------------------------------
+export const initialEnvironmentalHistoryLogs: EnvironmentalHistoryLog[] = [
+  // 1# 温室
+  { timestamp: '2026-09-13 06:00', locationId: 'gh_001', locationName: '1# Venlo番茄棚', airTemp: 18.5, substrateTemp: 19.2, airHumidity: 85, co2: 680, solarRadiation: 50, vpd: 0.45, accumulatedGdd: 18.5 },
+  { timestamp: '2026-09-13 09:00', locationId: 'gh_001', locationName: '1# Venlo番茄棚', airTemp: 22.8, substrateTemp: 21.0, airHumidity: 74, co2: 850, solarRadiation: 420, vpd: 0.85, accumulatedGdd: 19.0 },
+  { timestamp: '2026-09-13 12:00', locationId: 'gh_001', locationName: '1# Venlo番茄棚', airTemp: 26.2, substrateTemp: 23.4, airHumidity: 65, co2: 780, solarRadiation: 750, vpd: 1.25, accumulatedGdd: 19.8 },
+  { timestamp: '2026-09-13 15:00', locationId: 'gh_001', locationName: '1# Venlo番茄棚', airTemp: 25.1, substrateTemp: 23.0, airHumidity: 68, co2: 820, solarRadiation: 580, vpd: 1.10, accumulatedGdd: 20.3 },
+  { timestamp: '2026-09-13 18:00', locationId: 'gh_001', locationName: '1# Venlo番茄棚', airTemp: 21.4, substrateTemp: 21.5, airHumidity: 78, co2: 640, solarRadiation: 120, vpd: 0.65, accumulatedGdd: 20.6 },
+  
+  // 2# 草莓棚
+  { timestamp: '2026-09-13 06:00', locationId: 'gh_002', locationName: '2# 草莓立体栽培棚', airTemp: 16.8, substrateTemp: 17.5, airHumidity: 88, co2: 620, solarRadiation: 40, vpd: 0.38, accumulatedGdd: 16.5 },
+  { timestamp: '2026-09-13 09:00', locationId: 'gh_002', locationName: '2# 草莓立体栽培棚', airTemp: 20.5, substrateTemp: 19.8, airHumidity: 78, co2: 800, solarRadiation: 380, vpd: 0.65, accumulatedGdd: 17.0 },
+  { timestamp: '2026-09-13 12:00', locationId: 'gh_002', locationName: '2# 草莓立体栽培棚', airTemp: 23.4, substrateTemp: 21.2, airHumidity: 70, co2: 750, solarRadiation: 650, vpd: 0.95, accumulatedGdd: 17.8 },
+  { timestamp: '2026-09-13 15:00', locationId: 'gh_002', locationName: '2# 草莓立体栽培棚', airTemp: 22.8, substrateTemp: 20.9, airHumidity: 72, co2: 790, solarRadiation: 520, vpd: 0.88, accumulatedGdd: 18.2 },
+  { timestamp: '2026-09-13 18:00', locationId: 'gh_002', locationName: '2# 草莓立体栽培棚', airTemp: 19.2, substrateTemp: 19.5, airHumidity: 82, co2: 600, solarRadiation: 90, vpd: 0.52, accumulatedGdd: 18.5 },
+
+  // 生态鱼塘 (水温与生境)
+  { timestamp: '2026-09-13 06:00', locationId: 'pond', locationName: '生态鱼塘水质生境', airTemp: 21.5, substrateTemp: 22.0, airHumidity: 92, co2: 450, solarRadiation: 60, vpd: 0.30, accumulatedGdd: 22.0 },
+  { timestamp: '2026-09-13 09:00', locationId: 'pond', locationName: '生态鱼塘水质生境', airTemp: 23.4, substrateTemp: 23.0, airHumidity: 80, co2: 430, solarRadiation: 480, vpd: 0.60, accumulatedGdd: 22.5 },
+  { timestamp: '2026-09-13 12:00', locationId: 'pond', locationName: '生态鱼塘水质生境', airTemp: 25.8, substrateTemp: 24.5, airHumidity: 72, co2: 420, solarRadiation: 820, vpd: 0.90, accumulatedGdd: 23.2 },
+  { timestamp: '2026-09-13 15:00', locationId: 'pond', locationName: '生态鱼塘水质生境', airTemp: 24.9, substrateTemp: 24.0, airHumidity: 75, co2: 435, solarRadiation: 610, vpd: 0.78, accumulatedGdd: 23.6 },
+  { timestamp: '2026-09-13 18:00', locationId: 'pond', locationName: '生态鱼塘水质生境', airTemp: 23.0, substrateTemp: 23.2, airHumidity: 85, co2: 440, solarRadiation: 100, vpd: 0.45, accumulatedGdd: 23.8 },
+
+  // 室外园区气象站
+  { timestamp: '2026-09-13 06:00', locationId: 'outdoor', locationName: '园区室外综合气象站', airTemp: 17.2, airHumidity: 88, solarRadiation: 55, co2: 415 },
+  { timestamp: '2026-09-13 09:00', locationId: 'outdoor', locationName: '园区室外综合气象站', airTemp: 21.6, airHumidity: 72, solarRadiation: 510, co2: 412 },
+  { timestamp: '2026-09-13 12:00', locationId: 'outdoor', locationName: '园区室外综合气象站', airTemp: 26.5, airHumidity: 58, solarRadiation: 910, co2: 410 },
+  { timestamp: '2026-09-13 15:00', locationId: 'outdoor', locationName: '园区室外综合气象站', airTemp: 25.8, airHumidity: 62, solarRadiation: 680, co2: 413 },
+  { timestamp: '2026-09-13 18:00', locationId: 'outdoor', locationName: '园区室外综合气象站', airTemp: 20.8, airHumidity: 76, solarRadiation: 110, co2: 418 },
+
+  // 冷链物流保鲜中心
+  { timestamp: '2026-09-13 08:00', locationId: 'coldchain', locationName: '冷链分选与气调预冷库', airTemp: 3.8, airHumidity: 90, co2: 1200 },
+  { timestamp: '2026-09-13 12:00', locationId: 'coldchain', locationName: '冷链分选与气调预冷库', airTemp: 4.2, airHumidity: 89, co2: 1350 },
+  { timestamp: '2026-09-13 16:00', locationId: 'coldchain', locationName: '冷链分选与气调预冷库', airTemp: 3.9, airHumidity: 91, co2: 1280 },
+];
+
+// -------------------------------------------------------------
+// 4. 园区能源电力与水电双碳核算台账 (老板必抓成本)
+// -------------------------------------------------------------
+export const initialFarmEnergyRecords: FarmEnergyRecord[] = [
+  { date: '2026-09-13', locationName: '全园区综合', gridElectricityKwh: 385.0, solarGreenElectricityKwh: 860.0, waterUsageM3: 42.5, carbonOffsetKg: 680.0, estimatedCostYuan: 346.5 },
+  { date: '2026-09-12', locationName: '全园区综合', gridElectricityKwh: 410.0, solarGreenElectricityKwh: 820.0, waterUsageM3: 45.0, carbonOffsetKg: 650.0, estimatedCostYuan: 369.0 },
+  { date: '2026-09-11', locationName: '全园区综合', gridElectricityKwh: 490.0, solarGreenElectricityKwh: 710.0, waterUsageM3: 48.2, carbonOffsetKg: 560.0, estimatedCostYuan: 441.0 },
+  { date: '2026-09-10', locationName: '全园区综合', gridElectricityKwh: 360.0, solarGreenElectricityKwh: 890.0, waterUsageM3: 40.8, carbonOffsetKg: 705.0, estimatedCostYuan: 324.0 },
+  { date: '2026-09-09', locationName: '全园区综合', gridElectricityKwh: 420.0, solarGreenElectricityKwh: 810.0, waterUsageM3: 44.1, carbonOffsetKg: 640.0, estimatedCostYuan: 378.0 },
+];
+
+// -------------------------------------------------------------
+// 5. 农资肥料/农药/基质/饲料库存台账 (物资供应链与资金占用)
+// -------------------------------------------------------------
+export const initialFarmInventoryItems: FarmInventoryItem[] = [
+  { id: 'INV-001', category: '肥料配方', name: '全水溶大量元素水肥 (高钾型 15-5-30+TE)', specification: '25kg/包 (食品级原料)', currentStock: 85, unit: '包', safetyStock: 30, unitCostYuan: 185.0, supplier: '以色列海法化工集团', lastRestockDate: '2026-09-01' },
+  { id: 'INV-002', category: '生物农药', name: '枯草芽孢杆菌生物杀菌剂 (100亿CFU/g)', specification: '500g/瓶', currentStock: 38, unit: '瓶', safetyStock: 15, unitCostYuan: 72.0, supplier: '中科院农业微生物研究所', lastRestockDate: '2026-08-25' },
+  { id: 'INV-003', category: '授粉熊蜂', name: '欧洲熊蜂标准授粉群 (60头工作蜂+蜂王)', specification: '标准纸箱蜂巢 (持效60天)', currentStock: 12, unit: '箱', safetyStock: 8, unitCostYuan: 360.0, supplier: '比利时科伯特Biobest', lastRestockDate: '2026-09-05' },
+  { id: 'INV-004', category: '鱼类饲料', name: '42%粗蛋白膨化浮水加州鲈颗粒饲料', specification: '20kg/袋', currentStock: 65, unit: '袋', safetyStock: 25, unitCostYuan: 140.0, supplier: '通威水产饲料股份', lastRestockDate: '2026-09-08' },
+  { id: 'INV-005', category: '无土基质', name: '进口脱盐水洗椰糠压缩砖 (EC<0.5)', specification: '5kg/块 (膨胀率8倍)', currentStock: 220, unit: '块', safetyStock: 100, unitCostYuan: 28.0, supplier: '斯里兰卡CoirGreen', lastRestockDate: '2026-08-15' },
+  { id: 'INV-006', category: '包装冷链', name: '高透防雾PET鲜果透气盒 (350g精品装)', specification: '1000个/箱', currentStock: 45, unit: '箱', safetyStock: 20, unitCostYuan: 210.0, supplier: '苏州优品绿色包装', lastRestockDate: '2026-09-02' },
+];
+
+// -------------------------------------------------------------
+// 6. 农工派工、工时与计件绩效台账 (劳动力管理)
+// -------------------------------------------------------------
+export const initialFarmLaborRecords: FarmLaborRecord[] = [
+  { id: 'LAB-20260913-01', date: '2026-09-13', workerName: '周大姐', greenhouseName: '1# Venlo番茄棚', taskType: '整枝落蔓', hoursSpent: 6.5, quantityCompleted: '420 株', efficiencyRating: '优秀', inspector: '张工 (片区生产班长)' },
+  { id: 'LAB-20260913-02', date: '2026-09-13', workerName: '吴师傅', greenhouseName: '2# 高架草莓棚', taskType: '采摘分拣', hoursSpent: 5.0, quantityCompleted: '160 盒', efficiencyRating: '优秀', inspector: '品控员·刘工' },
+  { id: 'LAB-20260913-03', date: '2026-09-13', workerName: '老王', greenhouseName: '生态鱼塘区域', taskType: '鱼塘投喂', hoursSpent: 4.0, quantityCompleted: '125 kg 饲料投喂巡检', efficiencyRating: '优秀', inspector: '水产部·李主管' },
+  { id: 'LAB-20260913-04', date: '2026-09-13', workerName: '陈师傅', greenhouseName: '5# 樱桃番茄棚', taskType: '病虫巡查', hoursSpent: 4.5, quantityCompleted: '更换黄蓝诱虫板 80 张', efficiencyRating: '良好', inspector: '植保技术员·刘工' },
+  { id: 'LAB-20260913-05', date: '2026-09-13', workerName: '孙阿姨', greenhouseName: '3# 密刺黄瓜棚', taskType: '整枝落蔓', hoursSpent: 6.0, quantityCompleted: '380 株', efficiencyRating: '良好', inspector: '张工 (片区生产班长)' },
+];
+
+// -------------------------------------------------------------
+// 7. 采收出库与订单销售营收台账 (经营现金流与收益)
+// -------------------------------------------------------------
+export const initialFarmSalesRecords: FarmHarvestSalesRecord[] = [
+  { id: 'ORD-20260913-01', batchNo: 'BATCH-GH1-202609-01', cropName: '荷兰粉果番茄 (树熟串采)', greenhouseName: '1# Venlo番茄棚', harvestDate: '2026-09-13', grade: '特级精品果', weightKg: 350.0, buyerChannel: '盒马鲜生直采直供', unitPriceYuan: 16.8, totalRevenueYuan: 5880.0, traceabilityCode: 'BC-2026-0913-GH01-8832' },
+  { id: 'ORD-20260912-02', batchNo: 'BATCH-GH2-202609-01', cropName: '红颜章姬高架草莓', greenhouseName: '2# 草莓立体栽培棚', harvestDate: '2026-09-12', grade: '特级高糖果', weightKg: 120.0, buyerChannel: '山姆会员店专柜', unitPriceYuan: 68.0, totalRevenueYuan: 8160.0, traceabilityCode: 'BC-2026-0912-GH02-4419' },
+  { id: 'ORD-20260912-03', batchNo: 'BATCH-POND-202609-01', cropName: '生态纯净水养殖加州鲈鱼', greenhouseName: '生态循环主鱼塘', harvestDate: '2026-09-12', grade: '生态活鲜水产', weightKg: 180.0, buyerChannel: '高端社区生鲜冷链', unitPriceYuan: 38.0, totalRevenueYuan: 6840.0, traceabilityCode: 'BC-2026-0912-POND-1290' },
+  { id: 'ORD-20260911-04', batchNo: 'BATCH-GH5-202609-01', cropName: '千禧水果小番茄', greenhouseName: '5# 樱桃番茄棚', harvestDate: '2026-09-11', grade: '特级高糖果', weightKg: 240.0, buyerChannel: '生态农业直营自提', unitPriceYuan: 24.0, totalRevenueYuan: 5760.0, traceabilityCode: 'BC-2026-0911-GH05-6721' },
+];
