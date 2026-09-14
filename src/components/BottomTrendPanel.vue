@@ -137,10 +137,13 @@ const areaD = computed(() => {
     <!-- Drawer Toggle Header Button -->
     <button
       @click="isCollapsed = !isCollapsed"
-      class="pointer-events-auto mb-1 flex items-center gap-1.5 px-3 py-1 rounded-t-xl bg-slate-950/70 hover:bg-slate-900/90 text-cyan-300 text-[11px] font-semibold border-t border-x border-cyan-500/30 shadow-[0_-4px_16px_rgba(0,0,0,0.5)] backdrop-blur-2xl transition-colors cursor-pointer shrink-0"
+      :class="[
+        'pointer-events-auto flex items-center gap-1.5 px-3 py-1 bg-slate-950/85 hover:bg-slate-900 text-cyan-300 text-[11px] font-semibold border border-cyan-500/30 shadow-[0_4px_16px_rgba(0,0,0,0.5)] backdrop-blur-xl transition-all cursor-pointer shrink-0',
+        isCollapsed ? 'rounded-xl mb-0 hover:scale-105 ring-1 ring-white/10' : 'rounded-t-xl border-b-0 mb-1'
+      ]"
     >
       <TrendingUp class="w-3.5 h-3.5 text-cyan-400" />
-      <span>24H环境态势 / 作物长势 / 巡检机 ({{ isCollapsed ? '点击展开' : '收起' }})</span>
+      <span>24H环境态势与农情监测 ({{ isCollapsed ? '展开' : '收起' }})</span>
       <ChevronUp v-if="isCollapsed" class="w-3.5 h-3.5 text-cyan-400" />
       <ChevronDown v-else class="w-3.5 h-3.5 text-cyan-400" />
     </button>

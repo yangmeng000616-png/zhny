@@ -577,19 +577,19 @@ const selectGreenhouse = (ghId: string) => {
               <div class="grid grid-cols-2 gap-1.5 pt-1">
                 <button
                   @click="$emit('openTempModal')"
-                  class="flex items-center justify-center gap-1 px-2 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-semibold text-[11px] transition-all cursor-pointer shadow-xs"
+                  class="flex items-center justify-center gap-1 px-2 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 font-semibold text-[10px] transition-colors cursor-pointer"
                   title="查看全区各点位温度历史记录及曲线并导出Excel"
                 >
-                  <Thermometer class="w-3.5 h-3.5 text-amber-400" />
-                  <span>各地温度历史</span>
+                  <Thermometer class="w-3 h-3 text-amber-400" />
+                  <span>温度历史</span>
                 </button>
                 <button
                   @click="$emit('openPestModal')"
-                  class="flex items-center justify-center gap-1 px-2 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-semibold text-[11px] transition-all cursor-pointer shadow-xs"
+                  class="flex items-center justify-center gap-1 px-2 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 font-semibold text-[10px] transition-colors cursor-pointer"
                   title="智能诱虫灯与虫情测报看板（支持录入及周走势分析）"
                 >
-                  <Bug class="w-3.5 h-3.5 text-emerald-400" />
-                  <span>诱虫灯测报</span>
+                  <Bug class="w-3 h-3 text-emerald-400" />
+                  <span>诱虫测报</span>
                 </button>
               </div>
             </div>
@@ -815,22 +815,22 @@ const selectGreenhouse = (ghId: string) => {
             </div>
 
             <!-- Water Tab: Fish Feeding Ledger & Temperature History -->
-            <div class="space-y-1.5 pt-1">
+            <div class="grid grid-cols-2 gap-1.5 pt-1">
               <button
                 @click="$emit('openFeedingModal')"
-                class="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 text-white font-semibold text-xs transition-all shadow-md cursor-pointer"
+                class="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 border border-teal-500/40 text-teal-200 font-semibold text-[10px] transition-colors cursor-pointer"
                 title="鱼塘每次喂食记录留痕、投前测温溶氧与Excel导出"
               >
-                <Waves class="w-3.5 h-3.5" />
-                <span>🐟 登记鱼塘投喂 / 投喂台账 (Excel)</span>
+                <Waves class="w-3 h-3 text-teal-400" />
+                <span>喂食留痕台账</span>
               </button>
               <button
                 @click="$emit('openTempModal')"
-                class="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-amber-500/40 text-amber-300 text-[11px] font-semibold transition-all cursor-pointer"
-                title="查看各点位温度历史记录及曲线并导出Excel"
+                class="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-amber-500/40 text-amber-300 text-[10px] font-semibold transition-colors cursor-pointer"
+                title="查看水体与全园区温度历史记录及曲线并导出Excel"
               >
-                <Thermometer class="w-3.5 h-3.5 text-amber-400" />
-                <span>水体与全园区温度历史曲线 (Excel)</span>
+                <Thermometer class="w-3 h-3 text-amber-400" />
+                <span>水温时序曲线</span>
               </button>
             </div>
           </div>
@@ -871,16 +871,16 @@ const selectGreenhouse = (ghId: string) => {
       </div>
 
       <!-- Panel Footer -->
-      <div class="p-2 bg-slate-950/90 backdrop-blur-md border-t border-white/10 text-[9px] text-slate-400 flex items-center justify-between">
+      <div class="px-2.5 py-1.5 bg-slate-950/90 backdrop-blur-md border-t border-slate-800/80 text-[10px] text-slate-400 flex items-center justify-between">
         <button
           @click="$emit('openOwnerHubModal')"
-          class="flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-semibold cursor-pointer transition-colors"
-          title="打开农业老板经营决策中枢（营收/库存/用工/能耗总表）"
+          class="flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 font-medium cursor-pointer transition-colors"
+          title="打开农业企业负责人经营决策中枢"
         >
-          <Briefcase class="w-3 h-3" />
-          <span>老板决策中枢</span>
+          <Briefcase class="w-3 h-3 text-emerald-400" />
+          <span>负责人中枢</span>
         </button>
-        <span class="text-emerald-300 font-medium">● 8棚+鱼塘生境在线</span>
+        <span class="text-emerald-400/80 font-mono text-[9px]">● 8棚+鱼塘在线</span>
       </div>
     </div>
 

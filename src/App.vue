@@ -211,7 +211,21 @@ const showSpatialTags = ref<boolean>(true);
 const isMobileScreen = typeof window !== 'undefined' ? window.innerWidth < 1024 : false;
 const leftPanelCollapsed = ref<boolean>(isMobileScreen);
 const rightPanelCollapsed = ref<boolean>(isMobileScreen);
-const bottomPanelCollapsed = ref<boolean>(false);
+const bottomPanelCollapsed = ref<boolean>(true); // Default collapsed for clean visual presentation
+
+// Zen / Clean Screen Mode
+const isZenMode = computed(() => leftPanelCollapsed.value && rightPanelCollapsed.value && bottomPanelCollapsed.value);
+const handleToggleZenMode = () => {
+  if (isZenMode.value) {
+    leftPanelCollapsed.value = false;
+    rightPanelCollapsed.value = false;
+    bottomPanelCollapsed.value = false;
+  } else {
+    leftPanelCollapsed.value = true;
+    rightPanelCollapsed.value = true;
+    bottomPanelCollapsed.value = true;
+  }
+};
 
 // Interaction State
 const selectedObject = ref<PickedObjectInfo | null>(null);
@@ -825,6 +839,7 @@ const handleTimeChange = (hourFraction: number) => {
       :show-history-bar="showHistoryBar"
       :show-sensors="showSensors"
       :total-alert-count="totalAlertCount"
+      :zen-mode="isZenMode"
       @preset-change="handlePresetChange"
       @display-mode-change="handleDisplayModeChange"
       @toggle-guide="showRoamGuide = true"
@@ -836,6 +851,7 @@ const handleTimeChange = (hourFraction: number) => {
       @toggle-alert-center="showAlertCenter = !showAlertCenter; if (showAlertCenter) showWeatherPanel = false;"
       @toggle-history-bar="showHistoryBar = !showHistoryBar; if (showHistoryBar) bottomPanelCollapsed = true;"
       @toggle-sensors="handleToggleSensors"
+      @toggle-zen-mode="handleToggleZenMode"
       @open-greenhouse-matrix="openGreenhouseMatrix"
       @open-farming-center="openFarmingCenter"
       @open-pest-modal="showPestMonitoring = true"

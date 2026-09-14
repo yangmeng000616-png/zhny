@@ -86,29 +86,29 @@ const getCategoryColor = (cat: string) => {
       >
         <!-- Card Container -->
         <div
-          class="relative flex items-center gap-2 px-3 py-2 bg-slate-950/85 hover:bg-slate-900/95 backdrop-blur-2xl rounded-xl border border-cyan-500/40 shadow-[0_10px_25px_rgba(0,0,0,0.8)] hover:shadow-[0_15px_35px_rgba(6,182,212,0.3)] hover:scale-105 transition-all duration-200 ring-1 ring-white/10"
+          class="relative flex items-center gap-1.5 px-2 py-1 bg-slate-950/85 hover:bg-slate-900/95 backdrop-blur-xl rounded-lg border border-slate-700/80 shadow-[0_6px_20px_rgba(0,0,0,0.7)] hover:border-cyan-400/60 hover:scale-105 transition-all duration-150 ring-1 ring-white/5"
         >
           <!-- Category Icon with animated pulsing status dot -->
           <div class="relative flex-shrink-0">
             <div
               :class="[
-                'w-8 h-8 rounded-lg flex items-center justify-center border',
+                'w-6 h-6 rounded-md flex items-center justify-center border',
                 getCategoryColor(tag.category).bg,
               ]"
             >
-              <CloudSun v-if="tag.icon === 'CloudSun'" class="w-4 h-4 text-amber-400" />
-              <Fan v-else-if="tag.icon === 'Fan'" class="w-4 h-4 text-sky-400 animate-spin" />
-              <Lightbulb v-else-if="tag.icon === 'Lightbulb'" class="w-4 h-4 text-yellow-300" />
-              <Cpu v-else-if="tag.icon === 'Cpu'" class="w-4 h-4 text-emerald-400" />
-              <Monitor v-else-if="tag.icon === 'Monitor'" class="w-4 h-4 text-indigo-400" />
-              <Droplets v-else-if="tag.icon === 'Droplets'" class="w-4 h-4 text-cyan-400" />
-              <Waves v-else-if="tag.icon === 'Waves'" class="w-4 h-4 text-teal-400" />
-              <Bot v-else-if="tag.icon === 'Bot'" class="w-4 h-4 text-purple-400" />
-              <Cpu v-else class="w-4 h-4 text-slate-400" />
+              <CloudSun v-if="tag.icon === 'CloudSun'" class="w-3.5 h-3.5 text-amber-400" />
+              <Fan v-else-if="tag.icon === 'Fan'" class="w-3.5 h-3.5 text-sky-400 animate-spin" />
+              <Lightbulb v-else-if="tag.icon === 'Lightbulb'" class="w-3.5 h-3.5 text-yellow-300" />
+              <Cpu v-else-if="tag.icon === 'Cpu'" class="w-3.5 h-3.5 text-emerald-400" />
+              <Monitor v-else-if="tag.icon === 'Monitor'" class="w-3.5 h-3.5 text-indigo-400" />
+              <Droplets v-else-if="tag.icon === 'Droplets'" class="w-3.5 h-3.5 text-cyan-400" />
+              <Waves v-else-if="tag.icon === 'Waves'" class="w-3.5 h-3.5 text-teal-400" />
+              <Bot v-else-if="tag.icon === 'Bot'" class="w-3.5 h-3.5 text-purple-400" />
+              <Cpu v-else class="w-3.5 h-3.5 text-slate-400" />
             </div>
 
             <!-- Pulsing Active Dot -->
-            <span class="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+            <span class="absolute -top-0.5 -right-0.5 flex h-2 w-2">
               <span
                 :class="[
                   'animate-ping absolute inline-flex h-full w-full rounded-full opacity-75',
@@ -117,7 +117,7 @@ const getCategoryColor = (cat: string) => {
               />
               <span
                 :class="[
-                  'relative inline-flex rounded-full h-2.5 w-2.5',
+                  'relative inline-flex rounded-full h-2 w-2',
                   getCategoryColor(tag.category).dot,
                 ]"
               />
@@ -125,28 +125,28 @@ const getCategoryColor = (cat: string) => {
           </div>
 
           <!-- Label & Status Subtext -->
-          <div class="flex flex-col text-left whitespace-nowrap pr-1">
-            <div class="flex items-center gap-1.5">
-              <span class="font-bold text-slate-100 text-xs tracking-tight group-hover:text-cyan-300 transition-colors">
+          <div class="flex flex-col text-left whitespace-nowrap pr-0.5">
+            <div class="flex items-center gap-1">
+              <span class="font-bold text-slate-100 text-[11px] tracking-tight group-hover:text-cyan-300 transition-colors">
                 {{ tag.name }}
               </span>
-              <span class="text-[9px] font-mono text-cyan-300 bg-cyan-950/70 px-1 py-0.2 rounded border border-cyan-500/30">
+              <span class="text-[8px] font-mono text-cyan-300 bg-cyan-950/70 px-1 py-0.2 rounded border border-cyan-500/30">
                 {{ tag.statusText }}
               </span>
             </div>
-            <div v-if="tag.subtext" class="text-[10px] text-slate-400 font-medium font-mono tracking-tight mt-0.5">
+            <div v-if="tag.subtext" class="text-[9px] text-slate-400 font-medium font-mono tracking-tight">
               {{ tag.subtext }}
             </div>
           </div>
 
           <!-- Click Arrow hint -->
-          <ChevronRight class="w-3.5 h-3.5 text-slate-500 group-hover:text-cyan-400 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+          <ChevronRight class="w-3 h-3 text-slate-500 group-hover:text-cyan-400 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
         </div>
 
         <!-- Stem Pin / Anchor Dot pointing to 3D position -->
         <div class="flex flex-col items-center">
-          <div class="w-0.5 h-3 bg-gradient-to-b from-cyan-400 to-transparent" />
-          <div class="w-2 h-2 rounded-full bg-cyan-400 border-2 border-slate-900 ring-2 ring-cyan-400/50 shadow-[0_0_10px_#22d3ee]" />
+          <div class="w-0.5 h-2 bg-gradient-to-b from-cyan-400 to-transparent" />
+          <div class="w-1.5 h-1.5 rounded-full bg-cyan-400 border border-slate-900 ring-1 ring-cyan-400/50 shadow-[0_0_6px_#22d3ee]" />
         </div>
       </div>
     </template>
