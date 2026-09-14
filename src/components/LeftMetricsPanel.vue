@@ -30,6 +30,7 @@ import {
   FileSpreadsheet,
   Bug,
   Briefcase,
+  Truck,
 } from 'lucide-vue-next';
 
 const props = withDefaults(
@@ -59,6 +60,7 @@ const emit = defineEmits<{
   (e: 'openTempModal'): void;
   (e: 'openPestModal'): void;
   (e: 'openOwnerHubModal'): void;
+  (e: 'openLogisticsModal'): void;
 }>();
 
 const localCollapsed = ref(false);
@@ -872,15 +874,25 @@ const selectGreenhouse = (ghId: string) => {
 
       <!-- Panel Footer -->
       <div class="px-2.5 py-1.5 bg-slate-950/90 backdrop-blur-md border-t border-slate-800/80 text-[10px] text-slate-400 flex items-center justify-between">
-        <button
-          @click="$emit('openOwnerHubModal')"
-          class="flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 font-medium cursor-pointer transition-colors"
-          title="打开农业企业负责人经营决策中枢"
-        >
-          <Briefcase class="w-3 h-3 text-emerald-400" />
-          <span>负责人中枢</span>
-        </button>
-        <span class="text-emerald-400/80 font-mono text-[9px]">● 8棚+鱼塘在线</span>
+        <div class="flex items-center gap-1.5">
+          <button
+            @click="$emit('openOwnerHubModal')"
+            class="flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 font-medium cursor-pointer transition-colors"
+            title="打开农业企业负责人经营决策中枢"
+          >
+            <Briefcase class="w-3 h-3 text-emerald-400" />
+            <span>负责人中枢</span>
+          </button>
+          <button
+            @click="$emit('openLogisticsModal')"
+            class="flex items-center gap-1 px-2 py-0.5 rounded-md bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 font-medium cursor-pointer transition-colors"
+            title="打开果蔬出货与农资进货物流台账"
+          >
+            <Truck class="w-3 h-3 text-cyan-400" />
+            <span>进出货</span>
+          </button>
+        </div>
+        <span class="text-emerald-400/80 font-mono text-[9px]">● 8棚+冷链+鱼塘在线</span>
       </div>
     </div>
 

@@ -60,6 +60,7 @@ const emit = defineEmits<{
   (e: 'openFeedingModal'): void;
   (e: 'openTempModal'): void;
   (e: 'openOwnerHubModal'): void;
+  (e: 'openLogisticsModal'): void;
   (e: 'toggleZenMode'): void;
 }>();
 
@@ -451,6 +452,19 @@ const selectPreset = (preset: CameraPreset) => {
                 <span class="font-medium">全区域温度历史时序</span>
               </div>
               <span class="text-[9px] text-amber-400/80 font-mono">时序曲线</span>
+            </button>
+
+            <button
+              id="btn-top-logistics-ledger"
+              @click="$emit('openLogisticsModal'); showLedgerMenu = false;"
+              class="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between text-slate-200 hover:bg-emerald-500/15 hover:text-emerald-200 transition-colors cursor-pointer group"
+              title="果蔬出货与农资进货物流台账（冷链在途跟踪与Excel导出）"
+            >
+              <div class="flex items-center gap-2">
+                <Truck class="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
+                <span class="font-medium">果蔬出货/农资进货台账</span>
+              </div>
+              <span class="text-[9px] text-emerald-400/80 font-mono">冷链物流</span>
             </button>
           </div>
         </div>

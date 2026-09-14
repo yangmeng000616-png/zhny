@@ -75,6 +75,7 @@ import PestMonitoringModal from './components/PestMonitoringModal.vue';
 import PondFeedingModal from './components/PondFeedingModal.vue';
 import TemperatureHistoryModal from './components/TemperatureHistoryModal.vue';
 import EnterpriseOwnerHubModal from './components/EnterpriseOwnerHubModal.vue';
+import LogisticsLedgerModal from './components/LogisticsLedgerModal.vue';
 
 const canvasContainerRef = ref<HTMLDivElement | null>(null);
 let sceneInstance: GreenhouseScene | null = null;
@@ -124,6 +125,9 @@ const inventoryItems = ref<FarmInventoryItem[]>(initialFarmInventoryItems);
 const laborRecords = ref<FarmLaborRecord[]>(initialFarmLaborRecords);
 const salesRecords = ref<FarmHarvestSalesRecord[]>(initialFarmSalesRecords);
 const showOwnerHubModal = ref<boolean>(false);
+
+// Produce Shipment & Agricultural Supplies Logistics Ledger
+const showLogisticsLedger = ref<boolean>(false);
 
 const handleAddPestRecord = (record: PestMonitoringRecord) => {
   pestRecords.value.unshift(record);
@@ -249,6 +253,16 @@ onMounted(() => {
       },
       onSelect: (info) => {
         if (info) {
+          // Direct facility modal triggers
+          if (info.id.includes('coldchain') || info.id.includes('truck') || info.id.includes('loader')) {
+            showLogisticsLedger.value = true;
+            return;
+          }
+          if (info.id.includes('pond') || info.id.includes('water') || info.id.includes('inspector')) {
+            showFeedingModal.value = true;
+            return;
+          }
+
           let matchedGhId: string | null = null;
           if (info.id.includes('gh2') || info.id.includes('greenhouse_2')) {
             matchedGhId = 'gh_002';
@@ -858,6 +872,7 @@ const handleTimeChange = (hourFraction: number) => {
       @open-feeding-modal="showFeedingModal = true"
       @open-temp-modal="showTempHistoryModal = true"
       @open-owner-hub-modal="showOwnerHubModal = true"
+      @open-logistics-modal="showLogisticsLedger = true"
     />
 
     <!-- Left Environment Telemetry Panel -->
@@ -878,6 +893,7 @@ const handleTimeChange = (hourFraction: number) => {
       @open-temp-modal="showTempHistoryModal = true"
       @open-pest-modal="showPestMonitoring = true"
       @open-owner-hub-modal="showOwnerHubModal = true"
+      @open-logistics-modal="showLogisticsLedger = true"
     />
 
     <!-- Right Actuators & Control Center -->
@@ -1058,6 +1074,14 @@ const handleTimeChange = (hourFraction: number) => {
       @open-feeding-modal="showOwnerHubModal = false; showFeedingModal = true"
       @open-temp-modal="showOwnerHubModal = false; showTempHistoryModal = true"
       @open-farming-modal="showOwnerHubModal = false; showFarmingCenter = true"
+      @open-logistics-modal="showOwnerHubModal = false; showLogisticsLedger = true"
+    />
+
+    <!-- Produce Shipment & Agricultural Supplies Logistics Ledger Modal -->
+    <LogisticsLedgerModal
+      v-if="showLogisticsLedger"
+      :visible="showLogisticsLedger"
+      @close="showLogisticsLedger = false"
     />
 
     <!-- 3D Mouse Hover Tooltip -->

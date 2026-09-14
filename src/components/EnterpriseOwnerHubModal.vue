@@ -39,6 +39,7 @@ import {
   Sparkles,
   CheckCircle2,
   AlertTriangle,
+  Truck,
 } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -58,6 +59,7 @@ const emit = defineEmits<{
   (e: 'openFeedingModal'): void;
   (e: 'openTempModal'): void;
   (e: 'openFarmingModal'): void;
+  (e: 'openLogisticsModal'): void;
 }>();
 
 const activeTab = ref<'summary' | 'energy' | 'inventory' | 'labor' | 'sales'>('summary');
@@ -398,6 +400,37 @@ const handleMasterExport = () => {
                 >
                   <FileSpreadsheet class="w-3.5 h-3.5" /> 导出Excel
                 </button>
+              </div>
+            </div>
+
+            <!-- Card 7: 果蔬出货与农资进货物流台账 -->
+            <div class="p-4 rounded-xl bg-slate-950/70 border border-emerald-500/30 hover:border-emerald-500/60 transition-all flex flex-col justify-between group md:col-span-3">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-start gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center shrink-0">
+                    <Truck class="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <h4 class="text-sm font-bold text-slate-100">园区果蔬出货与农资进货物流台账 (冷链互联)</h4>
+                      <span class="px-2 py-0.2 rounded text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">
+                        冷链在途追踪
+                      </span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1 max-w-2xl">
+                      果蔬采收出库至盒马/山姆冷链配送、新能源货车车牌在途跟踪、肥料基质农资入库详实留痕，支持单据新增登记与 Excel / CSV 报表实时导出。
+                    </p>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2 shrink-0">
+                  <button
+                    @click="$emit('openLogisticsModal')"
+                    class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow transition-colors cursor-pointer"
+                  >
+                    <Truck class="w-3.5 h-3.5" /> 打开出入库物流台账
+                  </button>
+                </div>
               </div>
             </div>
           </div>

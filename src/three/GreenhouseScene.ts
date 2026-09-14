@@ -11,6 +11,7 @@ import {
   AgroRiskWarning,
 } from '../types/digitalTwin';
 import { ParkEnvironment } from './ParkEnvironment';
+import { DynamicActorsManager } from './DynamicActorsManager';
 
 export interface PickedObjectInfo {
   id: string;
@@ -78,6 +79,7 @@ export class GreenhouseScene {
   private agvRobot: { group: THREE.Group; lidarPuck: THREE.Mesh; zDir: number } | null = null;
   private sensorNodes: { id: string; group: THREE.Group; halo: THREE.Mesh }[] = [];
   private anemometerMesh: THREE.Group | null = null;
+  private dynamicActorsManager: DynamicActorsManager | null = null;
 
   // Scene Lighting References
   private ambientLight: THREE.AmbientLight | null = null;
@@ -285,6 +287,10 @@ export class GreenhouseScene {
     this.pondWaterMesh = pondSubsystems.waterMesh;
     this.pondBuoy = pondSubsystems.buoy;
     this.pondBeaconLight = pondSubsystems.beaconLight;
+
+    // 8.6 Initialize Dynamic Actors (Vehicles & Farm Personnel)
+    this.dynamicActorsManager = new DynamicActorsManager();
+    this.parkGroup.add(this.dynamicActorsManager.actorsGroup);
 
     // 9. Event Listeners
     this.setupEvents();
@@ -3090,6 +3096,11 @@ export class GreenhouseScene {
     // 8.9 Continuous Environment Field Particles Shimmer
     if (this.envFieldGroup && this.envFieldGroup.visible && this.envFieldParticlePoints) {
       this.envFieldParticlePoints.rotation.y = Math.sin(elapsedTime * 0.2) * 0.03;
+    }
+
+    // 8.10 Update Dynamic Park Actors (Electric Reefer Truck, Utility Cart, Workers)
+    if (this.dynamicActorsManager) {
+      this.dynamicActorsManager.update(delta, elapsedTime);
     }
 
     // 9. Update 3D projected spatial tags
