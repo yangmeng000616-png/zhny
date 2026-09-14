@@ -412,3 +412,93 @@ export interface HistoryPlaybackState {
   currentHourIndex: number; // 0 - 23 or fractional
   playbackSpeed: number; // 1, 2, 5, 10
 }
+
+// -------------------------------------------------------------
+// AQUACULTURE & POND FEEDING MANAGEMENT (鱼塘喂食与水产养殖台账)
+// -------------------------------------------------------------
+export interface PondFeedingRecord {
+  id: string;
+  timestamp: string; // '2026-09-13 08:30'
+  pondZone: string; // '生态循环主鱼塘 (生态河塘)' | '6# 鱼菜共生微藻养殖槽'
+  species: string; // '加州鲈鱼' | '优质草鱼' | '红罗非鱼' | '中华绒螯蟹'
+  feedType: string; // '42%粗蛋白膨化浮水颗粒饲料' | '高钙微藻膨化沉水配合料'
+  feedAmountKg: number; // 投喂量 (kg)
+  feedingMethod: '自动投饵机定时投射' | '人工精准观察撒喂';
+  appetiteRating: '旺盛 (10分钟内摄食完毕)' | '良好 (适中摄食)' | '偏弱 (有少许残饵)';
+  waterTemp: number; // 投喂时水温 ℃
+  dissolvedOxygen: number; // 溶氧量 mg/L
+  ammoniaNitrogen: number; // 氨氮 mg/L
+  ph: number; // pH值
+  feedRemainingStatus: '无残饵 (水质清澈)' | '少量残饵 (已人工捞出)' | '微量悬浮';
+  operator: string;
+  notes?: string;
+}
+
+// -------------------------------------------------------------
+// HISTORICAL ENVIRONMENTAL DATA LOG (全区域温湿度与生境历史数据)
+// -------------------------------------------------------------
+export interface EnvironmentalHistoryLog {
+  timestamp: string; // e.g. '2026-09-13 14:00'
+  locationId: string; // 'gh_001' ~ 'gh_008' | 'pond' | 'outdoor' | 'coldchain'
+  locationName: string;
+  airTemp: number; // 空气温度 / 水温 ℃
+  substrateTemp?: number; // 根区地温 / 基质温度 ℃
+  airHumidity: number; // 相对湿度 %
+  co2?: number; // CO2浓度 ppm
+  solarRadiation?: number; // 光照 Lux 或 W/m²
+  vpd?: number; // 水汽压亏缺 kPa
+  accumulatedGdd?: number; // 当日积温 ℃·d
+}
+
+// -------------------------------------------------------------
+// ENTERPRISE PRODUCTION & OWNER OPERATIONS (农场老板经营生产中枢)
+// -------------------------------------------------------------
+export interface FarmEnergyRecord {
+  date: string;
+  locationName: string;
+  gridElectricityKwh: number; // 市电电网消耗 (度)
+  solarGreenElectricityKwh: number; // 光伏自发自用绿电 (度)
+  waterUsageM3: number; // 农业生产耗水量 (m³)
+  carbonOffsetKg: number; // 碳减排量 (kg)
+  estimatedCostYuan: number; // 能耗支出 (元)
+}
+
+export interface FarmInventoryItem {
+  id: string;
+  category: '肥料配方' | '生物农药' | '无土基质' | '授粉熊蜂' | '包装冷链' | '鱼类饲料';
+  name: string;
+  specification: string;
+  currentStock: number;
+  unit: string;
+  safetyStock: number;
+  unitCostYuan: number;
+  supplier: string;
+  lastRestockDate: string;
+}
+
+export interface FarmLaborRecord {
+  id: string;
+  date: string;
+  workerName: string;
+  greenhouseName: string;
+  taskType: '整枝落蔓' | '人工授粉' | '采摘分拣' | '病虫巡查' | '鱼塘投喂' | '设备维保';
+  hoursSpent: number;
+  quantityCompleted: string;
+  efficiencyRating: '优秀' | '良好' | '达标';
+  inspector: string;
+}
+
+export interface FarmHarvestSalesRecord {
+  id: string;
+  batchNo: string;
+  cropName: string;
+  greenhouseName: string;
+  harvestDate: string;
+  grade: '特级精品果' | '一级品' | '特级高糖果' | '生态活鲜水产';
+  weightKg: number;
+  buyerChannel: '盒马鲜生直采直供' | '山姆会员店专柜' | '高端社区生鲜冷链' | '生态农业直营自提';
+  unitPriceYuan: number;
+  totalRevenueYuan: number;
+  traceabilityCode: string;
+}
+
