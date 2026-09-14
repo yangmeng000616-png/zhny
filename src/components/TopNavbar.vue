@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, computed } from 'vue';
 import type { CameraPreset, ViewDisplayMode } from '../types/digitalTwin';
 import {
   Video as CameraIcon,
@@ -14,9 +15,16 @@ import {
   ShieldAlert,
   Clock,
   Radio,
+  ChevronDown,
+  Building2,
+  Plane,
+  Truck,
+  Warehouse,
+  Waves,
+  Sprout,
 } from 'lucide-vue-next';
 
-defineProps<{
+const props = defineProps<{
   currentPreset: CameraPreset;
   displayMode: ViewDisplayMode;
   timeString: string;
@@ -30,7 +38,7 @@ defineProps<{
   totalAlertCount?: number;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'presetChange', preset: CameraPreset): void;
   (e: 'displayModeChange', mode: ViewDisplayMode): void;
   (e: 'toggleGuide'): void;
@@ -43,6 +51,49 @@ defineEmits<{
   (e: 'toggleHistoryBar'): void;
   (e: 'toggleSensors'): void;
 }>();
+
+const showGhMenu = ref<boolean>(false);
+const showFacilityMenu = ref<boolean>(false);
+
+const isGhPreset = computed(() => {
+  return ['aerial', 'gh2', 'gh3', 'gh4', 'gh5', 'gh6', 'gh7', 'gh8'].includes(props.currentPreset);
+});
+
+const isFacilityPreset = computed(() => {
+  return ['drone_dock', 'coldchain', 'fertigation_tanks', 'smart_field', 'flux_tower', 'pond'].includes(props.currentPreset);
+});
+
+const currentGhLabel = computed(() => {
+  switch (props.currentPreset) {
+    case 'aerial': return '1# 示范棚';
+    case 'gh2': return '2# 玻璃棚';
+    case 'gh3': return '3# 圆拱棚';
+    case 'gh4': return '4# 育苗厂';
+    case 'gh5': return '5# 日光棚';
+    case 'gh6': return '6# 鱼菜棚';
+    case 'gh7': return '7# 气雾棚';
+    case 'gh8': return '8# 光伏棚';
+    default: return '温室群(8座)';
+  }
+});
+
+const currentFacilityLabel = computed(() => {
+  switch (props.currentPreset) {
+    case 'drone_dock': return '智能机巢';
+    case 'coldchain': return '冷链物流';
+    case 'fertigation_tanks': return '水肥储罐';
+    case 'smart_field': return '智慧大田';
+    case 'flux_tower': return '通量铁塔';
+    case 'pond': return '生态河塘';
+    default: return '数字设施(6处)';
+  }
+});
+
+const selectPreset = (preset: CameraPreset) => {
+  emit('presetChange', preset);
+  showGhMenu.value = false;
+  showFacilityMenu.value = false;
+};
 </script>
 
 <template>
@@ -58,7 +109,7 @@ defineEmits<{
             智慧现代农业示范园数字孪生系统
           </h1>
           <span class="px-1.5 py-0.5 text-[10px] font-mono font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 rounded-md">
-            4区温室基地 · 生态河塘水质水网
+            8座现代温室集群 · 5大数字设施 · 生态河塘水网
           </span>
         </div>
         <div class="flex items-center gap-3 text-[11px] text-slate-400 font-mono mt-0.5">
@@ -91,12 +142,14 @@ defineEmits<{
     </div>
 
     <!-- Camera View Switcher Bar -->
-    <div class="pointer-events-auto flex items-center bg-slate-950/80 hover:bg-slate-950/90 backdrop-blur-2xl px-2 py-1.5 rounded-2xl border border-cyan-500/30 shadow-[0_12px_36px_rgba(0,0,0,0.7)] ring-1 ring-white/10 gap-1 text-xs transition-all duration-300">
+    <div class="pointer-events-auto relative flex items-center bg-slate-950/80 hover:bg-slate-950/90 backdrop-blur-2xl px-2 py-1.5 rounded-2xl border border-cyan-500/30 shadow-[0_12px_36px_rgba(0,0,0,0.7)] ring-1 ring-white/10 gap-1 text-xs transition-all duration-300">
       <span class="text-slate-400 px-2 flex items-center gap-1 font-semibold text-[11px]">
         <CameraIcon class="w-3.5 h-3.5 text-cyan-400" /> 视角聚焦:
       </span>
+
+      <!-- 1. Park Panorama -->
       <button
-        @click="$emit('presetChange', 'park_panorama')"
+        @click="selectPreset('park_panorama')"
         :class="[
           'px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer',
           currentPreset === 'park_panorama'
@@ -107,70 +160,186 @@ defineEmits<{
       >
         园区全景
       </button>
-      <button
-        @click="$emit('presetChange', 'pond')"
-        :class="[
-          'px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer',
-          currentPreset === 'pond'
-            ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_12px_rgba(6,182,212,0.5)]'
-            : 'text-cyan-300 hover:text-white hover:bg-slate-800/80'
-        ]"
-        title="生态河塘水质与水位智能浮标站"
-      >
-        生态河塘
-      </button>
+
+      <!-- 2. Greenhouses Dropdown (GH1 - GH8) -->
+      <div class="relative">
+        <button
+          @click="showGhMenu = !showGhMenu; showFacilityMenu = false;"
+          :class="[
+            'flex items-center gap-1 px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer',
+            isGhPreset
+              ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-[0_0_12px_rgba(16,185,129,0.5)]'
+              : 'text-emerald-300 hover:text-white hover:bg-slate-800/80'
+          ]"
+          title="点击展开查看 8 座现代温室大棚"
+        >
+          <Building2 class="w-3.5 h-3.5" />
+          <span>{{ currentGhLabel }}</span>
+          <ChevronDown class="w-3 h-3 transition-transform" :class="{ 'rotate-180': showGhMenu }" />
+        </button>
+
+        <!-- Dropdown Menu -->
+        <div
+          v-if="showGhMenu"
+          class="absolute top-full left-0 mt-2 w-64 bg-slate-950/95 backdrop-blur-2xl rounded-xl border border-emerald-500/30 shadow-[0_16px_36px_rgba(0,0,0,0.85)] ring-1 ring-white/10 p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 text-xs"
+        >
+          <div class="text-[10px] font-mono text-emerald-400 font-semibold px-2 py-1 border-b border-slate-800/80 mb-1 flex items-center justify-between">
+            <span>8座智能温室集群</span>
+            <span class="text-slate-500">点击切换镜头</span>
+          </div>
+          <button
+            @click="selectPreset('aerial')"
+            :class="['w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors cursor-pointer', currentPreset === 'aerial' ? 'bg-emerald-500/25 text-emerald-300 font-bold' : 'text-slate-300 hover:bg-slate-900']"
+          >
+            <span>1# Venlo核心玻璃大棚</span>
+            <span class="text-[10px] text-slate-500 font-mono">示范主棚</span>
+          </button>
+          <button
+            @click="selectPreset('gh2')"
+            :class="['w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors cursor-pointer', currentPreset === 'gh2' ? 'bg-emerald-500/25 text-emerald-300 font-bold' : 'text-slate-300 hover:bg-slate-900']"
+          >
+            <span>2# 连栋智能玻璃棚</span>
+            <span class="text-[10px] text-slate-500 font-mono">立体草莓</span>
+          </button>
+          <button
+            @click="selectPreset('gh3')"
+            :class="['w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors cursor-pointer', currentPreset === 'gh3' ? 'bg-emerald-500/25 text-emerald-300 font-bold' : 'text-slate-300 hover:bg-slate-900']"
+          >
+            <span>3# 现代连栋圆拱棚</span>
+            <span class="text-[10px] text-slate-500 font-mono">水培叶菜</span>
+          </button>
+          <button
+            @click="selectPreset('gh4')"
+            :class="['w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors cursor-pointer', currentPreset === 'gh4' ? 'bg-emerald-500/25 text-emerald-300 font-bold' : 'text-slate-300 hover:bg-slate-900']"
+          >
+            <span>4# 数字化种苗工厂</span>
+            <span class="text-[10px] text-slate-500 font-mono">植物工厂</span>
+          </button>
+          <button
+            @click="selectPreset('gh5')"
+            :class="['w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors cursor-pointer', currentPreset === 'gh5' ? 'bg-emerald-500/25 text-emerald-300 font-bold' : 'text-slate-300 hover:bg-slate-900']"
+          >
+            <span>5# 智能蓄热日光棚</span>
+            <span class="text-[10px] text-amber-400 font-mono">相变蓄能</span>
+          </button>
+          <button
+            @click="selectPreset('gh6')"
+            :class="['w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors cursor-pointer', currentPreset === 'gh6' ? 'bg-emerald-500/25 text-emerald-300 font-bold' : 'text-slate-300 hover:bg-slate-900']"
+          >
+            <span>6# 鱼菜共生生态棚</span>
+            <span class="text-[10px] text-cyan-400 font-mono">循环生态</span>
+          </button>
+          <button
+            @click="selectPreset('gh7')"
+            :class="['w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors cursor-pointer', currentPreset === 'gh7' ? 'bg-emerald-500/25 text-emerald-300 font-bold' : 'text-slate-300 hover:bg-slate-900']"
+          >
+            <span>7# 垂直气雾培农业棚</span>
+            <span class="text-[10px] text-sky-400 font-mono">立体悬浮</span>
+          </button>
+          <button
+            @click="selectPreset('gh8')"
+            :class="['w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors cursor-pointer', currentPreset === 'gh8' ? 'bg-emerald-500/25 text-emerald-300 font-bold' : 'text-slate-300 hover:bg-slate-900']"
+          >
+            <span>8# 光伏农业一体棚</span>
+            <span class="text-[10px] text-lime-400 font-mono">BIPV光伏</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. Advanced Facilities Dropdown (6 facilities) -->
+      <div class="relative">
+        <button
+          @click="showFacilityMenu = !showFacilityMenu; showGhMenu = false;"
+          :class="[
+            'flex items-center gap-1 px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer',
+            isFacilityPreset
+              ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-[0_0_12px_rgba(59,130,246,0.5)]'
+              : 'text-cyan-300 hover:text-white hover:bg-slate-800/80'
+          ]"
+          title="点击展开查看园区核心配套设施"
+        >
+          <Warehouse class="w-3.5 h-3.5" />
+          <span>{{ currentFacilityLabel }}</span>
+          <ChevronDown class="w-3 h-3 transition-transform" :class="{ 'rotate-180': showFacilityMenu }" />
+        </button>
+
+        <!-- Dropdown Menu -->
+        <div
+          v-if="showFacilityMenu"
+          class="absolute top-full left-0 mt-2 w-64 bg-slate-950/95 backdrop-blur-2xl rounded-xl border border-cyan-500/30 shadow-[0_16px_36px_rgba(0,0,0,0.85)] ring-1 ring-white/10 p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 text-xs"
+        >
+          <div class="text-[10px] font-mono text-cyan-400 font-semibold px-2 py-1 border-b border-slate-800/80 mb-1 flex items-center justify-between">
+            <span>园区核心配套设施</span>
+            <span class="text-slate-500">点击切换镜头</span>
+          </div>
+          <button
+            @click="selectPreset('drone_dock')"
+            :class="['w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors cursor-pointer', currentPreset === 'drone_dock' ? 'bg-cyan-500/25 text-cyan-300 font-bold' : 'text-slate-300 hover:bg-slate-900']"
+          >
+            <div class="flex items-center gap-1.5">
+              <Plane class="w-3.5 h-3.5 text-cyan-400" />
+              <span>无人机智能机巢</span>
+            </div>
+            <span class="text-[10px] text-slate-500 font-mono">RTK起降站</span>
+          </button>
+          <button
+            @click="selectPreset('coldchain')"
+            :class="['w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors cursor-pointer', currentPreset === 'coldchain' ? 'bg-cyan-500/25 text-cyan-300 font-bold' : 'text-slate-300 hover:bg-slate-900']"
+          >
+            <div class="flex items-center gap-1.5">
+              <Truck class="w-3.5 h-3.5 text-sky-400" />
+              <span>冷链物流与采后分选</span>
+            </div>
+            <span class="text-[10px] text-slate-500 font-mono">气调冷库</span>
+          </button>
+          <button
+            @click="selectPreset('fertigation_tanks')"
+            :class="['w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors cursor-pointer', currentPreset === 'fertigation_tanks' ? 'bg-cyan-500/25 text-cyan-300 font-bold' : 'text-slate-300 hover:bg-slate-900']"
+          >
+            <div class="flex items-center gap-1.5">
+              <Layers class="w-3.5 h-3.5 text-amber-400" />
+              <span>水肥一体储罐群</span>
+            </div>
+            <span class="text-[10px] text-slate-500 font-mono">母液高位罐</span>
+          </button>
+          <button
+            @click="selectPreset('smart_field')"
+            :class="['w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors cursor-pointer', currentPreset === 'smart_field' ? 'bg-cyan-500/25 text-cyan-300 font-bold' : 'text-slate-300 hover:bg-slate-900']"
+          >
+            <div class="flex items-center gap-1.5">
+              <Sprout class="w-3.5 h-3.5 text-lime-400" />
+              <span>智慧大田试验区</span>
+            </div>
+            <span class="text-[10px] text-slate-500 font-mono">50亩大田</span>
+          </button>
+          <button
+            @click="selectPreset('flux_tower')"
+            :class="['w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors cursor-pointer', currentPreset === 'flux_tower' ? 'bg-cyan-500/25 text-cyan-300 font-bold' : 'text-slate-300 hover:bg-slate-900']"
+          >
+            <div class="flex items-center gap-1.5">
+              <Activity class="w-3.5 h-3.5 text-violet-400" />
+              <span>生态碳通量微气象塔</span>
+            </div>
+            <span class="text-[10px] text-slate-500 font-mono">18m测风塔</span>
+          </button>
+          <button
+            @click="selectPreset('pond')"
+            :class="['w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors cursor-pointer', currentPreset === 'pond' ? 'bg-cyan-500/25 text-cyan-300 font-bold' : 'text-slate-300 hover:bg-slate-900']"
+          >
+            <div class="flex items-center gap-1.5">
+              <Waves class="w-3.5 h-3.5 text-cyan-300" />
+              <span>生态河塘与泵站</span>
+            </div>
+            <span class="text-[10px] text-slate-500 font-mono">水质浮标</span>
+          </button>
+        </div>
+      </div>
+
       <div class="w-[1px] h-4 bg-slate-800 mx-0.5"></div>
+
+      <!-- 4. Interior Roaming -->
       <button
-        @click="$emit('presetChange', 'aerial')"
-        :class="[
-          'px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer',
-          currentPreset === 'aerial'
-            ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_12px_rgba(6,182,212,0.5)]'
-            : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
-        ]"
-        title="1号主示范温室"
-      >
-        1#示范棚
-      </button>
-      <button
-        @click="$emit('presetChange', 'gh2')"
-        :class="[
-          'px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer',
-          currentPreset === 'gh2'
-            ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_12px_rgba(6,182,212,0.5)]'
-            : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
-        ]"
-        title="2号连栋玻璃温室 (立体草莓)"
-      >
-        2#玻璃棚
-      </button>
-      <button
-        @click="$emit('presetChange', 'gh3')"
-        :class="[
-          'px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer',
-          currentPreset === 'gh3'
-            ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_12px_rgba(6,182,212,0.5)]'
-            : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
-        ]"
-        title="3号现代连栋圆拱温室 (水培叶菜)"
-      >
-        3#圆拱棚
-      </button>
-      <button
-        @click="$emit('presetChange', 'gh4')"
-        :class="[
-          'px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer',
-          currentPreset === 'gh4'
-            ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-[0_0_12px_rgba(6,182,212,0.5)]'
-            : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
-        ]"
-        title="4号数字化育苗中心 (植物工厂)"
-      >
-        4#育苗厂
-      </button>
-      <div class="w-[1px] h-4 bg-slate-800 mx-0.5"></div>
-      <button
-        @click="$emit('presetChange', 'interior')"
+        @click="selectPreset('interior')"
         :class="[
           'px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer',
           currentPreset === 'interior'

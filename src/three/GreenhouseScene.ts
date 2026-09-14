@@ -27,7 +27,17 @@ export interface PickedObjectInfo {
     | 'structure'
     | 'pond_buoy'
     | 'water_pump_station'
-    | 'greenhouse';
+    | 'greenhouse'
+    | 'facility_drone_dock'
+    | 'facility_coldchain'
+    | 'facility_fertigation'
+    | 'facility_smart_field'
+    | 'facility_flux_tower'
+    | 'drone_dock'
+    | 'coldchain'
+    | 'fertigation'
+    | 'smart_field'
+    | 'flux_tower';
   name: string;
   dataRef?: any;
   worldPosition: THREE.Vector3;
@@ -90,7 +100,7 @@ export class GreenhouseScene {
   private windStreamlinesMesh: THREE.LineSegments | null = null;
   private isWindFieldVisible = true;
   private isRainVisible = true;
-  private isRadarVisible = true;
+  private isRadarVisible = false;
 
   // Selected Object Ground Framing
   private selectionRingMesh: THREE.Group | null = null;
@@ -267,9 +277,10 @@ export class GreenhouseScene {
     this.buildContinuousEnvironmentField();
     this.initSpatialTags();
 
-    // 8.5 Build Agricultural Park Infrastructure: Roads, Additional Greenhouses, River/Pond
+    // 8.5 Build Agricultural Park Infrastructure: Roads, Additional Greenhouses, River/Pond, Facilities
     ParkEnvironment.buildRoadNetwork(this.scene, this.parkGroup, this.interactiveObjects);
     ParkEnvironment.buildAdditionalGreenhouses(this.scene, this.parkGroup, this.glassMaterials, this.interactiveObjects);
+    ParkEnvironment.buildAdvancedFacilities(this.scene, this.parkGroup, this.interactiveObjects);
     const pondSubsystems = ParkEnvironment.buildPondAndWaterStation(this.scene, this.parkGroup, this.interactiveObjects);
     this.pondWaterMesh = pondSubsystems.waterMesh;
     this.pondBuoy = pondSubsystems.buoy;
@@ -1821,6 +1832,56 @@ export class GreenhouseScene {
         subtext: '电量 86% · 巡视中',
         targetId: 'agv_patrol_01',
       },
+      {
+        id: 'tag_drone_dock',
+        name: '无人机机巢',
+        category: 'drone',
+        worldPos: [20.0, 3.2, 34.0],
+        icon: 'Plane',
+        statusText: '无人机智能机巢 · 待命',
+        subtext: 'RTK基站锁定 · 电池100% · 巡检待飞',
+        targetId: 'facility_drone_dock',
+      },
+      {
+        id: 'tag_coldchain',
+        name: '冷链物流中心',
+        category: 'logistics',
+        worldPos: [-36.0, 7.2, -52.0],
+        icon: 'Truck',
+        statusText: '冷链物流与分选中心',
+        subtext: '库温 2.8℃ · 1号冷藏车装车完毕',
+        targetId: 'facility_coldchain',
+      },
+      {
+        id: 'tag_fertigation_tanks',
+        name: '水肥储罐群',
+        category: 'tank',
+        worldPos: [42.0, 6.2, -48.0],
+        icon: 'Layers',
+        statusText: '水肥一体化储罐群',
+        subtext: 'EC 2.2mS/cm · pH 6.2 · 储液充足',
+        targetId: 'facility_fertigation_tanks',
+      },
+      {
+        id: 'tag_smart_field',
+        name: '智慧大田试验区',
+        category: 'field',
+        worldPos: [-36.0, 3.8, 74.0],
+        icon: 'Sprout',
+        statusText: '智慧大田物联网试验区',
+        subtext: '太阳能杀虫灯正常 · 土壤含水24.5%',
+        targetId: 'facility_smart_field',
+      },
+      {
+        id: 'tag_flux_tower',
+        name: '生态碳通量塔',
+        category: 'tower',
+        worldPos: [72.0, 18.2, 34.0],
+        icon: 'Activity',
+        statusText: '生态通量观测塔 (18m)',
+        subtext: '三维超声测风 · 涡度相关碳通量',
+        targetId: 'facility_flux_tower',
+      },
     ];
   }
 
@@ -1995,6 +2056,33 @@ export class GreenhouseScene {
       case 'gh4': // 4号数字育苗工厂
         this.animateCameraTo(new THREE.Vector3(0, 18, -20), new THREE.Vector3(0, 3.5, -46));
         break;
+      case 'gh5': // 5号智能蓄热日光温室
+        this.animateCameraTo(new THREE.Vector3(-36, 14, 58), new THREE.Vector3(-36, 2.5, 40));
+        break;
+      case 'gh6': // 6号鱼菜共生生态温室
+        this.animateCameraTo(new THREE.Vector3(-4, 15, 58), new THREE.Vector3(-4, 2.5, 40));
+        break;
+      case 'gh7': // 7号垂直气雾培农业温室
+        this.animateCameraTo(new THREE.Vector3(72, 16, 18), new THREE.Vector3(72, 3.0, -4));
+        break;
+      case 'gh8': // 8号光伏农业一体化温室
+        this.animateCameraTo(new THREE.Vector3(-68, 16, 18), new THREE.Vector3(-68, 3.0, -4));
+        break;
+      case 'drone_dock': // 无人机智能机巢
+        this.animateCameraTo(new THREE.Vector3(20, 8, 44), new THREE.Vector3(20, 1.2, 34));
+        break;
+      case 'coldchain': // 冷链物流中心与采后分选
+        this.animateCameraTo(new THREE.Vector3(-36, 16, -32), new THREE.Vector3(-36, 3.5, -52));
+        break;
+      case 'fertigation_tanks': // 水肥一体化储罐群
+        this.animateCameraTo(new THREE.Vector3(42, 15, -30), new THREE.Vector3(42, 3.0, -48));
+        break;
+      case 'smart_field': // 智慧大田试验区
+        this.animateCameraTo(new THREE.Vector3(-36, 14, 92), new THREE.Vector3(-36, 1.5, 74));
+        break;
+      case 'flux_tower': // 生态通量微气象塔
+        this.animateCameraTo(new THREE.Vector3(72, 22, 54), new THREE.Vector3(72, 10.0, 34));
+        break;
       case 'front': // 正立面
         this.animateCameraTo(new THREE.Vector3(0, 4.5, 36), new THREE.Vector3(0, 3.5, 0));
         break;
@@ -2122,38 +2210,69 @@ export class GreenhouseScene {
     this.rainParticles.visible = false;
     this.scene.add(this.rainParticles);
 
-    // 2. 3D Aerodynamic Wind Streamline Flow Field
+    // 2. 3D Aerodynamic Wind Streamline Flow Field (Soft translucent atmospheric currents)
     this.buildWindStreamlineField();
 
-    // 3. Weather Radar Atmospheric Reflectivity Echo Layer (Soft translucent disk at Y = 34m)
-    const radarGeo = new THREE.PlaneGeometry(160, 160, 24, 24);
+    // 3. Weather Radar Atmospheric Reflectivity Echo Layer (Feathered circular disk at Y = 36m)
+    const radarGeo = new THREE.CircleGeometry(85, 48);
+    const radarTexture = this.createRadarEchoTexture();
     const radarMat = new THREE.MeshBasicMaterial({
+      map: radarTexture,
       color: 0x06b6d4,
       transparent: true,
-      opacity: 0.28,
+      opacity: 0.25,
       side: THREE.DoubleSide,
       depthWrite: false,
     });
     this.radarEchoMesh = new THREE.Mesh(radarGeo, radarMat);
     this.radarEchoMesh.rotation.x = -Math.PI / 2;
-    this.radarEchoMesh.position.y = 34;
+    this.radarEchoMesh.position.y = 36;
     this.radarEchoMesh.visible = false;
     this.scene.add(this.radarEchoMesh);
   }
 
+  private createRadarEchoTexture(): THREE.CanvasTexture {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      const grad = ctx.createRadialGradient(256, 256, 10, 256, 256, 250);
+      grad.addColorStop(0, 'rgba(255, 255, 255, 0.65)');
+      grad.addColorStop(0.35, 'rgba(255, 255, 255, 0.45)');
+      grad.addColorStop(0.7, 'rgba(255, 255, 255, 0.18)');
+      grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 512, 512);
+
+      // Subtle radar concentric range rings
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.lineWidth = 1.5;
+      [75, 150, 225].forEach((r) => {
+        ctx.beginPath();
+        ctx.arc(256, 256, r, 0, Math.PI * 2);
+        ctx.stroke();
+      });
+    }
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearFilter;
+    return texture;
+  }
+
   private buildWindStreamlineField() {
-    const streamCount = 280;
+    const streamCount = 240;
     const positions = new Float32Array(streamCount * 6);
     const colors = new Float32Array(streamCount * 6);
 
-    const cHead = new THREE.Color(0x38bdf8);
+    // Soft sky-blue to deep atmospheric slate
+    const cHead = new THREE.Color(0x0284c7);
     const cTail = new THREE.Color(0x0f172a);
 
     for (let i = 0; i < streamCount; i++) {
-      const x = (Math.random() - 0.5) * 160;
-      const y = 2.0 + Math.random() * 12;
-      const z = (Math.random() - 0.5) * 160;
-      const len = 2.2 + Math.random() * 1.8;
+      const x = (Math.random() - 0.5) * 150;
+      const y = 3.0 + Math.random() * 11;
+      const z = (Math.random() - 0.5) * 150;
+      const len = 2.0 + Math.random() * 1.5;
       const dx = Math.cos(this.windDirectionRad) * len;
       const dz = Math.sin(this.windDirectionRad) * len;
 
@@ -2181,8 +2300,8 @@ export class GreenhouseScene {
     const streamMat = new THREE.LineBasicMaterial({
       vertexColors: true,
       transparent: true,
-      opacity: 0.65,
-      blending: THREE.AdditiveBlending,
+      opacity: 0.45,
+      blending: THREE.NormalBlending,
     });
 
     this.windStreamlinesMesh = new THREE.LineSegments(streamGeo, streamMat);
@@ -2494,6 +2613,14 @@ export class GreenhouseScene {
       greenhouse_03: { x: -42, y: 0.05, z: -4, w: 22, l: 28, name: '3# 现代连栋圆拱温室' },
       gh_004: { x: 0, y: 0.05, z: -46, w: 20, l: 24, name: '4# 数字立体育苗工厂' },
       greenhouse_04: { x: 0, y: 0.05, z: -46, w: 20, l: 24, name: '4# 数字立体育苗工厂' },
+      gh_005: { x: -36, y: 0.05, z: 40, w: 26, l: 16, name: '5# 智能蓄热日光温室' },
+      greenhouse_05: { x: -36, y: 0.05, z: 40, w: 26, l: 16, name: '5# 智能蓄热日光温室' },
+      gh_006: { x: -4, y: 0.05, z: 40, w: 20, l: 20, name: '6# 鱼菜共生生态温室' },
+      greenhouse_06: { x: -4, y: 0.05, z: 40, w: 20, l: 20, name: '6# 鱼菜共生生态温室' },
+      gh_007: { x: 72, y: 0.05, z: -4, w: 18, l: 28, name: '7# 垂直气雾培农业温室' },
+      greenhouse_07: { x: 72, y: 0.05, z: -4, w: 18, l: 28, name: '7# 垂直气雾培农业温室' },
+      gh_008: { x: -68, y: 0.05, z: -4, w: 18, l: 28, name: '8# 光伏农业一体化温室' },
+      greenhouse_08: { x: -68, y: 0.05, z: -4, w: 18, l: 28, name: '8# 光伏农业一体化温室' },
     };
 
     warnings.forEach((warn) => {
@@ -2564,7 +2691,7 @@ export class GreenhouseScene {
     }
     if (!objectId) return;
 
-    // Check if it's a known greenhouse
+    // Check if it's a known greenhouse or major facility
     const ghPositions: Record<string, { x: number; z: number; r: number }> = {
       gh_001: { x: 0, z: 0, r: 16 },
       greenhouse_01: { x: 0, z: 0, r: 16 },
@@ -2574,6 +2701,19 @@ export class GreenhouseScene {
       greenhouse_03: { x: -42, z: -4, r: 14 },
       gh_004: { x: 0, z: -46, r: 13 },
       greenhouse_04: { x: 0, z: -46, r: 13 },
+      gh_005: { x: -36, z: 40, r: 15 },
+      greenhouse_05: { x: -36, z: 40, r: 15 },
+      gh_006: { x: -4, z: 40, r: 14 },
+      greenhouse_06: { x: -4, z: 40, r: 14 },
+      gh_007: { x: 72, z: -4, r: 16 },
+      greenhouse_07: { x: 72, z: -4, r: 16 },
+      gh_008: { x: -68, z: -4, r: 16 },
+      greenhouse_08: { x: -68, z: -4, r: 16 },
+      facility_drone_dock: { x: 20, z: 34, r: 5 },
+      facility_coldchain: { x: -36, z: -52, r: 16 },
+      facility_fertigation_tanks: { x: 42, z: -48, r: 11 },
+      facility_smart_field: { x: -36, z: 74, r: 18 },
+      facility_flux_tower: { x: 72, z: 34, r: 5 },
     };
 
     let cx = 0;
@@ -2662,6 +2802,42 @@ export class GreenhouseScene {
     }
     if (objectId === 'gh_004' || objectId === 'greenhouse_04') {
       this.animateCameraTo(new THREE.Vector3(0, 16, -24), new THREE.Vector3(0, 3.0, -46));
+      return;
+    }
+    if (objectId === 'gh_005' || objectId === 'greenhouse_05') {
+      this.animateCameraTo(new THREE.Vector3(-36, 14, 58), new THREE.Vector3(-36, 2.5, 40));
+      return;
+    }
+    if (objectId === 'gh_006' || objectId === 'greenhouse_06') {
+      this.animateCameraTo(new THREE.Vector3(-4, 15, 58), new THREE.Vector3(-4, 2.5, 40));
+      return;
+    }
+    if (objectId === 'gh_007' || objectId === 'greenhouse_07') {
+      this.animateCameraTo(new THREE.Vector3(72, 16, 18), new THREE.Vector3(72, 3.0, -4));
+      return;
+    }
+    if (objectId === 'gh_008' || objectId === 'greenhouse_08') {
+      this.animateCameraTo(new THREE.Vector3(-68, 16, 18), new THREE.Vector3(-68, 3.0, -4));
+      return;
+    }
+    if (objectId === 'facility_drone_dock') {
+      this.animateCameraTo(new THREE.Vector3(20, 8, 44), new THREE.Vector3(20, 1.2, 34));
+      return;
+    }
+    if (objectId === 'facility_coldchain') {
+      this.animateCameraTo(new THREE.Vector3(-36, 16, -32), new THREE.Vector3(-36, 3.5, -52));
+      return;
+    }
+    if (objectId === 'facility_fertigation_tanks') {
+      this.animateCameraTo(new THREE.Vector3(42, 15, -30), new THREE.Vector3(42, 3.0, -48));
+      return;
+    }
+    if (objectId === 'facility_smart_field') {
+      this.animateCameraTo(new THREE.Vector3(-36, 14, 92), new THREE.Vector3(-36, 1.5, 74));
+      return;
+    }
+    if (objectId === 'facility_flux_tower') {
+      this.animateCameraTo(new THREE.Vector3(72, 22, 54), new THREE.Vector3(72, 10.0, 34));
       return;
     }
 

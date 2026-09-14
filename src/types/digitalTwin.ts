@@ -98,14 +98,25 @@ export type CameraPreset =
   | 'pump_room'
   | 'gh2'
   | 'gh3'
-  | 'gh4';
+  | 'gh4'
+  | 'gh5'
+  | 'gh6'
+  | 'gh7'
+  | 'gh8'
+  | 'drone_dock'
+  | 'cold_chain'
+  | 'coldchain'
+  | 'fertigation'
+  | 'fertigation_tanks'
+  | 'smart_field'
+  | 'flux_tower';
 
 export type ViewDisplayMode = 'standard' | 'xray' | 'thermal' | 'structure_only';
 
 export interface SpatialTagAnchor {
   id: string;
   name: string;
-  category: 'weather' | 'fan' | 'light' | 'sensor' | 'control' | 'irrigation' | 'pond' | 'agv';
+  category: 'weather' | 'fan' | 'light' | 'sensor' | 'control' | 'irrigation' | 'pond' | 'agv' | 'drone' | 'logistics' | 'tank' | 'field' | 'tower';
   worldPos: [number, number, number];
   icon: string;
   statusText: string;

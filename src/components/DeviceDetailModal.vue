@@ -22,6 +22,13 @@ import {
   Droplets,
   Waves,
   Building2,
+  Plane,
+  Truck,
+  Warehouse,
+  Sun,
+  Zap,
+  Gauge,
+  ThermometerSnowflake,
 } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -63,6 +70,11 @@ const isAGV = computed(() => {
 const isPondBuoy = computed(() => props.info?.type === 'pond_buoy');
 const isWaterPump = computed(() => props.info?.type === 'water_pump_station');
 const isGreenhouse = computed(() => props.info?.type === 'greenhouse');
+const isDroneDock = computed(() => props.info?.type === 'facility_drone_dock' || props.info?.id === 'facility_drone_dock');
+const isColdChain = computed(() => props.info?.type === 'facility_coldchain' || props.info?.id === 'facility_coldchain');
+const isFertigation = computed(() => props.info?.type === 'facility_fertigation' || props.info?.id === 'facility_fertigation_tanks');
+const isSmartField = computed(() => props.info?.type === 'facility_smart_field' || props.info?.id === 'facility_smart_field');
+const isFluxTower = computed(() => props.info?.type === 'facility_flux_tower' || props.info?.id === 'facility_flux_tower');
 </script>
 
 <template>
@@ -74,7 +86,12 @@ const isGreenhouse = computed(() => props.info?.type === 'greenhouse');
     <div class="p-3.5 bg-slate-900/70 backdrop-blur-sm border-b border-slate-800/80 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <div class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 flex items-center justify-center font-bold shadow-[0_0_8px_rgba(6,182,212,0.3)]">
-          <Waves v-if="isPondBuoy" class="w-4 h-4 text-cyan-300" />
+          <Plane v-if="isDroneDock" class="w-4 h-4 text-cyan-300" />
+          <Truck v-else-if="isColdChain" class="w-4 h-4 text-sky-400" />
+          <Warehouse v-else-if="isFertigation" class="w-4 h-4 text-amber-400" />
+          <Sun v-else-if="isSmartField" class="w-4 h-4 text-lime-400" />
+          <Activity v-else-if="isFluxTower" class="w-4 h-4 text-violet-400" />
+          <Waves v-else-if="isPondBuoy" class="w-4 h-4 text-cyan-300" />
           <Droplets v-else-if="isWaterPump" class="w-4 h-4 text-sky-400" />
           <Building2 v-else-if="isGreenhouse" class="w-4 h-4 text-emerald-400" />
           <Sliders v-else-if="actuator" class="w-4 h-4" />
@@ -310,22 +327,264 @@ const isGreenhouse = computed(() => props.info?.type === 'greenhouse');
         </div>
       </div>
 
-      <!-- 7. Additional Greenhouses -->
+      <!-- 7. Autonomous Drone Docking Station -->
+      <div v-else-if="isDroneDock" class="space-y-3 font-mono">
+        <div class="bg-slate-900/80 p-3 rounded-xl border border-cyan-500/40 shadow-xs">
+          <div class="text-slate-400 text-[11px] mb-1 flex items-center justify-between">
+            <span>全自主无人机巡检机巢</span>
+            <span class="text-emerald-400 font-bold bg-emerald-500/15 px-1.5 py-0.5 rounded text-[10px] border border-emerald-500/30">
+              就绪待命 (STANDBY)
+            </span>
+          </div>
+          <div class="text-sm font-bold text-cyan-300 flex items-center gap-1.5">
+            <Plane class="w-4 h-4 text-cyan-400" />
+            <span>DJI Matrice 350 RTK + 多光谱相机</span>
+          </div>
+          <p class="text-slate-300 text-xs mt-1.5 font-sans leading-relaxed">
+            支持全园区空中正射多光谱巡检、作物长势NDVI反演、病虫害热红外预警与温室屋面巡查。
+          </p>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-[11px]">
+          <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800/80 shadow-xs">
+            <span class="text-slate-400 block text-[10px]">机载电池电量</span>
+            <span class="text-emerald-400 font-bold text-base">100%</span>
+            <span class="text-slate-500 block text-[9px] mt-0.5">快充对接中</span>
+          </div>
+          <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800/80 shadow-xs">
+            <span class="text-slate-400 block text-[10px]">RTK差分基站</span>
+            <span class="text-cyan-300 font-bold text-base">FIX 定位</span>
+            <span class="text-emerald-400 block text-[9px] mt-0.5">定位精度 ±1.5cm</span>
+          </div>
+          <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800/80 shadow-xs">
+            <span class="text-slate-400 block text-[10px]">舱门状态</span>
+            <span class="text-slate-200 font-bold text-base">闭合防尘</span>
+            <span class="text-slate-500 block text-[9px] mt-0.5">温控除湿正常</span>
+          </div>
+          <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800/80 shadow-xs">
+            <span class="text-slate-400 block text-[10px]">气象适航判定</span>
+            <span class="text-emerald-400 font-bold text-base">优良适飞</span>
+            <span class="text-slate-500 block text-[9px] mt-0.5">风速&lt;6.5m/s</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8. Cold Chain Logistics Center -->
+      <div v-else-if="isColdChain" class="space-y-3 font-mono">
+        <div class="bg-slate-900/80 p-3 rounded-xl border border-sky-500/40 shadow-xs">
+          <div class="text-slate-400 text-[11px] mb-1 flex items-center justify-between">
+            <span>农产品冷链物流与采后分选中心</span>
+            <span class="text-sky-400 font-bold bg-sky-500/15 px-1.5 py-0.5 rounded text-[10px] border border-sky-500/30">
+              保鲜中
+            </span>
+          </div>
+          <div class="text-sm font-bold text-slate-100 flex items-center gap-1.5">
+            <Truck class="w-4 h-4 text-sky-400" />
+            <span>气调冷库 + 光电果蔬分选流水线</span>
+          </div>
+          <p class="text-slate-300 text-xs mt-1.5 font-sans leading-relaxed">
+            自动化糖度/果径双通道光电分级机运行中，采后预冷4小时降至休眠温区，保鲜期延长3.5倍。
+          </p>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-[11px]">
+          <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800/80 shadow-xs">
+            <span class="text-slate-400 block text-[10px]">气调库温</span>
+            <span class="text-cyan-300 font-bold text-base">2.8 ℃</span>
+            <span class="text-slate-500 block text-[9px] mt-0.5">设定范围: 1.5~4.0℃</span>
+          </div>
+          <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800/80 shadow-xs">
+            <span class="text-slate-400 block text-[10px]">相对湿度 (RH)</span>
+            <span class="text-emerald-400 font-bold text-base">92 %</span>
+            <span class="text-emerald-400 block text-[9px] mt-0.5">超声雾化抑蒸腾</span>
+          </div>
+          <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800/80 shadow-xs">
+            <span class="text-slate-400 block text-[10px]">日分选产能</span>
+            <span class="text-slate-200 font-bold text-base">15.0 吨/天</span>
+            <span class="text-slate-500 block text-[9px] mt-0.5">今日已完成 8.4吨</span>
+          </div>
+          <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800/80 shadow-xs">
+            <span class="text-slate-400 block text-[10px]">装卸泊位</span>
+            <span class="text-amber-400 font-bold text-base">1号车装载中</span>
+            <span class="text-slate-500 block text-[9px] mt-0.5">苏A·89K25 (冷藏)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 9. Central Fertigation Storage Tanks -->
+      <div v-else-if="isFertigation" class="space-y-3 font-mono">
+        <div class="bg-slate-900/80 p-3 rounded-xl border border-amber-500/40 shadow-xs">
+          <div class="text-slate-400 text-[11px] mb-1 flex items-center justify-between">
+            <span>水肥一体化中央母液储罐群</span>
+            <span class="text-emerald-400 font-bold bg-emerald-500/15 px-1.5 py-0.5 rounded text-[10px] border border-emerald-500/30">
+              精确配液中
+            </span>
+          </div>
+          <div class="text-sm font-bold text-amber-300 flex items-center gap-1.5">
+            <Warehouse class="w-4 h-4 text-amber-400" />
+            <span>3联装高位母液储罐 (A/B/C) + 原水罐</span>
+          </div>
+          <p class="text-slate-300 text-xs mt-1.5 font-sans leading-relaxed">
+            独立微机控制文丘里比例注肥器，依据各温室作物品种动态下发EC与pH目标曲线。
+          </p>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-[11px]">
+          <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800/80 shadow-xs">
+            <span class="text-slate-400 block text-[10px]">A罐(钙/硝态氮)</span>
+            <span class="text-cyan-300 font-bold text-base">82 % 液位</span>
+            <span class="text-slate-500 block text-[9px] mt-0.5">储量: 16.4 m³</span>
+          </div>
+          <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800/80 shadow-xs">
+            <span class="text-slate-400 block text-[10px]">B罐(磷钾微量)</span>
+            <span class="text-emerald-400 font-bold text-base">78 % 液位</span>
+            <span class="text-slate-500 block text-[9px] mt-0.5">储量: 15.6 m³</span>
+          </div>
+          <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800/80 shadow-xs">
+            <span class="text-slate-400 block text-[10px]">在线电导率 (EC)</span>
+            <span class="text-amber-400 font-bold text-base">2.20 mS/cm</span>
+            <span class="text-slate-500 block text-[9px] mt-0.5">目标: 2.20 ±0.05</span>
+          </div>
+          <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800/80 shadow-xs">
+            <span class="text-slate-400 block text-[10px]">酸碱度 (pH)</span>
+            <span class="text-purple-300 font-bold text-base">6.25</span>
+            <span class="text-emerald-400 block text-[9px] mt-0.5">最佳微酸吸收域</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 10. Smart Field Trial Zone -->
+      <div v-else-if="isSmartField" class="space-y-3 font-mono">
+        <div class="bg-slate-900/80 p-3 rounded-xl border border-lime-500/40 shadow-xs">
+          <div class="text-slate-400 text-[11px] mb-1 flex items-center justify-between">
+            <span>智慧大田物联网试验区 (50亩)</span>
+            <span class="text-lime-400 font-bold bg-lime-500/15 px-1.5 py-0.5 rounded text-[10px] border border-lime-500/30">
+              墒情正常
+            </span>
+          </div>
+          <div class="text-sm font-bold text-lime-300 flex items-center gap-1.5">
+            <Sun class="w-4 h-4 text-lime-400" />
+            <span>智能杀虫灯 + 多层墒情管 + 水肥地埋管</span>
+          </div>
+          <p class="text-slate-300 text-xs mt-1.5 font-sans leading-relaxed">
+            布设4通道分层管式土壤温湿度传感器，联动太阳能风吸式杀虫灯与虫情测报仪，绿色防控覆盖率100%。
+          </p>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-[11px]">
+          <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800/80 shadow-xs">
+            <span class="text-slate-400 block text-[10px]">表层20cm土壤墒情</span>
+            <span class="text-cyan-300 font-bold text-base">24.5 %</span>
+            <span class="text-slate-500 block text-[9px] mt-0.5">适宜田间持水量</span>
+          </div>
+          <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800/80 shadow-xs">
+            <span class="text-slate-400 block text-[10px]">地温 (Soil Temp)</span>
+            <span class="text-emerald-400 font-bold text-base">21.8 ℃</span>
+            <span class="text-slate-500 block text-[9px] mt-0.5">根系生理活性高</span>
+          </div>
+          <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800/80 shadow-xs">
+            <span class="text-slate-400 block text-[10px]">绿色杀虫灯</span>
+            <span class="text-lime-400 font-bold text-base">2台 待机</span>
+            <span class="text-slate-500 block text-[9px] mt-0.5">光控夜间自启</span>
+          </div>
+          <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800/80 shadow-xs">
+            <span class="text-slate-400 block text-[10px]">智能水肥分区</span>
+            <span class="text-slate-200 font-bold text-base">3个 轮灌组</span>
+            <span class="text-slate-500 block text-[9px] mt-0.5">电磁阀LoRa无线受控</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 11. Agro-Ecological Flux Tower -->
+      <div v-else-if="isFluxTower" class="space-y-3 font-mono">
+        <div class="bg-slate-900/80 p-3 rounded-xl border border-violet-500/40 shadow-xs">
+          <div class="text-slate-400 text-[11px] mb-1 flex items-center justify-between">
+            <span>园区微气象与碳通量观测铁塔 (18m)</span>
+            <span class="text-violet-400 font-bold bg-violet-500/15 px-1.5 py-0.5 rounded text-[10px] border border-violet-500/30">
+              高频采样 10Hz
+            </span>
+          </div>
+          <div class="text-sm font-bold text-violet-300 flex items-center gap-1.5">
+            <Activity class="w-4 h-4 text-violet-400" />
+            <span>三维超声测风 + 涡度相关系统 (EC)</span>
+          </div>
+          <p class="text-slate-300 text-xs mt-1.5 font-sans leading-relaxed">
+            观测园区近地层地气交换通量、光合有效辐射(PAR)、净辐射通量及农田生态系统碳汇固碳量。
+          </p>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-[11px]">
+          <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800/80 shadow-xs">
+            <span class="text-slate-400 block text-[10px]">净碳交换量 (NEE)</span>
+            <span class="text-emerald-400 font-bold text-base">-14.2 µmol</span>
+            <span class="text-emerald-400 block text-[9px] mt-0.5">强碳汇吸收态</span>
+          </div>
+          <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800/80 shadow-xs">
+            <span class="text-slate-400 block text-[10px]">光合辐射 (PAR)</span>
+            <span class="text-amber-400 font-bold text-base">1450 µmol</span>
+            <span class="text-slate-500 block text-[9px] mt-0.5">m⁻²·s⁻¹</span>
+          </div>
+          <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800/80 shadow-xs">
+            <span class="text-slate-400 block text-[10px]">18m层风速/风向</span>
+            <span class="text-cyan-300 font-bold text-base">3.4 m/s · 东南</span>
+            <span class="text-slate-500 block text-[9px] mt-0.5">三维超声波矩阵</span>
+          </div>
+          <div class="bg-slate-900/70 p-2.5 rounded-xl border border-slate-800/80 shadow-xs">
+            <span class="text-slate-400 block text-[10px]">潜热通量 (LE)</span>
+            <span class="text-slate-200 font-bold text-base">285 W/m²</span>
+            <span class="text-slate-500 block text-[9px] mt-0.5">作物蒸腾强盛</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 12. Greenhouses (GH1 - GH8) -->
       <div v-else-if="isGreenhouse" class="space-y-3">
         <div class="bg-slate-900/80 p-3 rounded-xl border border-emerald-500/40 shadow-xs">
-          <div class="text-emerald-400 font-bold text-sm mb-1">{{ info.name }}</div>
+          <div class="text-emerald-400 font-bold text-sm mb-1 flex items-center justify-between">
+            <span>{{ info.name }}</span>
+            <span class="text-xs font-mono font-normal text-slate-400">ID: {{ info.id }}</span>
+          </div>
           <p class="text-slate-300 text-xs leading-relaxed">
-            纳入数字孪生基地统一物联网管控。配置自动化环境控制、高精度温湿度光照微气象传感节点及独立水肥滴灌管网。
+            <template v-if="info.id === 'greenhouse_01' || info.id === 'gh_001'">
+              核心示范主温室。Venlo型三联栋超白散射钢化玻璃温室，配备高压微雾降温、双层外遮阳网、智能水肥滴灌机及双轨吊架番茄栽培系统。
+            </template>
+            <template v-else-if="info.id === 'greenhouse_02' || info.id === 'gh_002'">
+              2号连栋智能玻璃温室。高架草莓基质立体无土栽培，配置电动可升降栽培槽与自动化水肥回收消毒循环系统。
+            </template>
+            <template v-else-if="info.id === 'greenhouse_03' || info.id === 'gh_003'">
+              3号现代连栋圆拱温室。双层充气薄膜保温，NFT深液流循环水培生菜与羽衣甘蓝，年产茬数高达14茬。
+            </template>
+            <template v-else-if="info.id === 'greenhouse_04' || info.id === 'gh_004'">
+              4号数字化种苗繁育中心。全人工光植物工厂密闭立体多层育苗架，十万级净化车间，种苗成活率99.6%。
+            </template>
+            <template v-else-if="info.id === 'greenhouse_05' || info.id === 'gh_005'">
+              5号智能蓄热高效日光温室。重型复合相变蓄热后墙+自动化外保温电动卷帘被，全冬季零煤耗零碳供暖。
+            </template>
+            <template v-else-if="info.id === 'greenhouse_06' || info.id === 'gh_006'">
+              6号鱼菜共生生态循环温室。圆柱形高密度水产养殖池+微滤硝化菌床+浮板水耕种植，实现“养鱼不换水，种菜不施肥”。
+            </template>
+            <template v-else-if="info.id === 'greenhouse_07' || info.id === 'gh_007'">
+              7号垂直气雾培高密农业温室。A字型立体气雾喷柱+360°间隙脉冲雾化营养液，根系富氧悬浮，节水95%。
+            </template>
+            <template v-else-if="info.id === 'greenhouse_08' || info.id === 'gh_008'">
+              8号光伏农业一体化温室 (BIPV)。屋面铺设透光碲化镉薄膜太阳能组件，棚下立体栽培喜阴食用菌(灵芝/香菇)及名贵中药材。
+            </template>
+            <template v-else>
+              纳入数字孪生基地统一物联网管控。配置自动化环境控制、高精度微气象传感节点及独立水肥管网。
+            </template>
           </p>
         </div>
         <div class="grid grid-cols-2 gap-2 text-[11px] font-mono">
           <div class="bg-slate-900/70 p-2 rounded-xl border border-slate-800/80 shadow-xs">
-            <span class="text-slate-400 block">结构类型</span>
-            <span class="text-slate-200 font-bold">轻钢结构连栋</span>
+            <span class="text-slate-400 block text-[10px]">结构形态</span>
+            <span class="text-slate-200 font-bold">
+              <template v-if="info.id.includes('05')">相变蓄热日光温室</template>
+              <template v-else-if="info.id.includes('06')">生态鱼菜共生复合</template>
+              <template v-else-if="info.id.includes('07')">垂直立体气雾培</template>
+              <template v-else-if="info.id.includes('08')">BIPV双玻光伏一体</template>
+              <template v-else-if="info.id.includes('03')">双层连栋圆拱薄膜</template>
+              <template v-else-if="info.id.includes('04')">垂直密闭植物工厂</template>
+              <template v-else>热镀锌轻钢连栋玻璃</template>
+            </span>
           </div>
           <div class="bg-slate-900/70 p-2 rounded-xl border border-slate-800/80 shadow-xs">
-            <span class="text-slate-400 block">有效栽培区</span>
-            <span class="text-cyan-300 font-bold">616 ㎡</span>
+            <span class="text-slate-400 block text-[10px]">物联网测控状态</span>
+            <span class="text-cyan-300 font-bold">LoRaWAN · 正常</span>
           </div>
         </div>
       </div>
