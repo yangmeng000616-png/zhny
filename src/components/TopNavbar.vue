@@ -131,80 +131,67 @@ const selectPreset = (preset: CameraPreset) => {
     />
 
     <!-- 1. LEFT: Brand & Quick Status Badge -->
-    <div class="pointer-events-auto flex items-center gap-2.5 bg-slate-950/85 hover:bg-slate-950/95 backdrop-blur-xl px-3 py-1.5 rounded-xl border border-slate-800/80 shadow-[0_8px_24px_rgba(0,0,0,0.6)] ring-1 ring-white/10 shrink-0 transition-all">
-      <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0 shadow-xs">
-        <Sprout class="w-4 h-4" />
+    <div class="pointer-events-auto flex items-center gap-2 bg-slate-950/85 hover:bg-slate-950/95 backdrop-blur-xl px-2.5 py-1.5 rounded-xl border border-slate-800/80 shadow-[0_8px_24px_rgba(0,0,0,0.6)] ring-1 ring-white/10 shrink-0 transition-all">
+      <div class="w-6 h-6 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+        <Sprout class="w-3.5 h-3.5" />
       </div>
-      <div>
-        <div class="flex items-center gap-1.5">
-          <h1 class="text-xs sm:text-sm font-bold text-slate-100 tracking-wide truncate">
-            智慧农业大屏
-          </h1>
-          <span class="inline-flex items-center gap-1 px-1.5 py-0.2 text-[9px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 rounded-md">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_#34d399]"></span>
-            在线
-          </span>
-        </div>
-        <div class="flex items-center gap-1.5 text-[10px] text-slate-400 font-mono mt-0.5">
-          <span class="text-slate-300 font-mono">{{ timeString }}</span>
-          <span class="text-slate-600">|</span>
-          <!-- Data Source Mode Toggle -->
-          <button
-            id="btn-top-datasource-toggle"
-            @click="$emit('toggleDataSource')"
-            class="px-1.5 py-0.2 rounded bg-slate-900/90 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 font-sans text-[9px] cursor-pointer transition-colors"
-            :title="'数据接入模式: ' + (dataSourceMode === 'api' ? '远程后端API接口' : '本地数据文件') + ' (点击切换)'"
-          >
-            {{ dataSourceMode === 'api' ? 'API接口' : '本地文件' }}
-          </button>
-          <!-- Demo Fluctuation Switch with Explicit Simulation Badge -->
-          <button
-            id="btn-top-demo-jitter-toggle"
-            @click="$emit('toggleDemoJitter')"
-            :class="[
-              'px-1.5 py-0.2 rounded border font-sans text-[9px] cursor-pointer transition-all flex items-center gap-1',
-              isDemoMode
-                ? 'bg-amber-500/25 text-amber-300 border-amber-500/50 font-bold shadow-[0_0_8px_rgba(245,158,11,0.3)]'
-                : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25'
-            ]"
-            :title="isDemoMode ? '【演示模式】已开启前端模拟微抖动，点击关闭并立即回源后端实测数据' : '【实测模式】定时轮询 dataService 保真中 (上次同步: ' + (lastUpdateTime || '已就绪') + ')，点击可开启动态模拟微抖动'"
-          >
-            <span :class="['w-1.5 h-1.5 rounded-full', isDemoMode ? 'bg-amber-400 animate-ping' : 'bg-emerald-400 shadow-[0_0_5px_#34d399]']"></span>
-            <span>{{ isDemoMode ? '模拟数据' : '实测轮询' }}</span>
-          </button>
-        </div>
+      <div class="flex items-center gap-1.5">
+        <h1 class="text-xs sm:text-sm font-bold text-slate-100 tracking-wide truncate">
+          智慧农业大屏
+        </h1>
+        <span class="inline-flex items-center gap-1 px-1.5 py-0.2 text-[9px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 rounded-md">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_#34d399]"></span>
+          在线
+        </span>
       </div>
 
-      <!-- Persistent High-Impact Weather Safety Shield & Agri-Decision Capsule -->
+      <span class="text-slate-600 mx-0.5">|</span>
+      <span class="text-slate-300 font-mono text-[11px]">{{ timeString }}</span>
+
+      <!-- Compact Source & Simulation Toggle Group -->
+      <div class="flex items-center gap-1 ml-0.5">
+        <button
+          id="btn-top-datasource-toggle"
+          @click="$emit('toggleDataSource')"
+          class="px-1.5 py-0.5 rounded bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-cyan-300 border border-slate-700/60 font-sans text-[9px] cursor-pointer transition-colors"
+          :title="'数据接入模式: ' + (dataSourceMode === 'api' ? '远程后端API接口' : '本地数据文件') + ' (点击切换)'"
+        >
+          {{ dataSourceMode === 'api' ? 'API' : '本地' }}
+        </button>
+
+        <button
+          id="btn-top-demo-jitter-toggle"
+          @click="$emit('toggleDemoJitter')"
+          :class="[
+            'px-1.5 py-0.5 rounded border font-sans text-[9px] cursor-pointer transition-all flex items-center gap-1',
+            isDemoMode
+              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+              : 'bg-slate-900/90 text-slate-400 border-slate-700/60 hover:text-slate-300'
+          ]"
+          :title="isDemoMode ? '【演示模式】模拟波动中，点击切回实测' : '【实测模式】点击开启模拟波动'"
+        >
+          <span :class="['w-1.5 h-1.5 rounded-full', isDemoMode ? 'bg-amber-400' : 'bg-emerald-400']"></span>
+          <span>{{ isDemoMode ? '模拟' : '实测' }}</span>
+        </button>
+      </div>
+
+      <span class="text-slate-700 mx-0.5">|</span>
+
+      <!-- Refined, Calm Weather Safety Pill -->
       <button
         id="top-weather-safety-shield"
         @click="$emit('toggleWeatherPanel')"
         :class="[
-          'ml-1 px-2.5 py-1 rounded-lg border flex items-center gap-2 cursor-pointer transition-all text-xs font-semibold shadow-xs',
+          'px-2 py-0.5 rounded-lg border flex items-center gap-1.5 cursor-pointer transition-all text-xs shadow-xs',
           showWeatherPanel
-            ? 'bg-cyan-500/25 border-cyan-400 text-cyan-200 shadow-[0_0_12px_rgba(6,182,212,0.4)] ring-1 ring-cyan-400/50'
-            : 'bg-gradient-to-r from-amber-500/15 via-rose-500/15 to-emerald-500/15 hover:from-amber-500/25 hover:to-emerald-500/25 border-amber-500/40 text-slate-200'
+            ? 'bg-cyan-500/25 border-cyan-400 text-cyan-200 shadow-[0_0_12px_rgba(6,182,212,0.4)]'
+            : 'bg-slate-900/80 hover:bg-slate-800/90 border-amber-500/30 text-amber-300'
         ]"
-        title="点击展开微气象短临推演(0~120m)与72小时农事作业黄金窗口决策中枢"
+        title="点击展开微气象短临推演(0~120m)与72小时农事决策中枢"
       >
-        <div class="relative flex h-2 w-2">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-400"></span>
-        </div>
-        <div class="flex items-center gap-1.5 text-[11px]">
-          <span class="text-amber-300 font-bold flex items-center gap-1">
-            <Zap class="w-3 h-3 text-amber-400 fill-amber-400/30" />
-            0~2H短临: 30m后强降水
-          </span>
-          <span class="text-slate-600 hidden xl:inline">|</span>
-          <span class="text-emerald-300 hidden xl:inline flex items-center gap-1">
-            <CheckCircle2 class="w-3 h-3 text-emerald-400" />
-            72H农事: 明日宜开帘喷药
-          </span>
-        </div>
-        <span class="text-[9px] px-1 py-0.2 rounded bg-amber-500/30 text-amber-200 border border-amber-500/40 font-mono">
-          气象决策
-        </span>
+        <CloudRain class="w-3.5 h-3.5 text-amber-400" />
+        <span class="text-[11px] font-medium hidden sm:inline">气象短临</span>
+        <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
       </button>
     </div>
 

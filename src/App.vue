@@ -336,12 +336,12 @@ const displayMode = ref<ViewDisplayMode>('standard');
 const autoMode = ref<boolean>(true);
 const showRoamGuide = ref<boolean>(false);
 const spatialTags = ref<ProjectedTag[]>([]);
-const showSpatialTags = ref<boolean>(true);
+const showSpatialTags = ref<boolean>(false); // Default clean mode: disable floating badges across 3D scene
 
 // Coordinated responsive panel states to prevent overlapping
 const isMobileScreen = typeof window !== 'undefined' ? window.innerWidth < 1024 : false;
 const leftPanelCollapsed = ref<boolean>(isMobileScreen);
-const rightPanelCollapsed = ref<boolean>(isMobileScreen);
+const rightPanelCollapsed = ref<boolean>(isMobileScreen); // Dual-zone layout: left monitoring & right control
 const bottomPanelCollapsed = ref<boolean>(true); // Default collapsed for clean visual presentation
 
 // Zen / Clean Screen Mode

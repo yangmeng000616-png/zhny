@@ -164,59 +164,51 @@ const selectGreenhouse = (ghId: string) => {
 <template>
   <div
     :class="[
-      'absolute top-[68px] left-3 bottom-6 z-20 transition-all duration-300 pointer-events-none flex items-start select-none',
+      'absolute top-[64px] left-3 bottom-5 z-20 transition-all duration-300 pointer-events-none flex items-start select-none',
       isCollapsed ? '-translate-x-[calc(100%-12px)]' : 'translate-x-0'
     ]"
   >
-    <!-- Main Panel Box -->
+    <!-- Main Panel Box: Translucent Frosted Glass Cockpit -->
     <div
-      class="pointer-events-auto w-70 sm:w-72 h-full max-h-[calc(100vh-100px)] flex flex-col bg-slate-950/85 hover:bg-slate-950/95 backdrop-blur-2xl rounded-2xl border border-cyan-500/30 shadow-[0_20px_50px_rgba(0,0,0,0.85)] ring-1 ring-white/10 overflow-hidden transition-all duration-300 text-xs"
+      class="pointer-events-auto w-76 sm:w-82 h-full max-h-[calc(100vh-88px)] flex flex-col bg-slate-950/65 hover:bg-slate-950/75 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.65)] ring-1 ring-white/5 overflow-hidden transition-all duration-300 text-xs"
     >
-      <!-- Panel Top Header with Greenhouse/Outdoor Dropdown -->
-      <div class="p-2.5 border-b border-white/10 bg-slate-900/60 backdrop-blur-md">
-        <div class="flex items-center justify-between gap-1.5 mb-1.5">
-          <div class="flex items-center gap-1.5">
-            <span class="relative flex h-2 w-2">
-              <span :class="['animate-ping absolute inline-flex h-full w-full rounded-full opacity-75', isDemoMode ? 'bg-amber-400' : 'bg-cyan-400']"></span>
-              <span :class="['relative inline-flex rounded-full h-2 w-2', isDemoMode ? 'bg-amber-400' : 'bg-cyan-400']"></span>
-            </span>
-            <span class="text-[11px] font-bold text-slate-100 tracking-wide truncate">
-              {{ isOutdoorMode ? '室外微气象基准' : '大棚微生境遥测' }}
-            </span>
-          </div>
-
-          <div class="flex items-center gap-1">
-            <!-- Explicit Demo Switch & Simulation Badge -->
-            <button
-              id="btn-left-demo-badge"
-              @click="emit('toggleDemoJitter')"
-              :class="[
-                'text-[9px] px-1.5 py-0.5 rounded-md border font-mono font-semibold flex items-center gap-1 transition-all cursor-pointer',
-                isDemoMode
-                  ? 'bg-amber-500/25 text-amber-300 border-amber-500/50 shadow-[0_0_8px_rgba(245,158,11,0.25)] hover:bg-amber-500/35'
-                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/30'
-              ]"
-              :title="isDemoMode ? '【模拟数据·微抖动中】点击关闭模拟，回源后端定时轮询实测值' : '【实测数据·3s定时轮询】(上次回源: ' + (lastUpdateTime || '实时') + ') 点击开启动态模拟微抖动'"
-            >
-              <span v-if="isDemoMode" class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
-              <span v-else class="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_5px_#34d399]"></span>
-              <span>{{ isDemoMode ? '模拟数据' : '实测轮询' }}</span>
-            </button>
-
-            <span
-              v-if="!isOutdoorMode && currentGh"
-              class="text-[9px] px-1 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono font-semibold hidden sm:inline"
-            >
-              96.8%
-            </span>
-          </div>
+      <!-- Zone 1: Clear Functional Zone Identifier Header -->
+      <div class="px-3 py-2 border-b border-white/10 bg-slate-900/40 backdrop-blur-md flex items-center justify-between">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="px-2 py-0.5 rounded text-[9px] font-bold font-mono tracking-wider bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 shrink-0">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            左区 · 环境监控
+          </span>
+          <span class="text-[11px] font-semibold text-slate-200 truncate">
+            {{ isOutdoorMode ? '室外宏观气象基准' : '大棚微生境遥测' }}
+          </span>
         </div>
 
-        <!-- Target Greenhouse / Outdoor Switcher Dropdown Button -->
+        <div class="flex items-center gap-1 shrink-0">
+          <!-- Simulation Mode Switch Pill -->
+          <button
+            id="btn-left-demo-badge"
+            @click="emit('toggleDemoJitter')"
+            :class="[
+              'text-[9px] px-1.5 py-0.5 rounded border font-mono transition-all cursor-pointer flex items-center gap-1',
+              isDemoMode
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                : 'bg-slate-800/60 text-slate-300 border-white/10 hover:bg-slate-800'
+            ]"
+            :title="isDemoMode ? '模拟数据中，点击切回实测' : '实测轮询中，点击开启模拟波动'"
+          >
+            <span :class="['w-1 h-1 rounded-full', isDemoMode ? 'bg-amber-400' : 'bg-emerald-400']"></span>
+            <span>{{ isDemoMode ? '模拟' : '实测' }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Target Greenhouse / Outdoor Switcher Dropdown Block -->
+      <div class="p-2.5 border-b border-white/10 bg-slate-950/25">
         <div class="relative">
           <button
             @click="showGhSelector = !showGhSelector"
-            class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-cyan-500/30 shadow-inner transition-colors cursor-pointer"
+            class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 text-slate-200 border border-white/10 shadow-inner transition-colors cursor-pointer"
           >
             <div class="flex items-center gap-2 truncate">
               <Building2 v-if="!isOutdoorMode" class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
@@ -276,7 +268,7 @@ const selectGreenhouse = (ghId: string) => {
             >
               <div>
                 <div class="font-semibold flex items-center gap-1">
-                  <CloudSun class="w-3 h-3 text-cyan-400" />
+                  <CloudSun class="w-3.5 h-3.5 text-cyan-400" />
                   <span>园区室外气象观测站</span>
                 </div>
                 <div class="text-[10px] text-slate-400 font-normal">
@@ -296,7 +288,7 @@ const selectGreenhouse = (ghId: string) => {
             v-if="!isOutdoorMode"
             id="btn-open-single-station"
             @click="emit('openStation', currentGh?.id || 'gh_001')"
-            class="py-1 px-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 hover:text-white border border-cyan-500/40 text-[11px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer shadow-xs"
+            class="py-1 px-1.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 hover:text-white border border-cyan-500/30 text-[11px] font-medium flex items-center justify-center gap-1 transition-all cursor-pointer shadow-xs"
             title="打开当前大棚专属独立测控面板"
           >
             <Sliders class="w-3 h-3" />
@@ -305,7 +297,7 @@ const selectGreenhouse = (ghId: string) => {
           <button
             id="btn-open-cluster-matrix"
             @click="emit('openMatrix')"
-            class="py-1 px-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-750 text-slate-200 hover:text-white border border-slate-700 text-[11px] font-medium flex items-center justify-center gap-1 transition-all cursor-pointer"
+            class="py-1 px-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-200 hover:text-white border border-white/10 text-[11px] font-medium flex items-center justify-center gap-1 transition-all cursor-pointer"
             :class="[isOutdoorMode ? 'col-span-2' : '']"
             title="以矩阵形式查看全园8座大棚独立监控面板"
           >
@@ -316,7 +308,7 @@ const selectGreenhouse = (ghId: string) => {
       </div>
 
       <!-- Tab Switcher -->
-      <div class="grid grid-cols-4 border-b border-white/10 bg-slate-950/50 text-[10px] font-medium">
+      <div class="grid grid-cols-4 border-b border-white/10 bg-slate-950/40 text-[10px] font-medium">
         <button
           @click="activeTab = 'microclimate'"
           :class="[
@@ -374,31 +366,6 @@ const selectGreenhouse = (ghId: string) => {
       <div class="flex-1 overflow-y-auto p-2.5 space-y-2 text-slate-300">
         <!-- TAB 1: Microclimate & Outdoor Contrast -->
         <template v-if="activeTab === 'microclimate'">
-          <!-- Quick Surveillance Shortcut Card -->
-          <div
-            @click="activeTab = 'surveillance'"
-            class="bg-slate-900/60 hover:bg-slate-800/80 p-2 rounded-xl border border-cyan-500/30 hover:border-cyan-400/60 cursor-pointer transition-all flex items-center justify-between shadow-xs group mb-1.5"
-            title="点击切换到实时虚拟监控摄像头视频画面与3D视野标记"
-          >
-            <div class="flex items-center gap-2">
-              <div class="w-6 h-6 rounded-lg bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 group-hover:scale-105 transition-transform">
-                <Camera class="w-3.5 h-3.5" />
-              </div>
-              <div>
-                <div class="text-[11px] font-semibold text-slate-100 flex items-center gap-1.5">
-                  <span>{{ isOutdoorMode ? '通量铁塔高空全景监控' : `${currentGh?.name ?? '当前大棚'} 实时监控` }}</span>
-                  <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
-                </div>
-                <div class="text-[9px] text-slate-400 font-mono">
-                  4K全彩云台 · 3D视野范围标记
-                </div>
-              </div>
-            </div>
-            <div class="flex items-center gap-1 text-[10px] text-cyan-300 font-medium group-hover:translate-x-0.5 transition-transform">
-              <span>查看视频</span>
-              <ChevronRight class="w-3 h-3" />
-            </div>
-          </div>
           <!-- Case A: Indoor Greenhouse View -->
           <template v-if="!isOutdoorMode && currentGh">
             <!-- 1. Greenhouse Crop & Agronomy Banner -->
@@ -427,31 +394,20 @@ const selectGreenhouse = (ghId: string) => {
               </div>
             </div>
 
-            <!-- 2. 微气象短临防御与72H农事窗口决策条 (Weather-to-Action Impact Bar) -->
+            <!-- 2. 微气象短临决策卡 (Compact Weather Alert Bar) -->
             <div
               id="btn-left-weather-decision-card"
               @click="emit('openWeatherModal')"
-              class="p-2 rounded-xl bg-gradient-to-r from-amber-500/15 via-slate-900/90 to-emerald-500/15 border border-amber-500/40 hover:border-amber-400/80 cursor-pointer transition-all space-y-1 group shadow-xs"
+              class="px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 cursor-pointer transition-all flex items-center justify-between text-[10px] group shadow-xs"
               title="点击打开微气象短临推演(0~120m)与72小时农事黄金作业窗口"
             >
-              <div class="flex items-center justify-between text-[10px]">
-                <div class="flex items-center gap-1 font-bold text-amber-300">
-                  <Zap class="w-3 h-3 text-amber-400 fill-amber-400/40 animate-pulse" />
-                  <span>0~2H短临: 30分钟后短时强降水</span>
-                </div>
-                <span class="text-[9px] text-cyan-400 group-hover:underline flex items-center gap-0.5">
-                  决策中枢 <ArrowUpRight class="w-2.5 h-2.5" />
-                </span>
+              <div class="flex items-center gap-1.5 font-medium text-amber-300 truncate">
+                <Zap class="w-3 h-3 text-amber-400 shrink-0 animate-pulse" />
+                <span class="truncate">气象预警: 30m后短时强降水 (明日宜开帘)</span>
               </div>
-              <div class="flex items-center justify-between text-[10px] text-slate-300">
-                <div class="flex items-center gap-1 text-emerald-300">
-                  <CheckCircle2 class="w-3 h-3 text-emerald-400" />
-                  <span>72H农事: 明日07:00~10:30黄金喷药</span>
-                </div>
-                <span class="text-[9px] font-mono text-slate-400">
-                  {{ outdoorWeather?.temperature ?? 23.8 }}℃ / {{ outdoorWeather?.humidity ?? 54.2 }}%
-                </span>
-              </div>
+              <span class="text-[9px] text-cyan-400 group-hover:underline flex items-center gap-0.5 shrink-0 ml-1 font-mono">
+                推演 <ArrowUpRight class="w-2.5 h-2.5" />
+              </span>
             </div>
 
             <!-- 3. 室外宏观气象基准对照条 (Outdoor Meteorological Reference) -->
@@ -472,7 +428,7 @@ const selectGreenhouse = (ghId: string) => {
             <!-- 3. Four Core Microclimate Parameters (No duplication) -->
             <div class="grid grid-cols-2 gap-1.5">
               <!-- Air Temp Gauge -->
-              <div class="bg-slate-900/60 p-2 rounded-xl border border-white/10">
+              <div class="bg-slate-900/40 backdrop-blur-md p-2.5 rounded-xl border border-white/10 hover:border-white/20 transition-all">
                 <div class="flex items-center justify-between text-[10px] text-slate-400 mb-1">
                   <span class="flex items-center gap-1 text-amber-400 font-semibold">
                     <Thermometer class="w-3 h-3" /> 室内气温
@@ -507,7 +463,7 @@ const selectGreenhouse = (ghId: string) => {
               </div>
 
               <!-- Air Humidity Gauge -->
-              <div class="bg-slate-900/60 p-2 rounded-xl border border-white/10">
+              <div class="bg-slate-900/40 backdrop-blur-md p-2.5 rounded-xl border border-white/10 hover:border-white/20 transition-all">
                 <div class="flex items-center justify-between text-[10px] text-slate-400 mb-1">
                   <span class="flex items-center gap-1 text-sky-400 font-semibold">
                     <Droplets class="w-3 h-3" /> 室内湿度
@@ -542,7 +498,7 @@ const selectGreenhouse = (ghId: string) => {
               </div>
 
               <!-- CO2 Concentration -->
-              <div class="bg-slate-900/60 p-2 rounded-xl border border-white/10">
+              <div class="bg-slate-900/40 backdrop-blur-md p-2.5 rounded-xl border border-white/10 hover:border-white/20 transition-all">
                 <div class="flex items-center justify-between text-[10px] text-slate-400 mb-1">
                   <span class="flex items-center gap-1 text-emerald-400 font-semibold">
                     <Activity class="w-3 h-3" /> CO₂ 浓度
@@ -566,7 +522,7 @@ const selectGreenhouse = (ghId: string) => {
               </div>
 
               <!-- Solar Radiation / Lux -->
-              <div class="bg-slate-900/60 p-2 rounded-xl border border-white/10">
+              <div class="bg-slate-900/40 backdrop-blur-md p-2.5 rounded-xl border border-white/10 hover:border-white/20 transition-all">
                 <div class="flex items-center justify-between text-[10px] text-slate-400 mb-1">
                   <span class="flex items-center gap-1 text-amber-400 font-semibold">
                     <Sun class="w-3 h-3" /> 光照强度
