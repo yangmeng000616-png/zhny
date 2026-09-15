@@ -535,3 +535,48 @@ export interface PestWeeklyTrendItem {
   total: number;
 }
 
+// -------------------------------------------------------------
+// LIVE SURVEILLANCE & VIRTUAL CAMERA FOV (实时监控与虚拟摄像头视野)
+// -------------------------------------------------------------
+export interface SurveillanceAIDetection {
+  id: string;
+  label: string;
+  category: 'crop' | 'facility' | 'pest' | 'alert';
+  confidence: number; // e.g. 0.96
+  box: [number, number, number, number]; // [x%, y%, width%, height%]
+  status: 'normal' | 'warning' | 'info';
+  notes?: string;
+}
+
+export interface SurveillancePTZPreset {
+  id: string;
+  name: string;
+  pan: number; // degrees
+  tilt: number; // degrees
+  zoom: number; // 1.0 - 5.0
+}
+
+export interface SurveillanceCameraConfig {
+  id: string;
+  ghId: string; // 'gh_001', 'gh_002', ..., 'gh_008', 'pond', 'outdoor'
+  name: string;
+  code: string;
+  model: string;
+  resolution: string; // '3840×2160 (4K UHD)'
+  fps: number;
+  bitrate: string;
+  streamProtocol: string; // 'WebRTC / RTSP-Over-WSS'
+  mountLocation: string;
+  cropType: string;
+  status: 'online' | 'recording' | 'standby';
+  // 3D Spatial Coordinates
+  position: [number, number, number]; // [x, y, z] in Three.js world
+  target: [number, number, number]; // [x, y, z] target lookAt point
+  fov: number; // degrees (e.g. 58)
+  aspectRatio: number; // 16/9
+  range: number; // meters (e.g. 24)
+  groundCoverageM2: number;
+  aiDetections: SurveillanceAIDetection[];
+  ptzPresets: SurveillancePTZPreset[];
+}
+

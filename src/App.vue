@@ -388,6 +388,13 @@ onMounted(() => {
       onSelect: (info) => {
         if (info) {
           // Direct facility modal triggers
+          if (info.type === 'surveillance_camera' || info.id.startsWith('cam_')) {
+            const ghId = info.extra?.ghId || (info as any).ghId || 'gh_001';
+            selectedGreenhouseId.value = ghId;
+            sceneInstance?.setActiveSurveillanceCamera(ghId);
+            selectedObject.value = info;
+            return;
+          }
           if (info.id.includes('gate') || info.id.includes('barrier') || info.type === 'gate') {
             showGateModal.value = true;
             return;
@@ -665,10 +672,28 @@ const handlePresetChange = (preset: CameraPreset) => {
 
 const handleSelectGreenhouse = (ghId: string) => {
   selectedGreenhouseId.value = ghId;
+  sceneInstance?.setActiveSurveillanceCamera(ghId);
   const targetPreset = ghToPresetMap[ghId];
   if (targetPreset) {
     handlePresetChange(targetPreset);
   }
+};
+
+// Virtual Surveillance Camera & 3D FOV Frustum Controls
+const isSurveillanceFovActive = ref<boolean>(true);
+
+const handleFlyToCameraView = (ghId: string) => {
+  selectedGreenhouseId.value = ghId;
+  sceneInstance?.flyToSurveillanceCameraView(ghId);
+};
+
+const handleToggleFovVisible = (visible: boolean) => {
+  isSurveillanceFovActive.value = visible;
+  sceneInstance?.setSurveillanceFOVVisible(visible);
+};
+
+const handleToggleAllFovs = (showAll: boolean) => {
+  sceneInstance?.setAllSurveillanceFOVsVisible(showAll);
 };
 
 // Open Dedicated Greenhouse Station Modal
@@ -1085,6 +1110,7 @@ const handleTimeChange = (hourFraction: number) => {
       :is-demo-mode="isDemoJitterActive"
       :last-update-time="lastDataRefreshTime"
       :data-source-mode="dataSourceMode"
+      :is-surveillance-fov-active="isSurveillanceFovActive"
       v-model:collapsed="leftPanelCollapsed"
       @select-greenhouse="handleSelectGreenhouse"
       @select-sensor="handleSelectSensor"
@@ -1098,6 +1124,9 @@ const handleTimeChange = (hourFraction: number) => {
       @open-owner-hub-modal="showOwnerHubModal = true"
       @open-logistics-modal="showLogisticsLedger = true"
       @open-weather-modal="showWeatherPanel = true"
+      @fly-to-camera-view="handleFlyToCameraView"
+      @toggle-fov-visible="handleToggleFovVisible"
+      @toggle-all-fovs="handleToggleAllFovs"
     />
 
     <!-- Right Actuators & Control Center -->

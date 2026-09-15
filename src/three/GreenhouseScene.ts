@@ -9,7 +9,9 @@ import {
   WeatherNowcastPoint,
   RadarEchoFrame,
   AgroRiskWarning,
+  SurveillanceCameraConfig,
 } from '../types/digitalTwin';
+import { surveillanceCamerasData } from '../data/surveillanceData';
 import { ParkEnvironment } from './ParkEnvironment';
 import { DynamicActorsManager } from './DynamicActorsManager';
 import { gateService } from '../services/gateService';
@@ -42,7 +44,8 @@ export interface PickedObjectInfo {
     | 'flux_tower'
     | 'gate'
     | 'vehicle'
-    | 'worker';
+    | 'worker'
+    | 'surveillance_camera';
   name: string;
   dataRef?: any;
   extra?: any;
@@ -69,6 +72,7 @@ export class GreenhouseScene {
   public roboticsGroup: THREE.Group;
   public effectsGroup: THREE.Group;
   public parkGroup: THREE.Group;
+  public surveillanceGroup: THREE.Group;
 
   // Pond & Water telemetry animation references
   private pondWaterMesh: THREE.Mesh | null = null;
@@ -123,6 +127,24 @@ export class GreenhouseScene {
 
   // 3D Spatial Anomaly Alert Beacons & Greenhouse Risk Markers
   private riskWarningBeacons: Map<string, THREE.Group> = new Map();
+
+  // 3D Surveillance Camera Systems & Dynamic FOV Frustums
+  private surveillanceFrustums: Map<
+    string,
+    {
+      group: THREE.Group;
+      coneMesh: THREE.Mesh;
+      wireframe: THREE.LineSegments;
+      groundRing: THREE.LineLoop;
+      scanPlane: THREE.Mesh;
+      camMesh: THREE.Group;
+      ledLight: THREE.Mesh;
+      config: SurveillanceCameraConfig;
+    }
+  > = new Map();
+  private activeSurveillanceGhId: string = 'gh_001';
+  private isSurveillanceFOVVisible: boolean = true;
+  private isAllSurveillanceFOVsVisible: boolean = false;
 
   // 3D Spatial Anchored Badges
   private spatialTags: SpatialTagAnchor[] = [];
@@ -254,6 +276,9 @@ export class GreenhouseScene {
     this.parkGroup = new THREE.Group();
     this.parkGroup.name = 'Park_Environment';
 
+    this.surveillanceGroup = new THREE.Group();
+    this.surveillanceGroup.name = 'Surveillance_Cameras';
+
     this.rootGroup.add(
       this.structureGroup,
       this.coverGroup,
@@ -265,7 +290,8 @@ export class GreenhouseScene {
       this.cropsGroup,
       this.roboticsGroup,
       this.effectsGroup,
-      this.parkGroup
+      this.parkGroup,
+      this.surveillanceGroup
     );
     this.scene.add(this.rootGroup);
 
@@ -305,6 +331,9 @@ export class GreenhouseScene {
     this.pondWaterMesh = pondSubsystems.waterMesh;
     this.pondBuoy = pondSubsystems.buoy;
     this.pondBeaconLight = pondSubsystems.beaconLight;
+
+    // 8.55 Build Virtual Surveillance Cameras & 3D FOV Frustums
+    this.buildSurveillanceCameras();
 
     // 8.6 Initialize Dynamic Actors (Vehicles & Farm Personnel)
     this.dynamicActorsManager = new DynamicActorsManager();
@@ -1374,6 +1403,277 @@ export class GreenhouseScene {
       this.sensorNodes.push({ id: s.id, group: nodeGroup, halo: ring });
       this.sensorsGroup.add(nodeGroup);
     });
+  }
+
+  // -------------------------------------------------------------
+  // VIRTUAL SURVEILLANCE CAMERAS & 3D FOV FRUSTUM MARKERS
+  // -------------------------------------------------------------
+  private buildSurveillanceCameras() {
+    surveillanceCamerasData.forEach((cam) => {
+      // 1. Camera Physical 3D Model
+      const camGroup = new THREE.Group();
+      camGroup.position.set(cam.position[0], cam.position[1], cam.position[2]);
+
+      const targetVec = new THREE.Vector3(...cam.target);
+      const camPosVec = new THREE.Vector3(...cam.position);
+
+      // Bracket base plate
+      const baseGeo = new THREE.BoxGeometry(0.24, 0.24, 0.08);
+      const metalMat = new THREE.MeshStandardMaterial({
+        color: 0x334155,
+        roughness: 0.3,
+        metalness: 0.8,
+      });
+      const baseMesh = new THREE.Mesh(baseGeo, metalMat);
+      camGroup.add(baseMesh);
+
+      // Angled mount arm
+      const armGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.45, 12);
+      const armMesh = new THREE.Mesh(armGeo, metalMat);
+      armMesh.position.set(0, -0.15, -0.15);
+      armMesh.rotation.x = Math.PI / 4;
+      camGroup.add(armMesh);
+
+      // PTZ Dome / Bullet Camera Body
+      const bodyGeo = new THREE.CylinderGeometry(0.18, 0.22, 0.28, 20);
+      const bodyMat = new THREE.MeshStandardMaterial({
+        color: 0xf8fafc,
+        roughness: 0.2,
+        metalness: 0.1,
+      });
+      const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+      bodyMesh.position.set(0, -0.32, -0.28);
+      bodyMesh.rotation.x = Math.PI / 3;
+      camGroup.add(bodyMesh);
+
+      // High-index optical glass lens
+      const lensGeo = new THREE.SphereGeometry(0.14, 20, 16, 0, Math.PI * 2, 0, Math.PI * 0.7);
+      const lensMat = new THREE.MeshPhysicalMaterial({
+        color: 0x020617,
+        roughness: 0.05,
+        metalness: 0.9,
+        transmission: 0.4,
+      });
+      const lensMesh = new THREE.Mesh(lensGeo, lensMat);
+      lensMesh.position.set(0, -0.38, -0.34);
+      lensMesh.rotation.x = Math.PI / 3;
+      camGroup.add(lensMesh);
+
+      // Optical cyan accent ring
+      const ringGeo = new THREE.TorusGeometry(0.14, 0.015, 8, 24);
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4 });
+      const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+      ringMesh.position.set(0, -0.38, -0.34);
+      ringMesh.rotation.x = Math.PI / 3;
+      camGroup.add(ringMesh);
+
+      // Status indicator LED (Blinking Red REC or Cyan online)
+      const ledGeo = new THREE.SphereGeometry(0.035, 12, 12);
+      const ledMat = new THREE.MeshBasicMaterial({
+        color: cam.ghId === this.activeSurveillanceGhId ? 0xef4444 : 0x10b981,
+        transparent: true,
+        opacity: 0.9,
+      });
+      const ledMesh = new THREE.Mesh(ledGeo, ledMat);
+      ledMesh.position.set(0.14, -0.25, -0.2);
+      camGroup.add(ledMesh);
+
+      // Interactive Click Target Box
+      const hitGeo = new THREE.SphereGeometry(0.9, 12, 12);
+      const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+      const hitMesh = new THREE.Mesh(hitGeo, hitMat);
+      hitMesh.userData = {
+        id: cam.id,
+        type: 'surveillance_camera',
+        ghId: cam.ghId,
+        name: cam.name,
+        extra: cam,
+      };
+      camGroup.add(hitMesh);
+      this.interactiveObjects.push(hitMesh);
+
+      this.surveillanceGroup.add(camGroup);
+
+      // 2. Camera Field of View (FOV) Frustum Cone (三维视野范围标记)
+      const frustumGroup = new THREE.Group();
+      frustumGroup.position.copy(camPosVec);
+      frustumGroup.lookAt(targetVec);
+
+      const D = cam.range;
+      const halfFovRad = ((cam.fov * Math.PI) / 180) / 2;
+      const H = D * Math.tan(halfFovRad);
+      const W = H * cam.aspectRatio;
+
+      const P0 = new THREE.Vector3(-W, H, -D);
+      const P1 = new THREE.Vector3(W, H, -D);
+      const P2 = new THREE.Vector3(W, -H, -D);
+      const P3 = new THREE.Vector3(-W, -H, -D);
+
+      // Volumetric Transparent Cone Mesh
+      const coneVertices = new Float32Array([
+        // Top
+        0, 0, 0, P0.x, P0.y, P0.z, P1.x, P1.y, P1.z,
+        // Right
+        0, 0, 0, P1.x, P1.y, P1.z, P2.x, P2.y, P2.z,
+        // Bottom
+        0, 0, 0, P2.x, P2.y, P2.z, P3.x, P3.y, P3.z,
+        // Left
+        0, 0, 0, P3.x, P3.y, P3.z, P0.x, P0.y, P0.z,
+        // Far base (two triangles)
+        P0.x, P0.y, P0.z, P2.x, P2.y, P2.z, P1.x, P1.y, P1.z,
+        P0.x, P0.y, P0.z, P3.x, P3.y, P3.z, P2.x, P2.y, P2.z,
+      ]);
+      const coneGeo = new THREE.BufferGeometry();
+      coneGeo.setAttribute('position', new THREE.BufferAttribute(coneVertices, 3));
+      coneGeo.computeVertexNormals();
+
+      const coneMat = new THREE.MeshBasicMaterial({
+        color: 0x06b6d4,
+        transparent: true,
+        opacity: 0.12,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+      });
+      const coneMesh = new THREE.Mesh(coneGeo, coneMat);
+      frustumGroup.add(coneMesh);
+
+      // Luminous Wireframe Outline Edges
+      const edgeVerts = new Float32Array([
+        0, 0, 0, P0.x, P0.y, P0.z,
+        0, 0, 0, P1.x, P1.y, P1.z,
+        0, 0, 0, P2.x, P2.y, P2.z,
+        0, 0, 0, P3.x, P3.y, P3.z,
+        P0.x, P0.y, P0.z, P1.x, P1.y, P1.z,
+        P1.x, P1.y, P1.z, P2.x, P2.y, P2.z,
+        P2.x, P2.y, P2.z, P3.x, P3.y, P3.z,
+        P3.x, P3.y, P3.z, P0.x, P0.y, P0.z,
+      ]);
+      const wireGeo = new THREE.BufferGeometry();
+      wireGeo.setAttribute('position', new THREE.BufferAttribute(edgeVerts, 3));
+      const wireMat = new THREE.LineBasicMaterial({
+        color: 0x38bdf8,
+        transparent: true,
+        opacity: 0.85,
+      });
+      const wireMesh = new THREE.LineSegments(wireGeo, wireMat);
+      frustumGroup.add(wireMesh);
+
+      // Active Dynamic Scan Plane inside the cone
+      const scanGeo = new THREE.PlaneGeometry(1, 1);
+      const scanMat = new THREE.MeshBasicMaterial({
+        color: 0x22d3ee,
+        transparent: true,
+        opacity: 0.35,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      });
+      const scanPlane = new THREE.Mesh(scanGeo, scanMat);
+      scanPlane.position.set(0, 0, -D * 0.5);
+      frustumGroup.add(scanPlane);
+
+      this.surveillanceGroup.add(frustumGroup);
+
+      // Ground Coverage Footprint Projection Circle
+      const groundPoints: THREE.Vector3[] = [];
+      const radius = Math.max(3, Math.sqrt(cam.groundCoverageM2 / Math.PI) * 0.8);
+      for (let i = 0; i <= 32; i++) {
+        const theta = (i / 32) * Math.PI * 2;
+        groundPoints.push(new THREE.Vector3(Math.cos(theta) * radius, 0.08, Math.sin(theta) * radius));
+      }
+      const groundGeo = new THREE.BufferGeometry().setFromPoints(groundPoints);
+      const groundMat = new THREE.LineBasicMaterial({
+        color: 0x06b6d4,
+        transparent: true,
+        opacity: 0.65,
+      });
+      const groundRing = new THREE.LineLoop(groundGeo, groundMat);
+      groundRing.position.set(cam.target[0], 0.08, cam.target[2]);
+      this.surveillanceGroup.add(groundRing);
+
+      this.surveillanceFrustums.set(cam.ghId, {
+        group: frustumGroup,
+        coneMesh,
+        wireframe: wireMesh,
+        groundRing,
+        scanPlane,
+        camMesh: camGroup,
+        ledLight: ledMesh,
+        config: cam,
+      });
+    });
+
+    this.updateSurveillanceFrustumsVisibility();
+  }
+
+  // Update visibility of 3D surveillance frustums
+  private updateSurveillanceFrustumsVisibility() {
+    this.surveillanceFrustums.forEach((f, ghId) => {
+      const isActive = ghId === this.activeSurveillanceGhId;
+      if (!this.isSurveillanceFOVVisible) {
+        f.group.visible = false;
+        f.groundRing.visible = false;
+        return;
+      }
+
+      if (isActive) {
+        f.group.visible = true;
+        f.groundRing.visible = true;
+        (f.coneMesh.material as THREE.MeshBasicMaterial).opacity = 0.18;
+        (f.wireframe.material as THREE.LineBasicMaterial).opacity = 0.95;
+        (f.groundRing.material as THREE.LineBasicMaterial).opacity = 0.85;
+        f.scanPlane.visible = true;
+      } else if (this.isAllSurveillanceFOVsVisible) {
+        f.group.visible = true;
+        f.groundRing.visible = true;
+        (f.coneMesh.material as THREE.MeshBasicMaterial).opacity = 0.04;
+        (f.wireframe.material as THREE.LineBasicMaterial).opacity = 0.3;
+        (f.groundRing.material as THREE.LineBasicMaterial).opacity = 0.25;
+        f.scanPlane.visible = false;
+      } else {
+        f.group.visible = false;
+        f.groundRing.visible = false;
+      }
+    });
+  }
+
+  // Set active greenhouse surveillance camera & switch 3D FOV
+  public setActiveSurveillanceCamera(ghId: string, flyTo: boolean = false) {
+    this.activeSurveillanceGhId = ghId;
+    this.updateSurveillanceFrustumsVisibility();
+
+    if (flyTo) {
+      this.flyToSurveillanceCameraView(ghId);
+    }
+  }
+
+  // Fly camera to match virtual surveillance camera viewpoint
+  public flyToSurveillanceCameraView(ghId: string) {
+    const frustumData = this.surveillanceFrustums.get(ghId);
+    if (!frustumData) return;
+
+    const cam = frustumData.config;
+    const eye = new THREE.Vector3(...cam.position);
+    const target = new THREE.Vector3(...cam.target);
+
+    // Position camera just behind the surveillance camera for an authentic viewpoint
+    const backOffset = eye.clone().sub(target).normalize().multiplyScalar(2.0);
+    const cameraLookPos = eye.clone().add(backOffset);
+
+    this.animateCameraTo(cameraLookPos, target);
+  }
+
+  // Toggle 3D FOV marker visibility
+  public setSurveillanceFOVVisible(visible: boolean) {
+    this.isSurveillanceFOVVisible = visible;
+    this.updateSurveillanceFrustumsVisibility();
+  }
+
+  // Toggle showing all 3D FOV markers simultaneously across the entire park
+  public setAllSurveillanceFOVsVisible(showAll: boolean) {
+    this.isAllSurveillanceFOVsVisible = showAll;
+    this.updateSurveillanceFrustumsVisibility();
   }
 
   // -------------------------------------------------------------
@@ -2887,6 +3187,30 @@ export class GreenhouseScene {
   public focusOnObject(objectId: string) {
     this.setSelectedObject(objectId);
 
+    // Auto update surveillance active camera if clicking on a camera or greenhouse
+    if (objectId.startsWith('cam_')) {
+      const frustumData = Array.from(this.surveillanceFrustums.values()).find(
+        (f) => f.config.id === objectId
+      );
+      if (frustumData) {
+        this.setActiveSurveillanceCamera(frustumData.config.ghId);
+        const camPos = new THREE.Vector3(...frustumData.config.position);
+        this.animateCameraTo(
+          new THREE.Vector3(camPos.x + 6, camPos.y + 4, camPos.z + 6),
+          camPos
+        );
+        return;
+      }
+    }
+
+    if (objectId.startsWith('gh_')) {
+      this.setActiveSurveillanceCamera(objectId);
+    } else if (objectId === 'outdoor' || objectId === 'flux_tower' || objectId === 'facility_flux_tower') {
+      this.setActiveSurveillanceCamera('outdoor');
+    } else if (objectId === 'pond' || objectId === 'pond_water') {
+      this.setActiveSurveillanceCamera('pond');
+    }
+
     // Greenhouse camera presets
     if (objectId === 'gh_001' || objectId === 'greenhouse_01') {
       this.animateCameraTo(new THREE.Vector3(24, 15, 26), new THREE.Vector3(0, 2.8, 0));
@@ -3230,6 +3554,40 @@ export class GreenhouseScene {
     if (this.dynamicActorsManager) {
       this.dynamicActorsManager.update(delta, elapsedTime);
     }
+
+    // 8.11 Animate Active Surveillance Camera FOV Scanning Beam & Status LEDs
+    const activeFrustum = this.surveillanceFrustums.get(this.activeSurveillanceGhId);
+    if (activeFrustum && this.isSurveillanceFOVVisible && activeFrustum.group.visible) {
+      const D = activeFrustum.config.range;
+      const scanT = (elapsedTime * 0.4) % 1.0;
+      const curZ = -D * (0.08 + scanT * 0.88);
+      activeFrustum.scanPlane.position.z = curZ;
+
+      const halfFovRad = ((activeFrustum.config.fov * Math.PI) / 180) / 2;
+      const curH = 2 * Math.abs(curZ) * Math.tan(halfFovRad);
+      const curW = curH * activeFrustum.config.aspectRatio;
+      activeFrustum.scanPlane.scale.set(curW, curH, 1);
+
+      // Pulse ground projection ring
+      const ringScale = 1.0 + Math.sin(elapsedTime * 3.0) * 0.04;
+      activeFrustum.groundRing.scale.set(ringScale, 1, ringScale);
+    }
+
+    // Pulse Surveillance Camera Status LEDs
+    this.surveillanceFrustums.forEach((f, ghId) => {
+      if (f.ledLight && (f.ledLight.material as THREE.MeshBasicMaterial)) {
+        const isCurrent = ghId === this.activeSurveillanceGhId;
+        const ledMat = f.ledLight.material as THREE.MeshBasicMaterial;
+        if (isCurrent) {
+          const blink = Math.sin(elapsedTime * 6.0) > 0 ? 1 : 0.25;
+          ledMat.color.setHex(0xef4444); // Blinking red REC
+          ledMat.opacity = blink;
+        } else {
+          ledMat.color.setHex(0x10b981); // Solid emerald online
+          ledMat.opacity = 0.75;
+        }
+      }
+    });
 
     // 9. Update 3D projected spatial tags
     this.calculateSpatialTags();

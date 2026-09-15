@@ -34,7 +34,10 @@ import {
   CheckCircle2,
   CloudRain,
   AlertTriangle,
+  Camera,
+  Video,
 } from 'lucide-vue-next';
+import LiveSurveillanceCard from './LiveSurveillanceCard.vue';
 
 const props = withDefaults(
   defineProps<{
@@ -48,11 +51,13 @@ const props = withDefaults(
     isDemoMode?: boolean;
     lastUpdateTime?: string;
     dataSourceMode?: 'local' | 'api';
+    isSurveillanceFovActive?: boolean;
   }>(),
   {
     collapsed: false,
     selectedGreenhouseId: 'gh_001',
     isDemoMode: false,
+    isSurveillanceFovActive: true,
   }
 );
 
@@ -70,6 +75,9 @@ const emit = defineEmits<{
   (e: 'openOwnerHubModal'): void;
   (e: 'openLogisticsModal'): void;
   (e: 'openWeatherModal'): void;
+  (e: 'flyToCameraView', ghId: string): void;
+  (e: 'toggleFovVisible', visible: boolean): void;
+  (e: 'toggleAllFovs', showAll: boolean): void;
 }>();
 
 const localCollapsed = ref(false);
@@ -81,8 +89,18 @@ const isCollapsed = computed({
   },
 });
 
-const activeTab = ref<'microclimate' | 'water' | 'sensors'>('microclimate');
+const activeTab = ref<'microclimate' | 'surveillance' | 'water' | 'sensors'>('microclimate');
 const showGhSelector = ref(false);
+
+const greenhousesMicroclimatesRecord = computed<Record<string, GreenhouseMicroclimate>>(() => {
+  const map: Record<string, GreenhouseMicroclimate> = {};
+  if (props.greenhousesMicroclimates) {
+    props.greenhousesMicroclimates.forEach((g) => {
+      map[g.id] = g;
+    });
+  }
+  return map;
+});
 
 // If selectedGreenhouseId === 'outdoor', we show the outdoor meteorological station!
 const isOutdoorMode = computed(() => props.selectedGreenhouseId === 'outdoor');
@@ -298,40 +316,57 @@ const selectGreenhouse = (ghId: string) => {
       </div>
 
       <!-- Tab Switcher -->
-      <div class="flex border-b border-white/10 bg-slate-950/40 text-[11px] font-medium">
+      <div class="grid grid-cols-4 border-b border-white/10 bg-slate-950/50 text-[10px] font-medium">
         <button
           @click="activeTab = 'microclimate'"
           :class="[
-            'flex-1 py-1.5 text-center transition-colors border-b-2',
+            'py-1.5 px-0.5 text-center transition-colors border-b-2 truncate flex items-center justify-center gap-0.5 cursor-pointer',
             activeTab === 'microclimate'
               ? 'text-cyan-300 border-cyan-400 bg-cyan-500/15 font-semibold shadow-[0_0_12px_rgba(6,182,212,0.25)]'
               : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-white/5'
           ]"
         >
-          {{ isOutdoorMode ? '室外气象指标' : '棚内微环境' }}
+          <span>{{ isOutdoorMode ? '室外气象' : '棚内环境' }}</span>
         </button>
+
+        <button
+          @click="activeTab = 'surveillance'"
+          :class="[
+            'py-1.5 px-0.5 text-center transition-colors border-b-2 flex items-center justify-center gap-1 cursor-pointer truncate',
+            activeTab === 'surveillance'
+              ? 'text-cyan-300 border-cyan-400 bg-cyan-500/15 font-semibold shadow-[0_0_12px_rgba(6,182,212,0.25)]'
+              : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-white/5'
+          ]"
+          title="切换大棚虚拟监控摄像头画面与三维视野范围"
+        >
+          <Camera class="w-3 h-3 text-cyan-400" />
+          <span class="font-semibold">实时监控</span>
+          <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+        </button>
+
         <button
           @click="activeTab = 'water'"
           :class="[
-            'flex-1 py-1.5 text-center transition-colors border-b-2 flex items-center justify-center gap-1',
+            'py-1.5 px-0.5 text-center transition-colors border-b-2 flex items-center justify-center gap-1 cursor-pointer truncate',
             activeTab === 'water'
               ? 'text-cyan-300 border-cyan-400 bg-cyan-500/15 font-semibold shadow-[0_0_12px_rgba(6,182,212,0.25)]'
               : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-white/5'
           ]"
         >
           <Waves class="w-3 h-3 text-cyan-400" />
-          河塘水质
+          <span>河塘水质</span>
         </button>
+
         <button
           @click="activeTab = 'sensors'"
           :class="[
-            'flex-1 py-1.5 text-center transition-colors border-b-2',
+            'py-1.5 px-0.5 text-center transition-colors border-b-2 flex items-center justify-center gap-0.5 cursor-pointer truncate',
             activeTab === 'sensors'
               ? 'text-cyan-300 border-cyan-400 bg-cyan-500/15 font-semibold shadow-[0_0_12px_rgba(6,182,212,0.25)]'
               : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-white/5'
           ]"
         >
-          节点 ({{ filteredSensors.length }})
+          <span>节点({{ filteredSensors.length }})</span>
         </button>
       </div>
 
@@ -339,6 +374,31 @@ const selectGreenhouse = (ghId: string) => {
       <div class="flex-1 overflow-y-auto p-2.5 space-y-2 text-slate-300">
         <!-- TAB 1: Microclimate & Outdoor Contrast -->
         <template v-if="activeTab === 'microclimate'">
+          <!-- Quick Surveillance Shortcut Card -->
+          <div
+            @click="activeTab = 'surveillance'"
+            class="bg-slate-900/60 hover:bg-slate-800/80 p-2 rounded-xl border border-cyan-500/30 hover:border-cyan-400/60 cursor-pointer transition-all flex items-center justify-between shadow-xs group mb-1.5"
+            title="点击切换到实时虚拟监控摄像头视频画面与3D视野标记"
+          >
+            <div class="flex items-center gap-2">
+              <div class="w-6 h-6 rounded-lg bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 group-hover:scale-105 transition-transform">
+                <Camera class="w-3.5 h-3.5" />
+              </div>
+              <div>
+                <div class="text-[11px] font-semibold text-slate-100 flex items-center gap-1.5">
+                  <span>{{ isOutdoorMode ? '通量铁塔高空全景监控' : `${currentGh?.name ?? '当前大棚'} 实时监控` }}</span>
+                  <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                </div>
+                <div class="text-[9px] text-slate-400 font-mono">
+                  4K全彩云台 · 3D视野范围标记
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-1 text-[10px] text-cyan-300 font-medium group-hover:translate-x-0.5 transition-transform">
+              <span>查看视频</span>
+              <ChevronRight class="w-3 h-3" />
+            </div>
+          </div>
           <!-- Case A: Indoor Greenhouse View -->
           <template v-if="!isOutdoorMode && currentGh">
             <!-- 1. Greenhouse Crop & Agronomy Banner -->
@@ -701,7 +761,23 @@ const selectGreenhouse = (ghId: string) => {
           </template>
         </template>
 
-        <!-- TAB 2: Pond Water Tab -->
+        <!-- TAB 2: Live Surveillance & Virtual Camera FOV -->
+        <template v-else-if="activeTab === 'surveillance'">
+          <LiveSurveillanceCard
+            :selected-greenhouse-id="selectedGreenhouseId"
+            :greenhouses-microclimates="greenhousesMicroclimatesRecord"
+            :outdoor-weather="outdoorWeather"
+            :pond-water="pondWater"
+            :is-surveillance-fov-active="isSurveillanceFovActive"
+            @select-greenhouse="$emit('selectGreenhouse', $event)"
+            @fly-to-camera-view="$emit('flyToCameraView', $event)"
+            @toggle-fov-visible="$emit('toggleFovVisible', $event)"
+            @toggle-all-fovs="$emit('toggleAllFovs', $event)"
+            @open-station="$emit('openStation', $event)"
+          />
+        </template>
+
+        <!-- TAB 3: Pond Water Tab -->
         <template v-else-if="activeTab === 'water'">
           <div class="space-y-2">
             <!-- Focus Pond Button -->
