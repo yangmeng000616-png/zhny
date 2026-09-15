@@ -387,7 +387,7 @@ onBeforeUnmount(() => {
               </span>
             </div>
             <p class="text-[11px] text-slate-400 mt-0.5">
-              为农业管理者转化的「影响预报 (Impact Forecasting)」· 杜绝晦涩雷达专业术语，直击防灾动作与经济效益
+              全息气象演变推演 · 园区防灾联动与农事作业决策
             </p>
           </div>
         </div>

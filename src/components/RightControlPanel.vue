@@ -131,21 +131,14 @@ const handleBatchPreset = (preset: 'cooling' | 'all_off') => {
 
       <!-- AI Strategy / Manual Dispatch Mode Bar -->
       <div class="px-3 py-2 bg-slate-950/30 border-b border-white/10 flex items-center justify-between text-xs">
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1.5 font-medium text-slate-200 text-xs">
           <Bot :class="['w-3.5 h-3.5', autoMode ? 'text-emerald-400' : 'text-slate-400']" />
-          <div>
-            <div class="text-[11px] font-medium text-slate-200">
-              {{ autoMode ? 'AI 策略自主托管' : '人工手动遥控调度' }}
-            </div>
-            <div class="text-[9px] text-slate-400 font-mono">
-              {{ autoMode ? '闭环自适应平衡' : '操作员直接下发指令' }}
-            </div>
-          </div>
+          <span>{{ autoMode ? 'AI 策略自适应托管' : '人工手动遥控' }}</span>
         </div>
         <button
           @click="$emit('toggleAutoMode')"
           :class="[
-            'px-2 py-1 rounded-lg text-[10px] font-medium transition-all cursor-pointer border',
+            'px-2 py-0.5 rounded-lg text-[10px] font-medium transition-all cursor-pointer border',
             autoMode
               ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30 shadow-xs'
               : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 hover:bg-cyan-500/30'
@@ -160,10 +153,10 @@ const handleBatchPreset = (preset: 'cooling' | 'all_off') => {
         <button
           v-for="tab in [
             { id: 'all', label: '全部', count: actuators.length },
-            { id: 'ventilation', label: '通风降温' },
-            { id: 'shading', label: '遮阳保温' },
-            { id: 'irrigation', label: '灌溉水肥' },
-            { id: 'light_heat', label: '补光加热' }
+            { id: 'ventilation', label: '通风' },
+            { id: 'shading', label: '遮阳' },
+            { id: 'irrigation', label: '灌溉' },
+            { id: 'light_heat', label: '温控' }
           ]"
           :key="tab.id"
           @click="selectedCategory = tab.id as any"
@@ -180,7 +173,7 @@ const handleBatchPreset = (preset: 'cooling' | 'all_off') => {
 
       <!-- Quick Batch Actions Toolbar -->
       <div class="px-3 py-1.5 bg-slate-900/30 border-b border-white/5 flex items-center justify-between text-[10px] text-slate-400 font-mono">
-        <span>当前运行: <strong class="text-cyan-300 font-semibold">{{ activeCount }}</strong> / {{ actuators.length }} 台</span>
+        <span>运行: <strong class="text-cyan-300 font-semibold">{{ activeCount }}</strong> / {{ actuators.length }} 台</span>
         <div class="flex items-center gap-1">
           <button
             @click="handleBatchPreset('cooling')"
@@ -200,7 +193,7 @@ const handleBatchPreset = (preset: 'cooling' | 'all_off') => {
       </div>
 
       <!-- Actuator Cards Scrollable List -->
-      <div class="flex-1 overflow-y-auto p-3 space-y-2 text-xs">
+      <div class="flex-1 overflow-y-auto p-2.5 space-y-2 text-xs">
         <div
           v-for="actuator in filteredActuators"
           :key="actuator.id"
@@ -235,11 +228,15 @@ const handleBatchPreset = (preset: 'cooling' | 'all_off') => {
                 <Flame v-else-if="actuator.type === 'heater'" class="w-4 h-4 text-amber-400" />
               </div>
               <div class="min-w-0 flex-1">
-                <div class="font-medium text-slate-100 group-hover:text-cyan-300 transition-colors text-xs truncate flex items-center gap-1">
-                  <span>{{ actuator.name }}</span>
+                <div class="font-medium text-slate-100 group-hover:text-cyan-300 transition-colors text-xs truncate">
+                  {{ actuator.name }}
                 </div>
-                <div class="text-[10px] text-slate-400 font-mono truncate">
-                  {{ actuator.zone }} · {{ actuator.powerConsumptionKw }}kW
+                <div class="text-[10px] text-slate-400 font-mono truncate flex items-center gap-1.5 mt-0.5">
+                  <span>{{ actuator.zone }}</span>
+                  <span class="text-slate-600">·</span>
+                  <span :class="actuator.power ? 'text-cyan-300 font-semibold' : 'text-slate-500'">
+                    {{ actuator.power ? `${actuator.value}${actuator.metricUnit}` : '待机' }}
+                  </span>
                 </div>
               </div>
             </div>
@@ -271,12 +268,6 @@ const handleBatchPreset = (preset: 'cooling' | 'all_off') => {
 
           <!-- Range Slider for devices with adjustable speed/angle/brightness -->
           <div v-if="actuator.power" class="mt-2 pt-1.5 border-t border-white/10">
-            <div class="flex items-center justify-between text-[10px] mb-1 font-mono">
-              <span class="text-slate-400">输出调节</span>
-              <span class="text-cyan-300 font-bold">
-                {{ actuator.value }} {{ actuator.metricUnit }}
-              </span>
-            </div>
             <input
               type="range"
               :min="0"

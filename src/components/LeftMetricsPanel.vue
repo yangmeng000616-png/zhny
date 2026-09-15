@@ -203,22 +203,22 @@ const selectGreenhouse = (ghId: string) => {
         </div>
       </div>
 
-      <!-- Target Greenhouse / Outdoor Switcher Dropdown Block -->
-      <div class="p-2.5 border-b border-white/10 bg-slate-950/25">
-        <div class="relative">
+      <!-- Target Greenhouse / Outdoor Switcher Block with Quick Action Buttons -->
+      <div class="p-2 border-b border-white/10 bg-slate-950/25 flex items-center gap-1.5">
+        <div class="relative flex-1 min-w-0">
           <button
             @click="showGhSelector = !showGhSelector"
-            class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 text-slate-200 border border-white/10 shadow-inner transition-colors cursor-pointer"
+            class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-slate-900/70 hover:bg-slate-800 text-slate-200 border border-white/10 shadow-inner transition-colors cursor-pointer"
           >
-            <div class="flex items-center gap-2 truncate">
+            <div class="flex items-center gap-1.5 truncate">
               <Building2 v-if="!isOutdoorMode" class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
               <CloudSun v-else class="w-3.5 h-3.5 text-cyan-400 shrink-0" />
               <span class="font-bold text-xs truncate">
-                {{ isOutdoorMode ? '🏞️ 园区室外气象观测站 (基准)' : currentGh?.name || '1# Venlo核心玻璃大棚' }}
+                {{ isOutdoorMode ? '园区室外基准站' : currentGh?.name || '1# Venlo核心玻璃大棚' }}
               </span>
             </div>
             <ChevronDown
-              class="w-3.5 h-3.5 text-cyan-400 transition-transform shrink-0 ml-1"
+              class="w-3 h-3 text-cyan-400 transition-transform shrink-0 ml-1"
               :class="{ 'rotate-180': showGhSelector }"
             />
           </button>
@@ -282,29 +282,26 @@ const selectGreenhouse = (ghId: string) => {
           </div>
         </div>
 
-        <!-- Fast Actions: Open Dedicated Single Greenhouse Station & 8-Greenhouse Matrix -->
-        <div class="mt-2 grid grid-cols-2 gap-1.5">
-          <button
-            v-if="!isOutdoorMode"
-            id="btn-open-single-station"
-            @click="emit('openStation', currentGh?.id || 'gh_001')"
-            class="py-1 px-1.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 hover:text-white border border-cyan-500/30 text-[11px] font-medium flex items-center justify-center gap-1 transition-all cursor-pointer shadow-xs"
-            title="打开当前大棚专属独立测控面板"
-          >
-            <Sliders class="w-3 h-3" />
-            <span>单棚专属面板</span>
-          </button>
-          <button
-            id="btn-open-cluster-matrix"
-            @click="emit('openMatrix')"
-            class="py-1 px-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-200 hover:text-white border border-white/10 text-[11px] font-medium flex items-center justify-center gap-1 transition-all cursor-pointer"
-            :class="[isOutdoorMode ? 'col-span-2' : '']"
-            title="以矩阵形式查看全园8座大棚独立监控面板"
-          >
-            <LayoutGrid class="w-3 h-3 text-cyan-400" />
-            <span>8棚独立矩阵</span>
-          </button>
-        </div>
+        <!-- Fast Actions: Compact Station & Matrix Buttons -->
+        <button
+          v-if="!isOutdoorMode"
+          id="btn-open-single-station"
+          @click="emit('openStation', currentGh?.id || 'gh_001')"
+          class="h-7 px-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 hover:text-white border border-cyan-500/30 text-[11px] font-medium flex items-center gap-1 transition-all cursor-pointer shrink-0 shadow-xs"
+          title="打开当前大棚专属独立测控面板"
+        >
+          <Sliders class="w-3.5 h-3.5" />
+          <span>专属</span>
+        </button>
+        <button
+          id="btn-open-cluster-matrix"
+          @click="emit('openMatrix')"
+          class="h-7 px-2 rounded-xl bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-white border border-white/10 text-[11px] font-medium flex items-center gap-1 transition-all cursor-pointer shrink-0"
+          title="以矩阵形式查看全园8座大棚独立监控面板"
+        >
+          <LayoutGrid class="w-3.5 h-3.5 text-cyan-400" />
+          <span>矩阵</span>
+        </button>
       </div>
 
       <!-- Tab Switcher -->
@@ -368,246 +365,204 @@ const selectGreenhouse = (ghId: string) => {
         <template v-if="activeTab === 'microclimate'">
           <!-- Case A: Indoor Greenhouse View -->
           <template v-if="!isOutdoorMode && currentGh">
-            <!-- 1. Greenhouse Crop & Agronomy Banner -->
-            <div class="bg-slate-900/60 p-2 rounded-xl border border-emerald-500/30 flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <div class="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
-                  <Sprout class="w-4 h-4" />
-                </div>
-                <div>
-                  <div class="font-bold text-xs text-slate-100 flex items-center gap-1">
-                    <span>{{ currentGh.cropName }}</span>
-                    <span class="text-[9px] px-1 rounded bg-emerald-500/20 text-emerald-300 font-normal">
-                      {{ currentGh.growthStage }}
-                    </span>
-                  </div>
-                  <div class="text-[10px] text-slate-400">
-                    {{ currentGh.rootzoneType }}
-                  </div>
-                </div>
+            <!-- 1. Greenhouse Crop & Outdoor Baseline Glance Bar -->
+            <div class="px-2.5 py-1.5 rounded-xl bg-slate-900/50 border border-white/10 flex items-center justify-between text-xs">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+                <span class="font-bold text-slate-100 truncate">{{ currentGh.cropName }}</span>
+                <span class="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-mono shrink-0">
+                  {{ currentGh.growthStage }}
+                </span>
               </div>
-              <div class="text-right">
-                <div class="text-[9px] text-slate-400">二氧化碳</div>
-                <div class="text-[10px] font-mono text-cyan-300 font-semibold">
-                  {{ currentGh.co2Status }}
-                </div>
+              <div class="flex items-center gap-1.5 text-[10px] font-mono text-slate-400 shrink-0">
+                <CloudSun class="w-3.5 h-3.5 text-cyan-400" />
+                <span>室外 {{ outdoorWeather?.temperature ?? 23.8 }}℃</span>
               </div>
             </div>
 
-            <!-- 2. 微气象短临决策卡 (Compact Weather Alert Bar) -->
-            <div
-              id="btn-left-weather-decision-card"
-              @click="emit('openWeatherModal')"
-              class="px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 cursor-pointer transition-all flex items-center justify-between text-[10px] group shadow-xs"
-              title="点击打开微气象短临推演(0~120m)与72小时农事黄金作业窗口"
-            >
-              <div class="flex items-center gap-1.5 font-medium text-amber-300 truncate">
-                <Zap class="w-3 h-3 text-amber-400 shrink-0 animate-pulse" />
-                <span class="truncate">气象预警: 30m后短时强降水 (明日宜开帘)</span>
-              </div>
-              <span class="text-[9px] text-cyan-400 group-hover:underline flex items-center gap-0.5 shrink-0 ml-1 font-mono">
-                推演 <ArrowUpRight class="w-2.5 h-2.5" />
-              </span>
-            </div>
-
-            <!-- 3. 室外宏观气象基准对照条 (Outdoor Meteorological Reference) -->
-            <div class="px-2.5 py-1.5 rounded-xl bg-slate-900/70 border border-slate-800/80 flex items-center justify-between text-[10px]">
-              <div class="flex items-center gap-1.5 text-slate-400">
-                <CloudSun class="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                <span>室外宏观气象基准:</span>
-              </div>
-              <div class="flex items-center gap-2 font-mono text-[10px] text-slate-300">
-                <span>{{ outdoorWeather?.temperature ?? 23.8 }}℃</span>
-                <span class="text-slate-600">|</span>
-                <span>{{ outdoorWeather?.humidity ?? 54.2 }}%</span>
-                <span class="text-slate-600">|</span>
-                <span>{{ outdoorWeather?.windSpeed ?? 3.2 }}m/s {{ outdoorWeather?.windDirection ?? '东南风' }}</span>
-              </div>
-            </div>
-
-            <!-- 3. Four Core Microclimate Parameters (No duplication) -->
-            <div class="grid grid-cols-2 gap-1.5">
+            <!-- 2. Four Core Microclimate Graphical Instruments -->
+            <div class="grid grid-cols-2 gap-2">
               <!-- Air Temp Gauge -->
               <div class="bg-slate-900/40 backdrop-blur-md p-2.5 rounded-xl border border-white/10 hover:border-white/20 transition-all">
-                <div class="flex items-center justify-between text-[10px] text-slate-400 mb-1">
-                  <span class="flex items-center gap-1 text-amber-400 font-semibold">
-                    <Thermometer class="w-3 h-3" /> 室内气温
+                <div class="flex items-center justify-between text-[11px] mb-1">
+                  <span class="flex items-center gap-1 text-amber-400 font-bold">
+                    <Thermometer class="w-3.5 h-3.5" /> 室内气温
                   </span>
-                  <span class="text-[8px] font-mono text-emerald-400">
-                    目标 {{ currentGh.tempRange[0] }}~{{ currentGh.tempRange[1] }}℃
+                  <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-semibold">
+                    适宜
                   </span>
                 </div>
-                <div class="flex items-baseline justify-between">
-                  <span class="text-base font-bold font-mono text-slate-100">
+                <div class="flex items-baseline justify-between mt-1">
+                  <span class="text-xl font-bold font-mono text-slate-100">
                     {{ currentGh.airTemp }}<span class="text-xs font-normal text-slate-400 ml-0.5">℃</span>
                   </span>
                   <span
                     :class="[
-                      'text-[9px] font-mono px-1 py-0.2 rounded font-semibold',
+                      'text-[10px] font-mono px-1.5 py-0.2 rounded font-semibold',
                       tempDelta >= 0 ? 'bg-amber-500/20 text-amber-300' : 'bg-blue-500/20 text-blue-300'
                     ]"
                   >
-                    比室外 {{ tempDelta >= 0 ? `+${tempDelta}` : tempDelta }}℃
+                    {{ tempDelta >= 0 ? `+${tempDelta}` : tempDelta }}℃
                   </span>
                 </div>
-                <div class="w-full h-1 bg-slate-800 rounded-full mt-1.5 overflow-hidden">
+                <div class="w-full h-1.5 bg-slate-800 rounded-full mt-2 overflow-hidden">
                   <div
                     class="h-full bg-gradient-to-r from-cyan-400 via-emerald-400 to-amber-500 rounded-full"
                     :style="{ width: `${Math.min(100, (currentGh.airTemp / 40) * 100)}%` }"
                   ></div>
                 </div>
-                <div class="flex items-center justify-between text-[8.5px] text-slate-400 mt-1 font-mono">
-                  <span>露点 18.2℃</span>
-                  <span>{{ tempDelta >= 0 ? '温室储热增温' : '遮阳湿帘降温' }}</span>
+                <div class="flex items-center justify-between text-[9px] text-slate-400 mt-1.5 font-mono">
+                  <span>目标 22~30℃</span>
+                  <span class="text-slate-500">露点 18.2℃</span>
                 </div>
               </div>
 
               <!-- Air Humidity Gauge -->
               <div class="bg-slate-900/40 backdrop-blur-md p-2.5 rounded-xl border border-white/10 hover:border-white/20 transition-all">
-                <div class="flex items-center justify-between text-[10px] text-slate-400 mb-1">
-                  <span class="flex items-center gap-1 text-sky-400 font-semibold">
-                    <Droplets class="w-3 h-3" /> 室内湿度
+                <div class="flex items-center justify-between text-[11px] mb-1">
+                  <span class="flex items-center gap-1 text-sky-400 font-bold">
+                    <Droplets class="w-3.5 h-3.5" /> 空气湿度
                   </span>
-                  <span class="text-[8px] font-mono text-emerald-400">
-                    目标 {{ currentGh.humidityRange[0] }}~{{ currentGh.humidityRange[1] }}%
+                  <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 font-semibold">
+                    正常
                   </span>
                 </div>
-                <div class="flex items-baseline justify-between">
-                  <span class="text-base font-bold font-mono text-slate-100">
+                <div class="flex items-baseline justify-between mt-1">
+                  <span class="text-xl font-bold font-mono text-slate-100">
                     {{ currentGh.airHumidity }}<span class="text-xs font-normal text-slate-400 ml-0.5">%</span>
                   </span>
                   <span
                     :class="[
-                      'text-[9px] font-mono px-1 py-0.2 rounded font-semibold',
+                      'text-[10px] font-mono px-1.5 py-0.2 rounded font-semibold',
                       humidityDelta >= 0 ? 'bg-sky-500/20 text-sky-300' : 'bg-slate-700 text-slate-300'
                     ]"
                   >
-                    比室外 {{ humidityDelta >= 0 ? `+${humidityDelta}` : humidityDelta }}%
+                    {{ humidityDelta >= 0 ? `+${humidityDelta}` : humidityDelta }}%
                   </span>
                 </div>
-                <div class="w-full h-1 bg-slate-800 rounded-full mt-1.5 overflow-hidden">
+                <div class="w-full h-1.5 bg-slate-800 rounded-full mt-2 overflow-hidden">
                   <div
                     class="h-full bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full"
                     :style="{ width: `${currentGh.airHumidity}%` }"
                   ></div>
                 </div>
-                <div class="flex items-center justify-between text-[8.5px] text-slate-400 mt-1 font-mono">
-                  <span class="text-emerald-300">VPD 1.12</span>
-                  <span>{{ humidityDelta >= 0 ? '植物蒸腾集湿' : '除湿调节中' }}</span>
+                <div class="flex items-center justify-between text-[9px] text-slate-400 mt-1.5 font-mono">
+                  <span>目标 60~80%</span>
+                  <span class="text-emerald-400">VPD 1.1</span>
                 </div>
               </div>
 
               <!-- CO2 Concentration -->
               <div class="bg-slate-900/40 backdrop-blur-md p-2.5 rounded-xl border border-white/10 hover:border-white/20 transition-all">
-                <div class="flex items-center justify-between text-[10px] text-slate-400 mb-1">
-                  <span class="flex items-center gap-1 text-emerald-400 font-semibold">
-                    <Activity class="w-3 h-3" /> CO₂ 浓度
+                <div class="flex items-center justify-between text-[11px] mb-1">
+                  <span class="flex items-center gap-1 text-emerald-400 font-bold">
+                    <Activity class="w-3.5 h-3.5" /> CO₂ 浓度
                   </span>
-                  <span class="text-[8px] font-mono text-emerald-300 bg-emerald-500/20 px-1 rounded">
+                  <span class="text-[9px] font-mono text-emerald-300 bg-emerald-500/20 px-1.5 py-0.2 rounded font-semibold">
                     {{ currentGh.co2Status }}
                   </span>
                 </div>
-                <div class="flex items-baseline justify-between">
-                  <span class="text-base font-bold font-mono text-slate-100">
-                    {{ currentGh.co2 }}<span class="text-[10px] font-normal text-slate-400 ml-0.5">ppm</span>
+                <div class="flex items-baseline justify-between mt-1">
+                  <span class="text-xl font-bold font-mono text-slate-100">
+                    {{ currentGh.co2 }}<span class="text-xs font-normal text-slate-400 ml-0.5">ppm</span>
                   </span>
-                  <span class="text-[9px] font-mono text-slate-400">阀门就绪</span>
+                  <span class="text-[9px] font-mono text-emerald-400">达标</span>
                 </div>
-                <div class="w-full h-1 bg-slate-800 rounded-full mt-1.5 overflow-hidden">
+                <div class="w-full h-1.5 bg-slate-800 rounded-full mt-2 overflow-hidden">
                   <div
                     class="h-full bg-emerald-400 rounded-full"
                     :style="{ width: `${Math.min(100, (currentGh.co2 / 1200) * 100)}%` }"
                   ></div>
                 </div>
+                <div class="flex items-center justify-between text-[9px] text-slate-400 mt-1.5 font-mono">
+                  <span>基准 800ppm</span>
+                  <span class="text-slate-500">气肥联动</span>
+                </div>
               </div>
 
               <!-- Solar Radiation / Lux -->
               <div class="bg-slate-900/40 backdrop-blur-md p-2.5 rounded-xl border border-white/10 hover:border-white/20 transition-all">
-                <div class="flex items-center justify-between text-[10px] text-slate-400 mb-1">
-                  <span class="flex items-center gap-1 text-amber-400 font-semibold">
-                    <Sun class="w-3 h-3" /> 光照强度
+                <div class="flex items-center justify-between text-[11px] mb-1">
+                  <span class="flex items-center gap-1 text-amber-400 font-bold">
+                    <Sun class="w-3.5 h-3.5" /> 光照强度
                   </span>
-                  <span class="text-[8px] font-mono text-slate-400">DLI 18.4</span>
-                </div>
-                <div class="flex items-baseline justify-between">
-                  <span class="text-base font-bold font-mono text-slate-100">
-                    {{ currentGh.lightLux }}<span class="text-[10px] font-normal text-slate-400 ml-0.5">klux</span>
+                  <span class="text-[9px] font-mono text-amber-300 bg-amber-500/20 px-1.5 py-0.2 rounded font-semibold">
+                    充足
                   </span>
-                  <span class="text-[9px] font-mono text-amber-300">透光良好</span>
                 </div>
-                <div class="w-full h-1 bg-slate-800 rounded-full mt-1.5 overflow-hidden">
+                <div class="flex items-baseline justify-between mt-1">
+                  <span class="text-xl font-bold font-mono text-slate-100">
+                    {{ currentGh.lightLux }}<span class="text-xs font-normal text-slate-400 ml-0.5">klx</span>
+                  </span>
+                  <span class="text-[9px] font-mono text-amber-300">透光佳</span>
+                </div>
+                <div class="w-full h-1.5 bg-slate-800 rounded-full mt-2 overflow-hidden">
                   <div
                     class="h-full bg-amber-400 rounded-full"
                     :style="{ width: `${Math.min(100, (currentGh.lightLux / 60) * 100)}%` }"
                   ></div>
                 </div>
+                <div class="flex items-center justify-between text-[9px] text-slate-400 mt-1.5 font-mono">
+                  <span>DLI 18.4</span>
+                  <span class="text-slate-500">光合旺盛</span>
+                </div>
               </div>
             </div>
 
-            <!-- 4. 当前环境 + 未来2小时气象影响组合 (Future 2H Weather Impact & Agro Risk Combo) -->
-            <div class="bg-gradient-to-br from-rose-950/40 via-slate-900/80 to-amber-950/30 p-2.5 rounded-xl border border-rose-500/40 space-y-2 shadow-xs">
-              <div class="flex items-center justify-between text-[11px] font-bold text-rose-300">
-                <div class="flex items-center gap-1.5">
+            <!-- 3. 微气象短临影响与防灾联动 (Graphic Nowcast Widget) -->
+            <div class="p-2.5 rounded-xl bg-gradient-to-br from-rose-950/35 via-slate-900/60 to-slate-900/40 border border-rose-500/30 space-y-2 backdrop-blur-md">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-1.5 text-xs font-bold text-rose-300">
                   <CloudRain class="w-3.5 h-3.5 text-rose-400" />
-                  <span>未来2H微气象预测与棚区影响</span>
+                  <span>短临强降水防汛态势</span>
                 </div>
-                <span class="text-[9px] px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-200 border border-rose-500/40 font-mono">
-                  🔴 橙色防汛预警
+                <span class="text-[9px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-200 border border-rose-500/30 font-mono font-semibold">
+                  30m 内入园
                 </span>
               </div>
 
-              <!-- 4 Future Impact Indicators Grid -->
-              <div class="grid grid-cols-2 gap-1.5 text-[10px] font-mono">
-                <div class="bg-slate-950/60 p-1.5 rounded-lg border border-slate-800">
-                  <div class="text-[9px] text-slate-400">2H 累积降水</div>
-                  <div class="text-rose-400 font-bold text-xs mt-0.5">17.5 <span class="text-[9px] font-normal text-slate-400">mm (短时28mm/h)</span></div>
-                  <div class="text-[8px] text-slate-500">预计 30m 后入园冲淋</div>
+              <!-- Graphic Quick Indicators -->
+              <div class="grid grid-cols-2 gap-2">
+                <div class="bg-slate-950/50 p-2 rounded-lg border border-white/5 flex items-center justify-between">
+                  <div>
+                    <div class="text-[9px] text-slate-400">降雨预测</div>
+                    <div class="text-sm font-bold font-mono text-rose-300 mt-0.5">17.5 <span class="text-[9px] font-normal text-slate-400">mm</span></div>
+                  </div>
+                  <CloudRain class="w-5 h-5 text-rose-400/60 shrink-0" />
                 </div>
 
-                <div class="bg-slate-950/60 p-1.5 rounded-lg border border-slate-800">
-                  <div class="text-[9px] text-slate-400">最大可能阵风</div>
-                  <div class="text-amber-300 font-bold text-xs mt-0.5">18.2 <span class="text-[9px] font-normal text-slate-400">m/s (7级)</span></div>
-                  <div class="text-[8px] text-slate-500">风压 210 N/m² 风险</div>
-                </div>
-
-                <div class="bg-slate-950/60 p-1.5 rounded-lg border border-slate-800">
-                  <div class="text-[9px] text-slate-400">棚区预测极值温</div>
-                  <div class="text-slate-200 font-bold text-xs mt-0.5">23.5 ~ 28.0 <span class="text-[9px] font-normal text-slate-400">℃</span></div>
-                  <div class="text-[8px] text-emerald-400">落雨后降温 3.5℃</div>
-                </div>
-
-                <div class="bg-slate-950/60 p-1.5 rounded-lg border border-slate-800">
-                  <div class="text-[9px] text-slate-400">预测最高湿度</div>
-                  <div class="text-sky-300 font-bold text-xs mt-0.5">92.5 <span class="text-[9px] font-normal text-slate-400">% (饱和高湿)</span></div>
-                  <div class="text-[8px] text-amber-400">需警惕灰霉病侵染</div>
+                <div class="bg-slate-950/50 p-2 rounded-lg border border-white/5 flex items-center justify-between">
+                  <div>
+                    <div class="text-[9px] text-slate-400">最大阵风</div>
+                    <div class="text-sm font-bold font-mono text-amber-300 mt-0.5">18.2 <span class="text-[9px] font-normal text-slate-400">m/s</span></div>
+                  </div>
+                  <Wind class="w-5 h-5 text-amber-400/60 shrink-0" />
                 </div>
               </div>
 
-              <!-- Action Advice Banner -->
-              <div class="p-1.5 rounded-lg bg-slate-950/80 border border-slate-800 text-[9.5px] text-slate-300 space-y-0.5">
-                <div class="text-amber-300 font-semibold flex items-center gap-1">
-                  <AlertTriangle class="w-3 h-3 text-amber-400 shrink-0" />
-                  <span>棚内应急应对建议:</span>
+              <!-- Defensive Action Pill -->
+              <div class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-[10px]">
+                <div class="flex items-center gap-1.5 text-emerald-300 font-medium">
+                  <ShieldCheck class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>联动防汛防风预案已自动就绪</span>
                 </div>
-                <div class="text-slate-300 leading-tight">
-                  1. 立即闭锁脊顶天窗(0%)，严防雨水倒灌番茄花穗；<br/>
-                  2. 展开内保温幕防冷凝滴水，外遮阳收拢防撕裂；<br/>
-                  3. 全面暂停叶面打药与无人机飞防作业。
-                </div>
+                <span class="text-[9px] font-mono text-emerald-400 font-bold">8/8棚</span>
               </div>
 
-              <!-- Trigger Buttons -->
+              <!-- Quick Action Buttons -->
               <div class="grid grid-cols-2 gap-1.5 pt-0.5">
                 <button
+                  id="btn-left-weather-decision-card"
                   @click="emit('openWeatherModal')"
-                  class="py-1 px-2 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[10px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer"
+                  class="py-1 px-2 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/40 text-[10px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer"
+                  title="点击打开微气象短临推演与防灾联动"
                 >
                   <CloudRain class="w-3 h-3" />
-                  <span>气象态势中枢</span>
+                  <span>气象全息推演</span>
                 </button>
                 <button
                   @click="$emit('openTempModal')"
-                  class="py-1 px-2 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700 text-[10px] font-medium flex items-center justify-center gap-1 transition-all cursor-pointer"
+                  class="py-1 px-2 rounded-lg bg-slate-800/80 hover:bg-slate-750 text-slate-300 border border-slate-700 text-[10px] font-medium flex items-center justify-center gap-1 transition-all cursor-pointer"
                 >
                   <Thermometer class="w-3 h-3 text-amber-400" />
                   <span>温湿度历史</span>
@@ -695,14 +650,6 @@ const selectGreenhouse = (ghId: string) => {
                   </div>
                   <div class="text-[9px] text-slate-400 mt-0.5 font-mono">降雨 {{ outdoorWeather?.rainRate ?? 0.0 }} mm/h</div>
                 </div>
-              </div>
-
-              <!-- Scientific Notice -->
-              <div class="bg-slate-900/60 p-2.5 rounded-xl border border-cyan-500/20 text-[10px] text-slate-400 leading-relaxed">
-                <div class="font-bold text-cyan-300 mb-1 flex items-center gap-1">
-                  <span>💡 农业生境数字孪生说明:</span>
-                </div>
-                室外气象代表园区外部宏观大气条件。每个大棚根据其种植品种特性，利用双层充气膜、超白玻璃、外遮阳及地源热泵独立维持专属适生微气候。
               </div>
 
               <!-- Jump to Greenhouse 1 button -->

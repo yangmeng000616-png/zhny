@@ -2954,45 +2954,41 @@ export class GreenhouseScene {
   // -------------------------------------------------------------
   private createRiskBadgeSprite(title: string, leadTimeText: string, isCritical: boolean): THREE.Sprite {
     const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 160;
+    canvas.width = 380;
+    canvas.height = 76;
     const ctx = canvas.getContext('2d');
     if (!ctx) return new THREE.Sprite();
 
-    // Semi-transparent dark pill background
-    ctx.fillStyle = 'rgba(10, 15, 26, 0.92)';
-    ctx.strokeStyle = isCritical ? 'rgba(239, 68, 68, 0.85)' : 'rgba(245, 158, 11, 0.85)';
-    ctx.lineWidth = 4;
+    // Sleek frosted pill background
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+    ctx.strokeStyle = isCritical ? 'rgba(239, 68, 68, 0.9)' : 'rgba(245, 158, 11, 0.9)';
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.roundRect(10, 10, 492, 140, 24);
+    ctx.roundRect(6, 6, 368, 64, 32);
     ctx.fill();
     ctx.stroke();
 
-    // Alert indicator dot
+    // Subtle alert indicator dot with pulse glow
     ctx.fillStyle = isCritical ? '#ef4444' : '#f59e0b';
     ctx.beginPath();
-    ctx.arc(42, 50, 12, 0, Math.PI * 2);
+    ctx.arc(32, 38, 8, 0, Math.PI * 2);
     ctx.fill();
 
-    // Header text
+    // Concise, scannable text
     ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 30px "PingFang SC", "Microsoft YaHei", sans-serif';
-    ctx.fillText(title, 70, 58);
-
-    // Subtitle / lead time text
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '22px "PingFang SC", "Microsoft YaHei", sans-serif';
-    ctx.fillText(leadTimeText, 42, 112);
+    ctx.font = 'bold 22px "PingFang SC", "Microsoft YaHei", sans-serif';
+    ctx.fillText(title, 50, 45);
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.minFilter = THREE.LinearFilter;
     const mat = new THREE.SpriteMaterial({
       map: texture,
       transparent: true,
-      depthTest: false,
+      depthTest: true,
+      opacity: 0.92,
     });
     const sprite = new THREE.Sprite(mat);
-    sprite.scale.set(11, 3.4, 1);
+    sprite.scale.set(4.8, 1.0, 1);
     return sprite;
   }
 
@@ -3063,13 +3059,13 @@ export class GreenhouseScene {
         const corners = new THREE.LineSegments(cornerGeo, new THREE.LineBasicMaterial({ color: alertColor, transparent: true, opacity: 0.95 }));
         beaconGroup.add(corners);
 
-        // 3. Floating 3D Risk Badge billboard above greenhouse roof
+        // 3. Floating 3D Risk Badge: clean, compact spatial beacon
         const badge = this.createRiskBadgeSprite(
-          `${gh.name} · ${warn.title}`,
-          `预计影响: ${warn.forecastLeadMinutes}分钟内 | 建议闭窗防风排涝`,
+          `${warn.title} (${warn.forecastLeadMinutes}m)`,
+          '',
           isCrit
         );
-        badge.position.set(0, 8.2, 0);
+        badge.position.set(0, 6.8, 0);
         beaconGroup.add(badge);
 
         this.scene.add(beaconGroup);
