@@ -26,6 +26,8 @@ import {
   Briefcase,
   Eye,
   EyeOff,
+  Zap,
+  CheckCircle2,
 } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -141,18 +143,41 @@ const selectPreset = (preset: CameraPreset) => {
           </span>
         </div>
         <div class="flex items-center gap-2 text-[10px] text-slate-400 font-mono mt-0.5">
-          <button
-            @click="$emit('toggleWeatherPanel')"
-            class="flex items-center gap-1 px-1.5 py-0.2 rounded bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-slate-700/60 cursor-pointer transition-colors"
-            title="查看微气象临近预报与雷达回波"
-          >
-            <CloudRain class="w-2.5 h-2.5 text-cyan-400" />
-            <span>临近气象</span>
-          </button>
-          <span class="text-slate-700">|</span>
           <span class="text-slate-300 font-mono">{{ timeString }}</span>
         </div>
       </div>
+
+      <!-- Persistent High-Impact Weather Safety Shield & Agri-Decision Capsule -->
+      <button
+        id="top-weather-safety-shield"
+        @click="$emit('toggleWeatherPanel')"
+        :class="[
+          'ml-1 px-2.5 py-1 rounded-lg border flex items-center gap-2 cursor-pointer transition-all text-xs font-semibold shadow-xs',
+          showWeatherPanel
+            ? 'bg-cyan-500/25 border-cyan-400 text-cyan-200 shadow-[0_0_12px_rgba(6,182,212,0.4)] ring-1 ring-cyan-400/50'
+            : 'bg-gradient-to-r from-amber-500/15 via-rose-500/15 to-emerald-500/15 hover:from-amber-500/25 hover:to-emerald-500/25 border-amber-500/40 text-slate-200'
+        ]"
+        title="点击展开微气象短临推演(0~120m)与72小时农事作业黄金窗口决策中枢"
+      >
+        <div class="relative flex h-2 w-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-400"></span>
+        </div>
+        <div class="flex items-center gap-1.5 text-[11px]">
+          <span class="text-amber-300 font-bold flex items-center gap-1">
+            <Zap class="w-3 h-3 text-amber-400 fill-amber-400/30" />
+            0~2H短临: 30m后强降水
+          </span>
+          <span class="text-slate-600 hidden xl:inline">|</span>
+          <span class="text-emerald-300 hidden xl:inline flex items-center gap-1">
+            <CheckCircle2 class="w-3 h-3 text-emerald-400" />
+            72H农事: 明日宜开帘喷药
+          </span>
+        </div>
+        <span class="text-[9px] px-1 py-0.2 rounded bg-amber-500/30 text-amber-200 border border-amber-500/40 font-mono">
+          气象决策
+        </span>
+      </button>
     </div>
 
     <!-- 2. CENTER: Unified Perspectives & Business Ledgers Control -->

@@ -983,6 +983,7 @@ const handleTimeChange = (hourFraction: number) => {
       @open-pest-modal="showPestMonitoring = true"
       @open-owner-hub-modal="showOwnerHubModal = true"
       @open-logistics-modal="showLogisticsLedger = true"
+      @open-weather-modal="showWeatherPanel = true"
     />
 
     <!-- Right Actuators & Control Center -->

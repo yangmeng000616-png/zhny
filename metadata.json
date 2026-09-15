@@ -1,6 +1,6 @@
 {
   "name": "智慧农业大棚数字孪生系统",
-  "description": "基于 Three.js 构建的现代智慧农业示范园数字孪生系统，具备8座温室微生境矩阵、动态人车与冷链配送巡检、气象农事影响与行动结果预警、果蔬出货与农资进货物流台账、生态鱼塘喂食留痕、全区温度时序记录与Excel报表导出能力。",
+  "description": "基于 Three.js 构建的现代智慧农业示范园数字孪生系统，具备8座温室微生境矩阵、微气象短临推演(0~120m)与72小时农事作业黄金窗口决策中枢、动态人车与冷链配送巡检、果蔬出货与农资进货物流台账、生态鱼塘喂食留痕与Excel报表导出能力。",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

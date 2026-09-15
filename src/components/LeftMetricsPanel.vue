@@ -31,6 +31,8 @@ import {
   Bug,
   Briefcase,
   Truck,
+  CheckCircle2,
+  CloudRain,
 } from 'lucide-vue-next';
 
 const props = withDefaults(
@@ -61,6 +63,7 @@ const emit = defineEmits<{
   (e: 'openPestModal'): void;
   (e: 'openOwnerHubModal'): void;
   (e: 'openLogisticsModal'): void;
+  (e: 'openWeatherModal'): void;
 }>();
 
 const localCollapsed = ref(false);
@@ -345,97 +348,49 @@ const selectGreenhouse = (ghId: string) => {
               </div>
             </div>
 
-            <!-- 2. 棚内外环境实时对比卡片 (Indoor vs Outdoor Differential) -->
-            <div class="bg-gradient-to-br from-slate-900/90 to-slate-950/90 p-2.5 rounded-xl border border-cyan-500/40 shadow-sm space-y-2">
-              <div class="flex items-center justify-between text-[11px] font-bold text-cyan-300 border-b border-slate-800/80 pb-1">
-                <div class="flex items-center gap-1">
-                  <Layers class="w-3.5 h-3.5 text-cyan-400" />
-                  <span>棚内微环境 vs 室外气象 对照</span>
+            <!-- 2. 微气象短临防御与72H农事窗口决策条 (Weather-to-Action Impact Bar) -->
+            <div
+              id="btn-left-weather-decision-card"
+              @click="emit('openWeatherModal')"
+              class="p-2 rounded-xl bg-gradient-to-r from-amber-500/15 via-slate-900/90 to-emerald-500/15 border border-amber-500/40 hover:border-amber-400/80 cursor-pointer transition-all space-y-1 group shadow-xs"
+              title="点击打开微气象短临推演(0~120m)与72小时农事黄金作业窗口"
+            >
+              <div class="flex items-center justify-between text-[10px]">
+                <div class="flex items-center gap-1 font-bold text-amber-300">
+                  <Zap class="w-3 h-3 text-amber-400 fill-amber-400/40 animate-pulse" />
+                  <span>0~2H短临: 30分钟后短时强降水</span>
                 </div>
-                <span class="text-[9px] text-slate-400 font-mono font-normal">动态调节中</span>
+                <span class="text-[9px] text-cyan-400 group-hover:underline flex items-center gap-0.5">
+                  决策中枢 <ArrowUpRight class="w-2.5 h-2.5" />
+                </span>
               </div>
-
-              <!-- Delta 1: Temperature -->
-              <div class="space-y-1">
-                <div class="flex items-center justify-between text-[10px]">
-                  <span class="text-slate-300 flex items-center gap-1">
-                    <Thermometer class="w-3 h-3 text-amber-400" />
-                    <span>空气温度差:</span>
-                  </span>
-                  <span
-                    :class="[
-                      'font-mono font-bold px-1.5 py-0.2 rounded text-[10px]',
-                      tempDelta >= 0 ? 'bg-amber-500/20 text-amber-300' : 'bg-blue-500/20 text-blue-300'
-                    ]"
-                  >
-                    {{ tempDelta >= 0 ? `+${tempDelta}` : tempDelta }} ℃ ({{ tempDelta >= 0 ? '温室储热增温' : '遮阳湿帘降温' }})
-                  </span>
+              <div class="flex items-center justify-between text-[10px] text-slate-300">
+                <div class="flex items-center gap-1 text-emerald-300">
+                  <CheckCircle2 class="w-3 h-3 text-emerald-400" />
+                  <span>72H农事: 明日07:00~10:30黄金喷药</span>
                 </div>
-                <div class="grid grid-cols-2 gap-1 text-[10px] font-mono bg-slate-950/60 p-1.5 rounded-lg border border-slate-800">
-                  <div class="flex items-center justify-between">
-                    <span class="text-emerald-400 font-semibold">棚内:</span>
-                    <span class="font-bold text-slate-100">{{ currentGh.airTemp }}℃</span>
-                  </div>
-                  <div class="flex items-center justify-between border-l border-slate-800 pl-1.5">
-                    <span class="text-slate-400">室外:</span>
-                    <span class="text-slate-300">{{ outdoorWeather?.temperature ?? 23.8 }}℃</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Delta 2: Humidity -->
-              <div class="space-y-1">
-                <div class="flex items-center justify-between text-[10px]">
-                  <span class="text-slate-300 flex items-center gap-1">
-                    <Droplets class="w-3 h-3 text-sky-400" />
-                    <span>相对湿度差:</span>
-                  </span>
-                  <span
-                    :class="[
-                      'font-mono font-bold px-1.5 py-0.2 rounded text-[10px]',
-                      humidityDelta >= 0 ? 'bg-sky-500/20 text-sky-300' : 'bg-slate-700 text-slate-300'
-                    ]"
-                  >
-                    {{ humidityDelta >= 0 ? `+${humidityDelta}` : humidityDelta }} % (植物蒸腾集湿)
-                  </span>
-                </div>
-                <div class="grid grid-cols-2 gap-1 text-[10px] font-mono bg-slate-950/60 p-1.5 rounded-lg border border-slate-800">
-                  <div class="flex items-center justify-between">
-                    <span class="text-sky-400 font-semibold">棚内:</span>
-                    <span class="font-bold text-slate-100">{{ currentGh.airHumidity }}%</span>
-                  </div>
-                  <div class="flex items-center justify-between border-l border-slate-800 pl-1.5">
-                    <span class="text-slate-400">室外:</span>
-                    <span class="text-slate-300">{{ outdoorWeather?.humidity ?? 54.2 }}%</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Delta 3: Radiation & Light -->
-              <div class="grid grid-cols-2 gap-1.5 text-[9px] pt-0.5">
-                <div class="bg-slate-950/60 p-1.5 rounded-lg border border-slate-800">
-                  <div class="text-slate-400 flex items-center gap-1 mb-0.5">
-                    <Sun class="w-2.5 h-2.5 text-amber-400" />
-                    <span>棚内光照/状态</span>
-                  </div>
-                  <div class="font-mono text-[10px] font-bold text-amber-300">
-                    {{ currentGh.lightLux }} klux ({{ currentGh.lightStatus }})
-                  </div>
-                </div>
-
-                <div class="bg-slate-950/60 p-1.5 rounded-lg border border-slate-800">
-                  <div class="text-slate-400 flex items-center gap-1 mb-0.5">
-                    <Wind class="w-2.5 h-2.5 text-cyan-400" />
-                    <span>室外风速基准</span>
-                  </div>
-                  <div class="font-mono text-[10px] font-bold text-cyan-300">
-                    {{ outdoorWeather?.windSpeed ?? 3.2 }} m/s ({{ outdoorWeather?.windDirection ?? '东南风' }})
-                  </div>
-                </div>
+                <span class="text-[9px] font-mono text-slate-400">
+                  {{ outdoorWeather?.temperature ?? 23.8 }}℃ / {{ outdoorWeather?.humidity ?? 54.2 }}%
+                </span>
               </div>
             </div>
 
-            <!-- 3. Four Core Microclimate Parameters -->
+            <!-- 3. 室外宏观气象基准对照条 (Outdoor Meteorological Reference) -->
+            <div class="px-2.5 py-1.5 rounded-xl bg-slate-900/70 border border-slate-800/80 flex items-center justify-between text-[10px]">
+              <div class="flex items-center gap-1.5 text-slate-400">
+                <CloudSun class="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                <span>室外宏观气象基准:</span>
+              </div>
+              <div class="flex items-center gap-2 font-mono text-[10px] text-slate-300">
+                <span>{{ outdoorWeather?.temperature ?? 23.8 }}℃</span>
+                <span class="text-slate-600">|</span>
+                <span>{{ outdoorWeather?.humidity ?? 54.2 }}%</span>
+                <span class="text-slate-600">|</span>
+                <span>{{ outdoorWeather?.windSpeed ?? 3.2 }}m/s {{ outdoorWeather?.windDirection ?? '东南风' }}</span>
+              </div>
+            </div>
+
+            <!-- 3. Four Core Microclimate Parameters (No duplication) -->
             <div class="grid grid-cols-2 gap-1.5">
               <!-- Air Temp Gauge -->
               <div class="bg-slate-900/60 p-2 rounded-xl border border-white/10">
@@ -451,13 +406,24 @@ const selectGreenhouse = (ghId: string) => {
                   <span class="text-base font-bold font-mono text-slate-100">
                     {{ currentGh.airTemp }}<span class="text-xs font-normal text-slate-400 ml-0.5">℃</span>
                   </span>
-                  <span class="text-[9px] font-mono text-slate-400">露点 18.2℃</span>
+                  <span
+                    :class="[
+                      'text-[9px] font-mono px-1 py-0.2 rounded font-semibold',
+                      tempDelta >= 0 ? 'bg-amber-500/20 text-amber-300' : 'bg-blue-500/20 text-blue-300'
+                    ]"
+                  >
+                    比室外 {{ tempDelta >= 0 ? `+${tempDelta}` : tempDelta }}℃
+                  </span>
                 </div>
                 <div class="w-full h-1 bg-slate-800 rounded-full mt-1.5 overflow-hidden">
                   <div
                     class="h-full bg-gradient-to-r from-cyan-400 via-emerald-400 to-amber-500 rounded-full"
                     :style="{ width: `${Math.min(100, (currentGh.airTemp / 40) * 100)}%` }"
                   ></div>
+                </div>
+                <div class="flex items-center justify-between text-[8.5px] text-slate-400 mt-1 font-mono">
+                  <span>露点 18.2℃</span>
+                  <span>{{ tempDelta >= 0 ? '温室储热增温' : '遮阳湿帘降温' }}</span>
                 </div>
               </div>
 
@@ -475,13 +441,24 @@ const selectGreenhouse = (ghId: string) => {
                   <span class="text-base font-bold font-mono text-slate-100">
                     {{ currentGh.airHumidity }}<span class="text-xs font-normal text-slate-400 ml-0.5">%</span>
                   </span>
-                  <span class="text-[9px] font-mono text-emerald-300">VPD 1.12</span>
+                  <span
+                    :class="[
+                      'text-[9px] font-mono px-1 py-0.2 rounded font-semibold',
+                      humidityDelta >= 0 ? 'bg-sky-500/20 text-sky-300' : 'bg-slate-700 text-slate-300'
+                    ]"
+                  >
+                    比室外 {{ humidityDelta >= 0 ? `+${humidityDelta}` : humidityDelta }}%
+                  </span>
                 </div>
                 <div class="w-full h-1 bg-slate-800 rounded-full mt-1.5 overflow-hidden">
                   <div
                     class="h-full bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full"
                     :style="{ width: `${currentGh.airHumidity}%` }"
                   ></div>
+                </div>
+                <div class="flex items-center justify-between text-[8.5px] text-slate-400 mt-1 font-mono">
+                  <span class="text-emerald-300">VPD 1.12</span>
+                  <span>{{ humidityDelta >= 0 ? '植物蒸腾集湿' : '除湿调节中' }}</span>
                 </div>
               </div>
 
