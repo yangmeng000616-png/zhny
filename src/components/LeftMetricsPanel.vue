@@ -33,6 +33,7 @@ import {
   Truck,
   CheckCircle2,
   CloudRain,
+  AlertTriangle,
 } from 'lucide-vue-next';
 
 const props = withDefaults(
@@ -146,7 +147,7 @@ const selectGreenhouse = (ghId: string) => {
   >
     <!-- Main Panel Box -->
     <div
-      class="pointer-events-auto w-72 sm:w-80 h-full max-h-[calc(100vh-100px)] flex flex-col bg-slate-950/85 hover:bg-slate-950/95 backdrop-blur-2xl rounded-2xl border border-cyan-500/30 shadow-[0_20px_50px_rgba(0,0,0,0.85)] ring-1 ring-white/10 overflow-hidden transition-all duration-300 text-xs"
+      class="pointer-events-auto w-70 sm:w-72 h-full max-h-[calc(100vh-100px)] flex flex-col bg-slate-950/85 hover:bg-slate-950/95 backdrop-blur-2xl rounded-2xl border border-cyan-500/30 shadow-[0_20px_50px_rgba(0,0,0,0.85)] ring-1 ring-white/10 overflow-hidden transition-all duration-300 text-xs"
     >
       <!-- Panel Top Header with Greenhouse/Outdoor Dropdown -->
       <div class="p-2.5 border-b border-white/10 bg-slate-900/60 backdrop-blur-md">
@@ -509,66 +510,73 @@ const selectGreenhouse = (ghId: string) => {
               </div>
             </div>
 
-            <!-- 4. Specialized Agronomy / Substrate / Facility Info (Adapted per greenhouse type) -->
-            <div class="bg-slate-900/60 p-2.5 rounded-xl border border-cyan-500/20 space-y-1.5">
-              <div class="flex items-center justify-between text-[11px] font-semibold text-slate-200">
-                <div class="flex items-center gap-1">
-                  <ShieldCheck class="w-3.5 h-3.5 text-cyan-400" />
-                  <span>根系生境与专有农艺指标</span>
+            <!-- 4. 当前环境 + 未来2小时气象影响组合 (Future 2H Weather Impact & Agro Risk Combo) -->
+            <div class="bg-gradient-to-br from-rose-950/40 via-slate-900/80 to-amber-950/30 p-2.5 rounded-xl border border-rose-500/40 space-y-2 shadow-xs">
+              <div class="flex items-center justify-between text-[11px] font-bold text-rose-300">
+                <div class="flex items-center gap-1.5">
+                  <CloudRain class="w-3.5 h-3.5 text-rose-400" />
+                  <span>未来2H微气象预测与棚区影响</span>
                 </div>
-                <span class="text-[9px] font-mono text-cyan-300">{{ currentGh.structureType }}</span>
-              </div>
-
-              <!-- Rootzone Moisture/EC/pH Grid -->
-              <div class="grid grid-cols-3 gap-1 pt-1 text-[10px] font-mono">
-                <div class="bg-slate-950/60 p-1.5 rounded-lg border border-slate-800 text-center">
-                  <div class="text-[8px] text-slate-400">根区水分/含水</div>
-                  <div class="font-bold text-cyan-300">{{ currentGh.rootMoisture }}%</div>
-                </div>
-                <div class="bg-slate-950/60 p-1.5 rounded-lg border border-slate-800 text-center">
-                  <div class="text-[8px] text-slate-400">根区 EC</div>
-                  <div class="font-bold text-purple-300">{{ currentGh.rootEc }} mS</div>
-                </div>
-                <div class="bg-slate-950/60 p-1.5 rounded-lg border border-slate-800 text-center">
-                  <div class="text-[8px] text-slate-400">根区酸碱 pH</div>
-                  <div class="font-bold text-emerald-400">{{ currentGh.rootPh }}</div>
-                </div>
-              </div>
-
-              <!-- Specialized Indicator (e.g. Solar power, Heat storage, Aerosol cycle, Fish DO) -->
-              <div
-                v-if="currentGh.specialMetric"
-                class="bg-slate-950/70 px-2 py-1.5 rounded-lg border border-slate-800 flex items-center justify-between text-[10px]"
-              >
-                <span class="text-slate-400 flex items-center gap-1">
-                  <Zap class="w-3 h-3 text-amber-400" />
-                  <span>{{ currentGh.specialMetric.label }}</span>
-                </span>
-                <span class="font-mono font-bold text-amber-300">
-                  {{ currentGh.specialMetric.value }}
-                  <span v-if="currentGh.specialMetric.hint" class="text-[8px] text-slate-400 font-normal ml-1">
-                    ({{ currentGh.specialMetric.hint }})
-                  </span>
+                <span class="text-[9px] px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-200 border border-rose-500/40 font-mono">
+                  🔴 橙色防汛预警
                 </span>
               </div>
 
-              <!-- Quick Actions: Temperature History & Pest Monitoring -->
-              <div class="grid grid-cols-2 gap-1.5 pt-1">
+              <!-- 4 Future Impact Indicators Grid -->
+              <div class="grid grid-cols-2 gap-1.5 text-[10px] font-mono">
+                <div class="bg-slate-950/60 p-1.5 rounded-lg border border-slate-800">
+                  <div class="text-[9px] text-slate-400">2H 累积降水</div>
+                  <div class="text-rose-400 font-bold text-xs mt-0.5">17.5 <span class="text-[9px] font-normal text-slate-400">mm (短时28mm/h)</span></div>
+                  <div class="text-[8px] text-slate-500">预计 30m 后入园冲淋</div>
+                </div>
+
+                <div class="bg-slate-950/60 p-1.5 rounded-lg border border-slate-800">
+                  <div class="text-[9px] text-slate-400">最大可能阵风</div>
+                  <div class="text-amber-300 font-bold text-xs mt-0.5">18.2 <span class="text-[9px] font-normal text-slate-400">m/s (7级)</span></div>
+                  <div class="text-[8px] text-slate-500">风压 210 N/m² 风险</div>
+                </div>
+
+                <div class="bg-slate-950/60 p-1.5 rounded-lg border border-slate-800">
+                  <div class="text-[9px] text-slate-400">棚区预测极值温</div>
+                  <div class="text-slate-200 font-bold text-xs mt-0.5">23.5 ~ 28.0 <span class="text-[9px] font-normal text-slate-400">℃</span></div>
+                  <div class="text-[8px] text-emerald-400">落雨后降温 3.5℃</div>
+                </div>
+
+                <div class="bg-slate-950/60 p-1.5 rounded-lg border border-slate-800">
+                  <div class="text-[9px] text-slate-400">预测最高湿度</div>
+                  <div class="text-sky-300 font-bold text-xs mt-0.5">92.5 <span class="text-[9px] font-normal text-slate-400">% (饱和高湿)</span></div>
+                  <div class="text-[8px] text-amber-400">需警惕灰霉病侵染</div>
+                </div>
+              </div>
+
+              <!-- Action Advice Banner -->
+              <div class="p-1.5 rounded-lg bg-slate-950/80 border border-slate-800 text-[9.5px] text-slate-300 space-y-0.5">
+                <div class="text-amber-300 font-semibold flex items-center gap-1">
+                  <AlertTriangle class="w-3 h-3 text-amber-400 shrink-0" />
+                  <span>棚内应急应对建议:</span>
+                </div>
+                <div class="text-slate-300 leading-tight">
+                  1. 立即闭锁脊顶天窗(0%)，严防雨水倒灌番茄花穗；<br/>
+                  2. 展开内保温幕防冷凝滴水，外遮阳收拢防撕裂；<br/>
+                  3. 全面暂停叶面打药与无人机飞防作业。
+                </div>
+              </div>
+
+              <!-- Trigger Buttons -->
+              <div class="grid grid-cols-2 gap-1.5 pt-0.5">
                 <button
-                  @click="$emit('openTempModal')"
-                  class="flex items-center justify-center gap-1 px-2 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 font-semibold text-[10px] transition-colors cursor-pointer"
-                  title="查看全区各点位温度历史记录及曲线并导出Excel"
+                  @click="emit('openWeatherModal')"
+                  class="py-1 px-2 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[10px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer"
                 >
-                  <Thermometer class="w-3 h-3 text-amber-400" />
-                  <span>温度历史</span>
+                  <CloudRain class="w-3 h-3" />
+                  <span>气象态势中枢</span>
                 </button>
                 <button
-                  @click="$emit('openPestModal')"
-                  class="flex items-center justify-center gap-1 px-2 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 font-semibold text-[10px] transition-colors cursor-pointer"
-                  title="智能诱虫灯与虫情测报看板（支持录入及周走势分析）"
+                  @click="$emit('openTempModal')"
+                  class="py-1 px-2 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700 text-[10px] font-medium flex items-center justify-center gap-1 transition-all cursor-pointer"
                 >
-                  <Bug class="w-3 h-3 text-emerald-400" />
-                  <span>诱虫测报</span>
+                  <Thermometer class="w-3 h-3 text-amber-400" />
+                  <span>温湿度历史</span>
                 </button>
               </div>
             </div>
