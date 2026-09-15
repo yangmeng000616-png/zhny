@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import {
   X,
   Plus,
@@ -80,6 +80,56 @@ const currentGh = computed(() => {
   return props.greenhouses.find((g) => g.id === selectedGhId.value) || props.greenhouses[0];
 });
 
+// Reset form
+const resetForm = () => {
+  selectedGhId.value = props.defaultGreenhouseId || 'gh_001';
+  opType.value = 'irrigation';
+  operator.value = '张工 (现场农艺组)';
+  notes.value = '';
+  formError.value = '';
+
+  irrMethod.value = '滴灌';
+  irrVolumeL.value = 2000;
+  irrDurationMin.value = 30;
+  irrMoistureBefore.value = 31.5;
+  irrMoistureAfter.value = 36.8;
+  irrTriggerMode.value = '人工手动指令';
+
+  fertFormula.value = 'A/B高钾水溶膨果配方 (15-8-30+TE)';
+  fertAmountKg.value = 12.5;
+  fertTargetEc.value = 1.5;
+  fertMeasuredEc.value = 1.48;
+  fertTargetPh.value = 6.2;
+  fertMeasuredPh.value = 6.2;
+  fertDilution.value = '1:120';
+
+  pestAgentName.value = '枯草芽孢杆菌微囊生物悬浮剂';
+  pestTarget.value = '白粉病预防';
+  pestMethod.value = '超低容量弥雾';
+  pestConcentration.value = '1000倍液';
+  pestDosageL.value = 80;
+  pestSafetyDays.value = 0;
+  pestIsBiocontrol.value = true;
+
+  harvBatch.value = `HARV-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-B01`;
+  harvWeightKg.value = 150;
+  harvGrade.value = '特级精品果';
+  harvBrix.value = 12.8;
+
+  setDefaultTitle();
+};
+
+watch(() => props.visible, (val) => {
+  if (val) resetForm();
+});
+
+watch(() => props.defaultGreenhouseId, (val) => {
+  if (val) {
+    selectedGhId.value = val;
+    setDefaultTitle();
+  }
+});
+
 // Auto-fill title based on type
 const setDefaultTitle = () => {
   const ghName = currentGh.value?.shortName || '温室';
@@ -104,6 +154,7 @@ const handleTypeChange = (type: FarmingOperationType) => {
 
 // Submission
 const handleSubmit = () => {
+  formError.value = '';
   if (!title.value.trim()) {
     formError.value = '请输入作业标题或农事摘要';
     return;
@@ -111,6 +162,52 @@ const handleSubmit = () => {
   if (!operator.value.trim()) {
     formError.value = '请输入经办农艺师或作业人员姓名';
     return;
+  }
+
+  if (opType.value === 'irrigation') {
+    if (isNaN(irrVolumeL.value) || irrVolumeL.value <= 0) {
+      formError.value = '灌溉注水量必须为正数值 (L)';
+      return;
+    }
+    if (isNaN(irrDurationMin.value) || irrDurationMin.value <= 0) {
+      formError.value = '灌水作业时长必须大于0分钟';
+      return;
+    }
+    if (irrMoistureBefore.value < 0 || irrMoistureBefore.value > 100 || irrMoistureAfter.value < 0 || irrMoistureAfter.value > 100) {
+      formError.value = '土壤体积含水率取值区间应在 0% ~ 100% 之间';
+      return;
+    }
+  } else if (opType.value === 'fertilization') {
+    if (isNaN(fertAmountKg.value) || fertAmountKg.value <= 0) {
+      formError.value = '用肥投入量必须为正数值 (kg)';
+      return;
+    }
+    if (fertTargetEc.value < 0 || fertTargetEc.value > 10 || fertMeasuredEc.value < 0 || fertMeasuredEc.value > 10) {
+      formError.value = 'EC导电率取值范围应在 0.0 ~ 10.0 mS/cm 之间';
+      return;
+    }
+    if (fertTargetPh.value < 1 || fertTargetPh.value > 14 || fertMeasuredPh.value < 1 || fertMeasuredPh.value > 14) {
+      formError.value = 'pH酸碱度取值范围应在 1.0 ~ 14.0 之间';
+      return;
+    }
+  } else if (opType.value === 'pesticide') {
+    if (isNaN(pestDosageL.value) || pestDosageL.value <= 0) {
+      formError.value = '药剂施用液量必须为正数值 (L)';
+      return;
+    }
+    if (isNaN(pestSafetyDays.value) || pestSafetyDays.value < 0) {
+      formError.value = '农药安全间隔期不能为负数';
+      return;
+    }
+  } else if (opType.value === 'harvest') {
+    if (isNaN(harvWeightKg.value) || harvWeightKg.value <= 0) {
+      formError.value = '采收净重必须为正数值 (kg)';
+      return;
+    }
+    if (isNaN(harvBrix.value) || harvBrix.value < 0 || harvBrix.value > 40) {
+      formError.value = '果实糖度 (Brix) 应在 0.0 ~ 40.0% 之间';
+      return;
+    }
   }
 
   const now = new Date();

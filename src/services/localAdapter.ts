@@ -16,6 +16,8 @@ import type {
   AgroRiskWarning,
   UnifiedAlarm,
   DeviceLinkageAction,
+  GreenhouseMicroclimate,
+  OutdoorWeatherSnapshot,
 } from '../types/digitalTwin';
 import {
   initialEnvironment,
@@ -24,12 +26,16 @@ import {
   initialCropZones,
   initialPondWaterData,
   initialAGV,
+  greenhousesMicroclimates,
+  outdoorWeather,
 } from '../data/mockData';
 
 export class LocalAdapter implements IDataAdapter {
   private basePath: string;
   private localDevices: ActuatorDevice[] = [...initialActuators];
   private localEnvironment: EnvironmentSnapshot = { ...initialEnvironment };
+  private localGreenhouses: GreenhouseMicroclimate[] = JSON.parse(JSON.stringify(greenhousesMicroclimates));
+  private localOutdoor: OutdoorWeatherSnapshot = { ...outdoorWeather };
   private activeRisks: AgroRiskWarning[] = [];
 
   constructor() {
@@ -165,18 +171,38 @@ export class LocalAdapter implements IDataAdapter {
     return this.fetchJson<PondWaterQuality>('greenhouse/pond/pond_water_latest.json', initialPondWaterData);
   }
 
+  async getGreenhousesMicroclimates(): Promise<GreenhouseMicroclimate[]> {
+    return this.fetchJson<GreenhouseMicroclimate[]>('greenhouse/microclimates/microclimates_latest.json', this.localGreenhouses);
+  }
+
+  async getOutdoorWeather(): Promise<OutdoorWeatherSnapshot> {
+    return this.fetchJson<OutdoorWeatherSnapshot>('greenhouse/weather/outdoor_weather_latest.json', this.localOutdoor);
+  }
+
   async updateDeviceStatus(deviceId: string, power: boolean, value?: number): Promise<boolean> {
     this.localDevices = this.localDevices.map((dev) => {
       if (dev.id === deviceId) {
         return {
           ...dev,
           power,
-          status: power ? 'running' : 'idle',
+          status: dev.status === 'offline' ? 'offline' : (power ? 'running' : 'idle'),
           value: value !== undefined ? value : dev.value,
         };
       }
       return dev;
     });
+
+    this.localGreenhouses.forEach((gh) => {
+      if (gh.actuators) {
+        gh.actuators.forEach((act) => {
+          if (act.id === deviceId) {
+            act.status = power;
+            if (value !== undefined) act.value = value;
+          }
+        });
+      }
+    });
+
     return true;
   }
 
@@ -328,6 +354,33 @@ export class LocalAdapter implements IDataAdapter {
     // Map active agro-risks into alarms
     risks.forEach((risk) => {
       if (!risk.isMitigated) {
+        let metricName = '气象遥测';
+        let currentValue = '超限';
+        let thresholdValue = '预警线';
+        let unit = '';
+
+        if (risk.type === 'heavy_rain') {
+          metricName = '降水外推率';
+          currentValue = '28.0 mm/h';
+          thresholdValue = '20.0 mm/h';
+          unit = 'mm/h';
+        } else if (risk.type === 'strong_wind') {
+          metricName = '阵风预报';
+          currentValue = '18.2 m/s';
+          thresholdValue = '15.0 m/s';
+          unit = 'm/s';
+        } else if (risk.type === 'high_temperature') {
+          metricName = '极端高温';
+          currentValue = '36.8 ℃';
+          thresholdValue = '35.0 ℃';
+          unit = '℃';
+        } else if (risk.type === 'low_temperature') {
+          metricName = '逆温霜冻';
+          currentValue = '2.5 ℃';
+          thresholdValue = '5.0 ℃';
+          unit = '℃';
+        }
+
         alarms.push({
           id: `alarm_${risk.id}`,
           timestamp: risk.timestamp,
@@ -336,10 +389,10 @@ export class LocalAdapter implements IDataAdapter {
           sourceId: risk.id,
           sourceName: risk.title,
           location: `大棚群 (${risk.impactedGreenhouses.join(', ')})`,
-          metricName: risk.type === 'heavy_rain' ? '降水外推率' : '阵风预报',
-          currentValue: risk.type === 'heavy_rain' ? '28.0 mm/h' : '18.2 m/s',
-          thresholdValue: risk.type === 'heavy_rain' ? '20.0 mm/h' : '15.0 m/s',
-          unit: risk.type === 'heavy_rain' ? 'mm/h' : 'm/s',
+          metricName,
+          currentValue,
+          thresholdValue,
+          unit,
           message: risk.summary,
           status: 'active',
           recommendedAction: risk.aiRecommendation,
@@ -348,7 +401,7 @@ export class LocalAdapter implements IDataAdapter {
       }
     });
 
-    // Check device anomalies
+    // Check device anomalies (warning, offline)
     this.localDevices.forEach((dev) => {
       if (dev.status === 'warning') {
         alarms.push({
@@ -359,13 +412,30 @@ export class LocalAdapter implements IDataAdapter {
           sourceId: dev.id,
           sourceName: dev.name,
           location: dev.zone,
-          metricName: '设备工况',
-          currentValue: '异常负载',
-          thresholdValue: '额定载荷',
-          unit: dev.metricUnit,
+          metricName: '电机负载',
+          currentValue: '108% (超载)',
+          thresholdValue: '100% 额定',
+          unit: dev.metricUnit || '%',
           message: `${dev.name} 运行电流微幅超出额定区间 (108%)`,
           status: 'active',
-          recommendedAction: '建议降低转速或切换备用机组进行电气检修',
+          recommendedAction: '建议降低负荷转速或切换备用机组进行电气检修',
+        });
+      } else if (dev.status === 'offline') {
+        alarms.push({
+          id: `alarm_dev_${dev.id}`,
+          timestamp: '2026-09-14T08:50:00Z',
+          level: 'warning',
+          sourceType: 'device',
+          sourceId: dev.id,
+          sourceName: dev.name,
+          location: dev.zone,
+          metricName: 'RS485通信心跳',
+          currentValue: '超时无应答',
+          thresholdValue: '在线应答',
+          unit: '',
+          message: `${dev.name} 通信总线响应超时 (离线状态)`,
+          status: 'active',
+          recommendedAction: '检查棚端边缘IoT网关、RS485线缆连接与供电模块',
         });
       }
     });

@@ -1113,17 +1113,20 @@ export class GreenhouseScene {
     });
 
     const leftShadeGeo = new THREE.PlaneGeometry(11.8, 29.5);
+    leftShadeGeo.translate(0, 14.75, 0);
     const leftShade = new THREE.Mesh(leftShadeGeo, shadeMat);
     leftShade.rotation.x = -Math.PI / 2;
-    leftShade.position.set(-6, 4.45, 0);
-    leftShade.scale.set(0.01, 1, 1); // Initially retracted
+    leftShade.position.set(-6, 4.45, -14.75);
+    leftShade.scale.set(1, 0.01, 1); // Initially retracted along length
     leftShade.userData = { id: 'shade_curtain_001', type: 'shade_curtain', name: '内保温遮阳反光铝箔拉幕' };
     this.interactiveObjects.push(leftShade);
 
-    const rightShade = new THREE.Mesh(leftShadeGeo, shadeMat);
+    const rightShadeGeo = new THREE.PlaneGeometry(11.8, 29.5);
+    rightShadeGeo.translate(0, 14.75, 0);
+    const rightShade = new THREE.Mesh(rightShadeGeo, shadeMat);
     rightShade.rotation.x = -Math.PI / 2;
-    rightShade.position.set(6, 4.45, 0);
-    rightShade.scale.set(0.01, 1, 1); // Initially retracted
+    rightShade.position.set(6, 4.45, -14.75);
+    rightShade.scale.set(1, 0.01, 1); // Initially retracted along length
     rightShade.userData = { id: 'shade_curtain_001', type: 'shade_curtain', name: '内保温遮阳反光铝箔拉幕' };
     this.interactiveObjects.push(rightShade);
 
@@ -2079,7 +2082,12 @@ export class GreenhouseScene {
         };
         // Select object to inspect details in modal without snatching user's camera viewpoint
         this.onObjectSelect?.(info);
+      } else {
+        this.onObjectSelect?.(null);
       }
+    } else {
+      // Clicked on empty terrain / sky: clear selection
+      this.onObjectSelect?.(null);
     }
   }
 
@@ -3005,6 +3013,22 @@ export class GreenhouseScene {
     }
   }
 
+  public resetToLiveLighting() {
+    if (this.sunLight) {
+      this.sunLight.position.set(45, 65, 35);
+      this.sunLight.intensity = 2.0;
+      this.sunLight.color.setHex(0xffffff);
+    }
+    if (this.ambientLight) {
+      this.ambientLight.intensity = 0.45;
+      this.ambientLight.color.setHex(0xdbeafe);
+    }
+    this.scene.background = new THREE.Color(0x090d16);
+    if (this.scene.fog) {
+      (this.scene.fog as THREE.Fog).color = new THREE.Color(0x090d16);
+    }
+  }
+
   // -------------------------------------------------------------
   // MAIN ANIMATION LOOP
   // -------------------------------------------------------------
@@ -3028,10 +3052,10 @@ export class GreenhouseScene {
       rv.group.rotation.x = rv.currentAngle * 0.5;
     });
 
-    // 3. Shading Curtains Scaling / Sliding Animation
-    const targetScaleX = Math.max(0.01, this.shadeCurtainOpenRatio);
+    // 3. Shading Curtains Scaling / Sliding Animation along length (local Y)
+    const targetScaleY = Math.max(0.01, this.shadeCurtainOpenRatio);
     this.shadeCurtains.forEach((curtain) => {
-      curtain.scale.x += (targetScaleX - curtain.scale.x) * 3 * delta;
+      curtain.scale.y += (targetScaleY - curtain.scale.y) * 3 * delta;
     });
 
     // 4. Water Particles Shimmer in Drip Lines

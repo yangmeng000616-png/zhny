@@ -45,10 +45,14 @@ const props = withDefaults(
     sensors: SensorData[];
     pondWater: PondWaterQuality;
     collapsed?: boolean;
+    isDemoMode?: boolean;
+    lastUpdateTime?: string;
+    dataSourceMode?: 'local' | 'api';
   }>(),
   {
     collapsed: false,
     selectedGreenhouseId: 'gh_001',
+    isDemoMode: false,
   }
 );
 
@@ -57,6 +61,7 @@ const emit = defineEmits<{
   (e: 'focusPond'): void;
   (e: 'selectGreenhouse', ghId: string): void;
   (e: 'update:collapsed', val: boolean): void;
+  (e: 'toggleDemoJitter', val?: boolean): void;
   (e: 'openStation', ghId: string): void;
   (e: 'openMatrix'): void;
   (e: 'openFeedingModal'): void;
@@ -154,26 +159,39 @@ const selectGreenhouse = (ghId: string) => {
         <div class="flex items-center justify-between gap-1.5 mb-1.5">
           <div class="flex items-center gap-1.5">
             <span class="relative flex h-2 w-2">
-              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-              <span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span>
+              <span :class="['animate-ping absolute inline-flex h-full w-full rounded-full opacity-75', isDemoMode ? 'bg-amber-400' : 'bg-cyan-400']"></span>
+              <span :class="['relative inline-flex rounded-full h-2 w-2', isDemoMode ? 'bg-amber-400' : 'bg-cyan-400']"></span>
             </span>
-            <span class="text-[11px] font-bold text-slate-100 tracking-wide">
+            <span class="text-[11px] font-bold text-slate-100 tracking-wide truncate">
               {{ isOutdoorMode ? '室外微气象基准' : '大棚微生境遥测' }}
             </span>
           </div>
 
-          <span
-            v-if="!isOutdoorMode && currentGh"
-            class="text-[9px] px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono font-semibold"
-          >
-            适生度 96.8%
-          </span>
-          <span
-            v-else
-            class="text-[9px] px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-mono font-semibold"
-          >
-            园区宏观基准
-          </span>
+          <div class="flex items-center gap-1">
+            <!-- Explicit Demo Switch & Simulation Badge -->
+            <button
+              id="btn-left-demo-badge"
+              @click="emit('toggleDemoJitter')"
+              :class="[
+                'text-[9px] px-1.5 py-0.5 rounded-md border font-mono font-semibold flex items-center gap-1 transition-all cursor-pointer',
+                isDemoMode
+                  ? 'bg-amber-500/25 text-amber-300 border-amber-500/50 shadow-[0_0_8px_rgba(245,158,11,0.25)] hover:bg-amber-500/35'
+                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/30'
+              ]"
+              :title="isDemoMode ? '【模拟数据·微抖动中】点击关闭模拟，回源后端定时轮询实测值' : '【实测数据·3s定时轮询】(上次回源: ' + (lastUpdateTime || '实时') + ') 点击开启动态模拟微抖动'"
+            >
+              <span v-if="isDemoMode" class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
+              <span v-else class="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_5px_#34d399]"></span>
+              <span>{{ isDemoMode ? '模拟数据' : '实测轮询' }}</span>
+            </button>
+
+            <span
+              v-if="!isOutdoorMode && currentGh"
+              class="text-[9px] px-1 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono font-semibold hidden sm:inline"
+            >
+              96.8%
+            </span>
+          </div>
         </div>
 
         <!-- Target Greenhouse / Outdoor Switcher Dropdown Button -->

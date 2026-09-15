@@ -11,6 +11,8 @@ import type {
   CropZone,
   EnvironmentSnapshot,
   PondWaterQuality,
+  GreenhouseMicroclimate,
+  OutdoorWeatherSnapshot,
 } from '../types/digitalTwin';
 import { localAdapter } from './localAdapter';
 
@@ -197,6 +199,22 @@ export class ApiAdapter implements IDataAdapter {
       return true;
     } catch {
       return localAdapter.executeDeviceLinkage(actions);
+    }
+  }
+
+  async getGreenhousesMicroclimates(): Promise<GreenhouseMicroclimate[]> {
+    try {
+      return await this.request<GreenhouseMicroclimate[]>('/greenhouse/microclimates');
+    } catch {
+      return localAdapter.getGreenhousesMicroclimates();
+    }
+  }
+
+  async getOutdoorWeather(): Promise<OutdoorWeatherSnapshot> {
+    try {
+      return await this.request<OutdoorWeatherSnapshot>('/weather/outdoor');
+    } catch {
+      return localAdapter.getOutdoorWeather();
     }
   }
 }

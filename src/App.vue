@@ -231,21 +231,59 @@ const activeEnvField = ref<EnvironmentFieldType>('none');
 const envSliceHeight = ref<number>(2.2);
 const envFieldOpacity = ref<number>(0.75);
 
-// Load data via unified DataService
+// Data Polling & Demo Simulation Jitter Management
+const isDemoJitterActive = ref<boolean>(false);
+const lastDataRefreshTime = ref<string>('');
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+// Load data via unified DataService (Directly adopting backend/file return values)
 const loadDataFromService = async () => {
   try {
-    const [envData, sensorsData, actuatorsData, cropsData, pondData, agvData, alarmsData, risksData] =
-      await Promise.all([
-        dataService.getEnvironmentSnapshot(),
-        dataService.getSensorData(),
-        dataService.getDeviceStatus(),
-        dataService.getCropStatus(),
-        dataService.getPondWaterQuality(),
-        dataService.getTrajectory(),
-        dataService.getUnifiedAlarms(),
-        weatherService.getRiskWarnings(),
-      ]);
-    if (envData) environment.value = envData;
+    const [
+      envData,
+      sensorsData,
+      actuatorsData,
+      cropsData,
+      pondData,
+      agvData,
+      alarmsData,
+      risksData,
+      microclimatesData,
+      outdoorData,
+    ] = await Promise.all([
+      dataService.getEnvironmentSnapshot(),
+      dataService.getSensorData(),
+      dataService.getDeviceStatus(),
+      dataService.getCropStatus(),
+      dataService.getPondWaterQuality(),
+      dataService.getTrajectory(),
+      dataService.getUnifiedAlarms(),
+      weatherService.getRiskWarnings(),
+      dataService.getGreenhousesMicroclimates(),
+      dataService.getOutdoorWeather(),
+    ]);
+
+    if (microclimatesData && microclimatesData.length > 0) {
+      greenhousesMicroclimates.value = microclimatesData;
+    }
+    if (outdoorData) {
+      outdoorWeather.value = outdoorData;
+    }
+
+    if (envData) {
+      environment.value = envData;
+      // Synchronize 1# greenhouse microclimate with environment snapshot
+      const gh1Index = greenhousesMicroclimates.value.findIndex((g) => g.id === 'gh_001');
+      if (gh1Index !== -1) {
+        greenhousesMicroclimates.value[gh1Index] = {
+          ...greenhousesMicroclimates.value[gh1Index],
+          airTemp: envData.airTemp,
+          airHumidity: envData.airHumidity,
+          co2: envData.co2,
+          lightLux: envData.lightLux,
+        };
+      }
+    }
     if (sensorsData) sensors.value = sensorsData;
     if (actuatorsData) actuators.value = actuatorsData;
     if (cropsData) crops.value = cropsData;
@@ -261,8 +299,16 @@ const loadDataFromService = async () => {
         battery: agvData.battery,
         speed: agvData.speed,
         currentTask: agvData.currentTask,
+        status: agvData.status || agv.value.status,
       };
     }
+    const now = new Date();
+    lastDataRefreshTime.value = now.toLocaleTimeString('zh-CN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
   } catch (err) {
     console.warn('[DataService] Error loading data:', err);
   }
@@ -273,6 +319,15 @@ const handleToggleDataSource = async () => {
   dataService.setMode(nextMode);
   dataSourceMode.value = nextMode;
   await loadDataFromService();
+};
+
+const handleToggleDemoJitter = async (enabled?: boolean) => {
+  const next = enabled !== undefined ? enabled : !isDemoJitterActive.value;
+  isDemoJitterActive.value = next;
+  if (!next) {
+    // When switching off demo mode, immediately re-pull true backend/file values to reset random walk
+    await loadDataFromService();
+  }
 };
 
 // View & UI Controls
@@ -316,6 +371,13 @@ let telemetryTimer: ReturnType<typeof setInterval> | null = null;
 // 1. Initialize Three.js Scene
 onMounted(() => {
   loadDataFromService();
+
+  // Periodic DataService polling loop (every 3000ms: faithfully adopts dataService return values without random walk)
+  pollTimer = setInterval(async () => {
+    if (!isDemoJitterActive.value) {
+      await loadDataFromService();
+    }
+  }, 3000);
 
   if (canvasContainerRef.value) {
     sceneInstance = new GreenhouseScene(canvasContainerRef.value, {
@@ -400,8 +462,10 @@ onMounted(() => {
   updateTime();
   clockTimer = setInterval(updateTime, 1000);
 
-  // 3. Simulated IoT Real-time Micro-telemetry Fluctuation Loop
+  // 3. Simulated IoT Real-time Micro-telemetry Fluctuation Loop (Only executes if user explicitly enabled demo mode)
   telemetryTimer = setInterval(() => {
+    if (!isDemoJitterActive.value) return;
+
     // Environment micro-fluctuations
     const prevEnv = environment.value;
     const dTemp = (Math.random() - 0.48) * 0.15;
@@ -488,6 +552,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   if (clockTimer) clearInterval(clockTimer);
+  if (pollTimer) clearInterval(pollTimer);
   if (telemetryTimer) clearInterval(telemetryTimer);
   if (sceneInstance) {
     sceneInstance.dispose();
@@ -565,6 +630,14 @@ const presetToGhMap: Record<string, string> = {
   gh7: 'gh_007',
   gh8: 'gh_008',
   flux_tower: 'outdoor',
+  park_panorama: 'all',
+  pond: 'pond',
+  pump_room: 'pump_room',
+  drone_dock: 'drone_dock',
+  coldchain: 'coldchain',
+  fertigation_tanks: 'fertigation_tanks',
+  smart_field: 'smart_field',
+  gate: 'gate',
 };
 
 const ghToPresetMap: Record<string, CameraPreset> = {
@@ -577,6 +650,9 @@ const ghToPresetMap: Record<string, CameraPreset> = {
   gh_007: 'gh7',
   gh_008: 'gh8',
   outdoor: 'flux_tower',
+  pond: 'pond',
+  coldchain: 'coldchain',
+  gate: 'gate',
 };
 
 const handlePresetChange = (preset: CameraPreset) => {
@@ -686,13 +762,18 @@ const handleStationSelectGreenhouse = (ghId: string) => {
   }
 };
 
-const handleStationActuatorToggle = (ghId: string, actuatorId: string, status: boolean) => {
+const handleStationActuatorToggle = async (ghId: string, actuatorId: string, status: boolean) => {
   const gh = greenhousesMicroclimates.value.find((g) => g.id === ghId);
   if (gh && gh.actuators) {
     const act = gh.actuators.find((a) => a.id === actuatorId);
     if (act) {
       act.status = status;
-      if (ghId === 'gh_001') {
+      await dataService.updateDeviceStatus(actuatorId, status, act.value);
+
+      const matchingTwin = actuators.value.find((a) => a.id === actuatorId);
+      if (matchingTwin) {
+        handleToggleActuator(actuatorId, status);
+      } else if (ghId === 'gh_001') {
         if (act.type === 'shading') {
           handleToggleActuator('shade_curtain_001', status);
         } else if (act.type === 'vent') {
@@ -703,13 +784,18 @@ const handleStationActuatorToggle = (ghId: string, actuatorId: string, status: b
   }
 };
 
-const handleStationActuatorValue = (ghId: string, actuatorId: string, value: number) => {
+const handleStationActuatorValue = async (ghId: string, actuatorId: string, value: number) => {
   const gh = greenhousesMicroclimates.value.find((g) => g.id === ghId);
   if (gh && gh.actuators) {
     const act = gh.actuators.find((a) => a.id === actuatorId);
     if (act) {
       act.value = value;
-      if (ghId === 'gh_001') {
+      await dataService.updateDeviceStatus(actuatorId, act.status, value);
+
+      const matchingTwin = actuators.value.find((a) => a.id === actuatorId);
+      if (matchingTwin) {
+        handleUpdateActuatorValue(actuatorId, value);
+      } else if (ghId === 'gh_001') {
         if (act.type === 'shading') {
           handleUpdateActuatorValue('shade_curtain_001', value);
         } else if (act.type === 'vent') {
@@ -860,12 +946,33 @@ const handleMitigateRisk = async (warningOrId: any) => {
   );
   sceneInstance?.setRiskWarnings(riskWarnings.value);
 
-  // Intelligent protective linkage action:
-  // If storm/rain, close roof vents & retract shade curtains
-  handleToggleActuator('vent_roof_001', true);
-  handleUpdateActuatorValue('vent_roof_001', 0); // close vent
-  handleToggleActuator('shade_curtain_001', true);
-  handleUpdateActuatorValue('shade_curtain_001', 0); // retract curtain
+  // Mark associated unified alarms as acknowledged
+  alarms.value = alarms.value.map((a) =>
+    a.sourceId === warningId || a.id === `alarm_${warningId}`
+      ? { ...a, status: 'acknowledged' as const }
+      : a
+  );
+
+  const targetRisk = riskWarnings.value.find((r) => r.id === warningId);
+  if (targetRisk && targetRisk.linkageActions && targetRisk.linkageActions.length > 0) {
+    await dataService.executeDeviceLinkage(targetRisk.linkageActions);
+    for (const act of targetRisk.linkageActions) {
+      handleToggleActuator(act.targetDeviceId, act.targetPower);
+      if (act.targetValue !== undefined) {
+        handleUpdateActuatorValue(act.targetDeviceId, act.targetValue);
+      }
+    }
+  } else {
+    // Intelligent protective linkage fallback: close roof vents & retract shade curtains
+    handleToggleActuator('vent_roof_001', true);
+    handleUpdateActuatorValue('vent_roof_001', 0);
+    handleToggleActuator('shade_curtain_001', true);
+    handleUpdateActuatorValue('shade_curtain_001', 0);
+  }
+};
+
+const handleResetRealtimeLighting = () => {
+  sceneInstance?.resetToLiveLighting();
 };
 
 const handleUpdateEnvField = (type: EnvironmentFieldType) => {
@@ -935,6 +1042,8 @@ const handleTimeChange = (hourFraction: number) => {
       :time-string="timeString"
       :show-spatial-tags="showSpatialTags"
       :data-source-mode="dataSourceMode"
+      :is-demo-mode="isDemoJitterActive"
+      :last-update-time="lastDataRefreshTime"
       :show-weather-panel="showWeatherPanel"
       :show-field-controller="showFieldController"
       :show-alert-center="showAlertCenter"
@@ -948,6 +1057,7 @@ const handleTimeChange = (hourFraction: number) => {
       @reset-camera="handleResetCamera"
       @toggle-spatial-tags="showSpatialTags = !showSpatialTags"
       @toggle-data-source="handleToggleDataSource"
+      @toggle-demo-jitter="handleToggleDemoJitter"
       @toggle-weather-panel="showWeatherPanel = !showWeatherPanel; if (showWeatherPanel) showAlertCenter = false;"
       @toggle-field-controller="showFieldController = !showFieldController"
       @toggle-alert-center="showAlertCenter = !showAlertCenter; if (showAlertCenter) showWeatherPanel = false;"
@@ -972,10 +1082,14 @@ const handleTimeChange = (hourFraction: number) => {
       :outdoor-weather="outdoorWeather"
       :sensors="sensors"
       :pond-water="pondWater"
+      :is-demo-mode="isDemoJitterActive"
+      :last-update-time="lastDataRefreshTime"
+      :data-source-mode="dataSourceMode"
       v-model:collapsed="leftPanelCollapsed"
       @select-greenhouse="handleSelectGreenhouse"
       @select-sensor="handleSelectSensor"
       @focus-pond="handlePresetChange('pond')"
+      @toggle-demo-jitter="handleToggleDemoJitter"
       @open-station="openGreenhouseStation"
       @open-matrix="openGreenhouseMatrix"
       @open-feeding-modal="showFeedingModal = true"
@@ -1047,6 +1161,7 @@ const handleTimeChange = (hourFraction: number) => {
       :visible="showHistoryBar"
       @close="showHistoryBar = false"
       @time-change="handleTimeChange"
+      @reset-realtime="handleResetRealtimeLighting"
     />
 
     <!-- Interactive Detail Modal upon Click -->

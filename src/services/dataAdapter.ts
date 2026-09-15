@@ -9,6 +9,8 @@ import type {
   AgroRiskWarning,
   UnifiedAlarm,
   DeviceLinkageAction,
+  GreenhouseMicroclimate,
+  OutdoorWeatherSnapshot,
 } from '../types/digitalTwin';
 
 export interface GreenhouseInfo {
@@ -70,6 +72,8 @@ export interface IDataAdapter {
   getTrajectory(): Promise<AGVTrajectoryData>;
   getPondWaterQuality(): Promise<PondWaterQuality>;
   updateDeviceStatus(deviceId: string, power: boolean, value?: number): Promise<boolean>;
+  getGreenhousesMicroclimates(): Promise<GreenhouseMicroclimate[]>;
+  getOutdoorWeather(): Promise<OutdoorWeatherSnapshot>;
 
   // Weather & Agro-Risk APIs
   getWeatherNowcast(): Promise<WeatherNowcastData>;

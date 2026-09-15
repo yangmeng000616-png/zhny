@@ -43,6 +43,8 @@ const props = defineProps<{
   showSensors?: boolean;
   totalAlertCount?: number;
   zenMode?: boolean;
+  isDemoMode?: boolean;
+  lastUpdateTime?: string;
 }>();
 
 const emit = defineEmits<{
@@ -52,6 +54,7 @@ const emit = defineEmits<{
   (e: 'resetCamera'): void;
   (e: 'toggleSpatialTags'): void;
   (e: 'toggleDataSource'): void;
+  (e: 'toggleDemoJitter', val?: boolean): void;
   (e: 'toggleWeatherPanel'): void;
   (e: 'toggleFieldController'): void;
   (e: 'toggleAlertCenter'): void;
@@ -135,15 +138,40 @@ const selectPreset = (preset: CameraPreset) => {
       <div>
         <div class="flex items-center gap-1.5">
           <h1 class="text-xs sm:text-sm font-bold text-slate-100 tracking-wide truncate">
-            智慧农业示范园数字孪生
+            智慧农业大屏
           </h1>
           <span class="inline-flex items-center gap-1 px-1.5 py-0.2 text-[9px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 rounded-md">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_#34d399]"></span>
             在线
           </span>
         </div>
-        <div class="flex items-center gap-2 text-[10px] text-slate-400 font-mono mt-0.5">
+        <div class="flex items-center gap-1.5 text-[10px] text-slate-400 font-mono mt-0.5">
           <span class="text-slate-300 font-mono">{{ timeString }}</span>
+          <span class="text-slate-600">|</span>
+          <!-- Data Source Mode Toggle -->
+          <button
+            id="btn-top-datasource-toggle"
+            @click="$emit('toggleDataSource')"
+            class="px-1.5 py-0.2 rounded bg-slate-900/90 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 font-sans text-[9px] cursor-pointer transition-colors"
+            :title="'数据接入模式: ' + (dataSourceMode === 'api' ? '远程后端API接口' : '本地数据文件') + ' (点击切换)'"
+          >
+            {{ dataSourceMode === 'api' ? 'API接口' : '本地文件' }}
+          </button>
+          <!-- Demo Fluctuation Switch with Explicit Simulation Badge -->
+          <button
+            id="btn-top-demo-jitter-toggle"
+            @click="$emit('toggleDemoJitter')"
+            :class="[
+              'px-1.5 py-0.2 rounded border font-sans text-[9px] cursor-pointer transition-all flex items-center gap-1',
+              isDemoMode
+                ? 'bg-amber-500/25 text-amber-300 border-amber-500/50 font-bold shadow-[0_0_8px_rgba(245,158,11,0.3)]'
+                : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25'
+            ]"
+            :title="isDemoMode ? '【演示模式】已开启前端模拟微抖动，点击关闭并立即回源后端实测数据' : '【实测模式】定时轮询 dataService 保真中 (上次同步: ' + (lastUpdateTime || '已就绪') + ')，点击可开启动态模拟微抖动'"
+          >
+            <span :class="['w-1.5 h-1.5 rounded-full', isDemoMode ? 'bg-amber-400 animate-ping' : 'bg-emerald-400 shadow-[0_0_5px_#34d399]']"></span>
+            <span>{{ isDemoMode ? '模拟数据' : '实测轮询' }}</span>
+          </button>
         </div>
       </div>
 

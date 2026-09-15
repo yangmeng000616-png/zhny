@@ -21,6 +21,8 @@ export const initialOutdoorWeather: OutdoorWeatherSnapshot = {
   airQualityAqi: 28,
 };
 
+export const outdoorWeather = initialOutdoorWeather;
+
 export const initialGreenhousesMicroclimates: GreenhouseMicroclimate[] = [
   {
     id: 'gh_001',
@@ -360,6 +362,8 @@ export const initialGreenhousesMicroclimates: GreenhouseMicroclimate[] = [
     ],
   },
 ];
+
+export const greenhousesMicroclimates = initialGreenhousesMicroclimates;
 
 export const initialEnvironment: EnvironmentSnapshot = {
   airTemp: 28.6,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onBeforeUnmount, computed } from 'vue';
+import { ref, onBeforeUnmount, computed, watch } from 'vue';
 import {
   Play,
   Pause,
@@ -21,12 +21,33 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'close'): void;
   (e: 'timeChange', hourFraction: number): void;
+  (e: 'resetRealtime'): void;
 }>();
 
 const isPlaying = ref<boolean>(false);
 const playbackSpeed = ref<number>(2); // 1x, 2x, 5x, 10x
 const currentHourFraction = ref<number>(9.5); // Default to 09:30 AM
 let playInterval: ReturnType<typeof setInterval> | null = null;
+
+const stopPlayback = () => {
+  if (playInterval) {
+    clearInterval(playInterval);
+    playInterval = null;
+  }
+  isPlaying.value = false;
+};
+
+const handleClose = () => {
+  stopPlayback();
+  emit('resetRealtime');
+  emit('close');
+};
+
+watch(() => props.visible, (val) => {
+  if (!val) {
+    stopPlayback();
+  }
+});
 
 const formattedTime = computed(() => {
   const totalMinutes = Math.floor(currentHourFraction.value * 60);
@@ -155,7 +176,7 @@ onBeforeUnmount(() => {
         </div>
 
         <button
-          @click="$emit('close')"
+          @click="handleClose"
           class="text-slate-400 hover:text-white transition-colors p-1"
         >
           <X class="w-4 h-4" />

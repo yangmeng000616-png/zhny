@@ -13,22 +13,41 @@ import type {
   CropZone,
   EnvironmentSnapshot,
   PondWaterQuality,
+  GreenhouseMicroclimate,
+  OutdoorWeatherSnapshot,
 } from '../types/digitalTwin';
 
 class DataService {
   private adapter: IDataAdapter;
 
   constructor() {
+    const savedMode = (typeof localStorage !== 'undefined' && localStorage.getItem('smart_agri_data_mode')) as 'local' | 'api' | null;
+    if (savedMode === 'api' || savedMode === 'local') {
+      dataConfig.mode = savedMode;
+    }
     this.adapter = dataConfig.mode === 'api' ? apiAdapter : localAdapter;
   }
 
   setMode(mode: 'local' | 'api'): void {
     dataConfig.mode = mode;
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('smart_agri_data_mode', mode);
+      } catch {}
+    }
     this.adapter = mode === 'api' ? apiAdapter : localAdapter;
   }
 
   getMode(): 'local' | 'api' {
     return dataConfig.mode;
+  }
+
+  async getGreenhousesMicroclimates(): Promise<GreenhouseMicroclimate[]> {
+    return this.adapter.getGreenhousesMicroclimates();
+  }
+
+  async getOutdoorWeather(): Promise<OutdoorWeatherSnapshot> {
+    return this.adapter.getOutdoorWeather();
   }
 
   async getGreenhouseInfo(): Promise<GreenhouseInfo> {
