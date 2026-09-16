@@ -35,6 +35,9 @@ import {
   CloudRain,
   ShieldCheck,
   Sparkles,
+  Cloud,
+  CloudLightning,
+  Umbrella,
 } from 'lucide-vue-next';
 import LiveSurveillanceCard from './LiveSurveillanceCard.vue';
 
@@ -277,6 +280,125 @@ const handleAddTodo = () => {
   newTodoText.value = '';
   showAddTodoInput.value = false;
 };
+
+// -------------------------------------------------------------
+// 3. WEATHER FORECAST & AGRO-METEOROLOGY (园区天气预报与农事气象)
+// -------------------------------------------------------------
+export interface HourlyWeatherItem {
+  time: string;
+  condition: string;
+  temp: number;
+  rainProb: number;
+  iconType: 'sun' | 'cloud-sun' | 'cloud' | 'rain' | 'rain-heavy';
+}
+
+export interface DailyWeatherItem {
+  date: string;
+  dayLabel: string;
+  condition: string;
+  tempMin: number;
+  tempMax: number;
+  wind: string;
+  rainProb: number;
+  iconType: 'sun' | 'cloud-sun' | 'cloud' | 'rain';
+  agriHint: string;
+  level: 'good' | 'prime' | 'caution';
+}
+
+const weatherViewTab = ref<'hourly' | 'daily' | 'agri'>('hourly');
+
+const hourlyForecast = ref<HourlyWeatherItem[]>([
+  { time: '现在', condition: '多云', temp: 24, rainProb: 0, iconType: 'cloud-sun' },
+  { time: '19:00', condition: '阴天', temp: 23, rainProb: 15, iconType: 'cloud' },
+  { time: '21:00', condition: '小雨', temp: 21, rainProb: 65, iconType: 'rain' },
+  { time: '23:00', condition: '中雨', temp: 19, rainProb: 85, iconType: 'rain-heavy' },
+  { time: '02:00', condition: '阵雨', temp: 18, rainProb: 40, iconType: 'rain' },
+  { time: '06:00', condition: '转晴', temp: 19, rainProb: 10, iconType: 'cloud-sun' },
+  { time: '10:00', condition: '晴朗', temp: 25, rainProb: 0, iconType: 'sun' },
+  { time: '14:00', condition: '多云', temp: 28, rainProb: 5, iconType: 'cloud-sun' },
+]);
+
+const dailyForecast = ref<DailyWeatherItem[]>([
+  {
+    date: '09-15',
+    dayLabel: '今天',
+    condition: '多云转小雨',
+    tempMin: 19,
+    tempMax: 28,
+    wind: '东南风 3-4级',
+    rainProb: 65,
+    iconType: 'rain',
+    agriHint: '夜间短临降水，注意闭天窗防淋花',
+    level: 'caution',
+  },
+  {
+    date: '09-16',
+    dayLabel: '明天',
+    condition: '雨后晴朗',
+    tempMin: 18,
+    tempMax: 28,
+    wind: '偏南风 2级',
+    rainProb: 0,
+    iconType: 'sun',
+    agriHint: '高光合黄金日，极佳喷药与采收期',
+    level: 'prime',
+  },
+  {
+    date: '09-17',
+    dayLabel: '后天',
+    condition: '多云间晴',
+    tempMin: 20,
+    tempMax: 27,
+    wind: '西南风 2级',
+    rainProb: 10,
+    iconType: 'cloud-sun',
+    agriHint: '温和微风，适宜水肥一体化补充',
+    level: 'good',
+  },
+  {
+    date: '09-18',
+    dayLabel: '周五',
+    condition: '晴朗微风',
+    tempMin: 21,
+    tempMax: 29,
+    wind: '东南风 1-2级',
+    rainProb: 0,
+    iconType: 'sun',
+    agriHint: '光照充足，温室蓄热蓄能良好',
+    level: 'prime',
+  },
+]);
+
+const agroIndices = ref([
+  {
+    id: 'spray',
+    name: '植保喷药指数',
+    status: '适宜',
+    statusLevel: 'prime',
+    desc: '明日早间无风无雨，叶面无水膜，药效附着最佳',
+  },
+  {
+    id: 'irrigation',
+    name: '水肥灌溉指数',
+    status: '暂缓',
+    statusLevel: 'caution',
+    desc: '夜间降水补充有效雨量12mm，暂停大田漫灌防渍根',
+  },
+  {
+    id: 'ventilation',
+    name: '通风排湿指数',
+    status: '推荐',
+    statusLevel: 'prime',
+    desc: '午后温湿度适宜，建议开启顶窗环流排湿',
+  },
+  {
+    id: 'machinery',
+    name: '农机作业指数',
+    status: '优良',
+    statusLevel: 'good',
+    desc: '地面承压强度高，适宜物流车与无人机自主作业',
+  },
+]);
 </script>
 
 <template>
@@ -613,17 +735,233 @@ const handleAddTodo = () => {
               </div>
             </div>
 
-            <!-- Quick Outdoor Glance Strip -->
-            <div class="p-2.5 rounded-xl bg-slate-900/40 border border-white/5 flex items-center justify-between text-xs">
-              <div class="flex items-center gap-2 text-slate-300">
-                <CloudSun class="w-4 h-4 text-cyan-400" />
-                <span>园区宏观气象</span>
+            <!-- ========================================================= -->
+            <!-- 园区天气预报与农事气象模块 (Weather Forecast & Agro-Advisory) -->
+            <!-- ========================================================= -->
+            <div class="mt-2 space-y-2 rounded-2xl bg-slate-900/60 border border-white/10 p-3 shadow-md">
+              <!-- Forecast Header with 3 Sub-tabs -->
+              <div class="flex items-center justify-between pb-2 border-b border-white/10">
+                <div class="flex items-center gap-2 min-w-0">
+                  <div class="p-1.5 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shrink-0">
+                    <CloudSun class="w-4 h-4 text-cyan-400" />
+                  </div>
+                  <div class="min-w-0">
+                    <div class="font-bold text-slate-100 text-xs flex items-center gap-1.5">
+                      <span>园区宏观气象预报</span>
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    </div>
+                    <div class="text-[10px] text-slate-400 font-mono truncate">
+                      室外基准 {{ outdoorWeather?.temperature ?? 23.8 }}℃ · {{ outdoorWeather?.windDirection ?? '东南风' }} {{ outdoorWeather?.windSpeed ?? 3.2 }}m/s
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Sub-tab pills -->
+                <div class="flex items-center gap-0.5 bg-slate-950/80 p-0.5 rounded-lg border border-white/10 text-[10px] shrink-0">
+                  <button
+                    @click="weatherViewTab = 'hourly'"
+                    :class="[
+                      'px-2 py-0.5 rounded-md font-medium transition-colors cursor-pointer',
+                      weatherViewTab === 'hourly'
+                        ? 'bg-cyan-500/25 text-cyan-200 font-bold border border-cyan-500/40'
+                        : 'text-slate-400 hover:text-slate-200'
+                    ]"
+                  >
+                    逐时
+                  </button>
+                  <button
+                    @click="weatherViewTab = 'daily'"
+                    :class="[
+                      'px-2 py-0.5 rounded-md font-medium transition-colors cursor-pointer',
+                      weatherViewTab === 'daily'
+                        ? 'bg-cyan-500/25 text-cyan-200 font-bold border border-cyan-500/40'
+                        : 'text-slate-400 hover:text-slate-200'
+                    ]"
+                  >
+                    3日
+                  </button>
+                  <button
+                    @click="weatherViewTab = 'agri'"
+                    :class="[
+                      'px-2 py-0.5 rounded-md font-medium transition-colors cursor-pointer',
+                      weatherViewTab === 'agri'
+                        ? 'bg-emerald-500/25 text-emerald-200 font-bold border border-emerald-500/40'
+                        : 'text-slate-400 hover:text-slate-200'
+                    ]"
+                  >
+                    农事
+                  </button>
+                </div>
               </div>
-              <div class="flex items-center gap-2 font-mono text-[11px] text-slate-400">
-                <span>{{ outdoorWeather?.temperature ?? 23.8 }}℃</span>
-                <span>·</span>
-                <span>{{ outdoorWeather?.windDirection ?? '东南风' }} {{ outdoorWeather?.windSpeed ?? 3.2 }}m/s</span>
+
+              <!-- Current Weather Glance Row -->
+              <div class="grid grid-cols-4 gap-1.5 text-center py-0.5">
+                <div class="p-1.5 rounded-xl bg-slate-950/50 border border-white/5">
+                  <div class="text-[9px] text-slate-400">相对湿度</div>
+                  <div class="text-xs font-mono font-bold text-sky-300 mt-0.5">
+                    {{ outdoorWeather?.humidity ?? 54.2 }}%
+                  </div>
+                </div>
+                <div class="p-1.5 rounded-xl bg-slate-950/50 border border-white/5">
+                  <div class="text-[9px] text-slate-400">风力等级</div>
+                  <div class="text-xs font-mono font-bold text-cyan-300 mt-0.5">
+                    2级微风
+                  </div>
+                </div>
+                <div class="p-1.5 rounded-xl bg-slate-950/50 border border-white/5">
+                  <div class="text-[9px] text-slate-400">光合辐射</div>
+                  <div class="text-xs font-mono font-bold text-amber-300 mt-0.5">
+                    820<span class="text-[8px] font-normal text-slate-400">W/㎡</span>
+                  </div>
+                </div>
+                <div class="p-1.5 rounded-xl bg-slate-950/50 border border-white/5">
+                  <div class="text-[9px] text-slate-400">空气质量</div>
+                  <div class="text-xs font-mono font-bold text-emerald-300 mt-0.5">
+                    28 优
+                  </div>
+                </div>
               </div>
+
+              <!-- 1. HOURLY FORECAST (24 Hours Horizontal Scroll) -->
+              <div v-if="weatherViewTab === 'hourly'" class="space-y-2 pt-1">
+                <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                  <span>未来24小时气温走势</span>
+                  <span class="text-sky-300 flex items-center gap-1 font-medium">
+                    <CloudRain class="w-3 h-3 text-sky-400" />
+                    <span>夜间降水概率 85%</span>
+                  </span>
+                </div>
+
+                <!-- Hourly Cards Carousel/Grid -->
+                <div class="flex items-center gap-1.5 overflow-x-auto pb-1.5 pt-0.5 no-scrollbar scroll-smooth">
+                  <div
+                    v-for="(hour, idx) in hourlyForecast"
+                    :key="idx"
+                    class="flex flex-col items-center justify-between p-2 rounded-xl bg-slate-950/70 border border-white/10 shrink-0 w-16 text-center hover:border-cyan-400/40 transition-colors"
+                  >
+                    <span class="text-[10px] text-slate-400 font-mono">{{ hour.time }}</span>
+                    
+                    <div class="my-1.5">
+                      <Sun v-if="hour.iconType === 'sun'" class="w-5 h-5 text-amber-400" />
+                      <CloudSun v-else-if="hour.iconType === 'cloud-sun'" class="w-5 h-5 text-amber-300" />
+                      <Cloud v-else-if="hour.iconType === 'cloud'" class="w-5 h-5 text-slate-400" />
+                      <CloudRain v-else-if="hour.iconType === 'rain'" class="w-5 h-5 text-sky-400 animate-pulse" />
+                      <CloudLightning v-else class="w-5 h-5 text-rose-400 animate-pulse" />
+                    </div>
+
+                    <span class="text-xs font-bold font-mono text-slate-100">{{ hour.temp }}℃</span>
+
+                    <span
+                      :class="[
+                        'text-[9px] font-mono px-1 rounded-full mt-1 font-medium',
+                        hour.rainProb > 50
+                          ? 'bg-sky-500/25 text-sky-300 border border-sky-500/30'
+                          : 'text-slate-500'
+                      ]"
+                    >
+                      {{ hour.rainProb > 0 ? `${hour.rainProb}%` : '无雨' }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Short weather notice -->
+                <div class="px-2.5 py-1.5 rounded-xl bg-sky-950/30 border border-sky-500/25 flex items-center gap-2 text-[10px] text-sky-200">
+                  <Umbrella class="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                  <span class="truncate">预警提醒：今晚21:00起迎阵雨降水，系统已联动自动闭锁顶窗</span>
+                </div>
+              </div>
+
+              <!-- 2. DAILY FORECAST (3-4 Days) -->
+              <div v-else-if="weatherViewTab === 'daily'" class="space-y-1.5 pt-1">
+                <div
+                  v-for="(day, idx) in dailyForecast"
+                  :key="idx"
+                  class="p-2 rounded-xl bg-slate-950/60 border border-white/10 hover:border-white/20 transition-all text-xs"
+                >
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="font-bold text-slate-200 font-mono">{{ day.dayLabel }}</span>
+                      <span class="text-[10px] text-slate-400 font-mono">{{ day.date }}</span>
+                      
+                      <div class="flex items-center gap-1 text-[11px] text-slate-300 ml-1">
+                        <Sun v-if="day.iconType === 'sun'" class="w-3.5 h-3.5 text-amber-400" />
+                        <CloudSun v-else-if="day.iconType === 'cloud-sun'" class="w-3.5 h-3.5 text-amber-300" />
+                        <CloudRain v-else-if="day.iconType === 'rain'" class="w-3.5 h-3.5 text-sky-400" />
+                        <span>{{ day.condition }}</span>
+                      </div>
+                    </div>
+
+                    <!-- Temperature range -->
+                    <div class="flex items-center gap-1.5 font-mono text-[11px]">
+                      <span class="text-sky-300">{{ day.tempMin }}℃</span>
+                      <div class="w-10 h-1 bg-slate-800 rounded-full overflow-hidden">
+                        <div class="h-full bg-gradient-to-r from-sky-400 to-amber-400 rounded-full" style="width: 100%"></div>
+                      </div>
+                      <span class="text-amber-300 font-bold">{{ day.tempMax }}℃</span>
+                    </div>
+                  </div>
+
+                  <!-- Agri advice line -->
+                  <div class="mt-1 flex items-center justify-between text-[10px]">
+                    <span class="text-slate-400 truncate flex-1 mr-2 font-sans">
+                      💡 {{ day.agriHint }}
+                    </span>
+                    <span
+                      :class="[
+                        'px-1.5 py-0.2 rounded font-mono text-[9px] shrink-0 font-medium',
+                        day.level === 'prime'
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                          : day.level === 'caution'
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                          : 'bg-slate-800 text-slate-300'
+                      ]"
+                    >
+                      {{ day.level === 'prime' ? '黄金作业日' : day.level === 'caution' ? '防汛警惕' : '适宜作业' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 3. AGRO INDICES -->
+              <div v-else-if="weatherViewTab === 'agri'" class="space-y-1.5 pt-1">
+                <div class="grid grid-cols-2 gap-1.5">
+                  <div
+                    v-for="idx in agroIndices"
+                    :key="idx.id"
+                    class="p-2 rounded-xl bg-slate-950/60 border border-white/10 space-y-1"
+                  >
+                    <div class="flex items-center justify-between text-[11px]">
+                      <span class="font-bold text-slate-200">{{ idx.name }}</span>
+                      <span
+                        :class="[
+                          'px-1.5 py-0.2 rounded font-mono text-[9px] font-semibold',
+                          idx.statusLevel === 'prime'
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                            : idx.statusLevel === 'caution'
+                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                            : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                        ]"
+                      >
+                        {{ idx.status }}
+                      </span>
+                    </div>
+                    <div class="text-[9px] text-slate-400 leading-tight">
+                      {{ idx.desc }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Shortcut Button: Open Radar Nowcast Modal -->
+              <button
+                id="btn-open-radar-weather-modal"
+                @click="$emit('openWeatherModal')"
+                class="w-full py-2 rounded-xl bg-gradient-to-r from-cyan-950/70 via-slate-900 to-sky-950/70 hover:from-cyan-900/80 hover:to-sky-900/80 text-cyan-300 hover:text-white border border-cyan-500/30 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs group"
+              >
+                <CloudRain class="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition-transform" />
+                <span>展开短临气象推演与防灾雷达 (0~120m)</span>
+                <ArrowRight class="w-3 h-3 text-cyan-400 group-hover:translate-x-0.5 transition-transform" />
+              </button>
             </div>
           </template>
 
