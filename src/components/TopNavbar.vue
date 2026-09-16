@@ -20,6 +20,7 @@ import {
   Waves,
   Sprout,
   LayoutGrid,
+  LayoutDashboard,
   FileSpreadsheet,
   Bug,
   Thermometer,
@@ -69,6 +70,7 @@ const emit = defineEmits<{
   (e: 'openLogisticsModal'): void;
   (e: 'openGateModal'): void;
   (e: 'toggleZenMode'): void;
+  (e: 'openAdminPortal', tab?: string): void;
 }>();
 
 const showGhMenu = ref<boolean>(false);
@@ -540,11 +542,25 @@ const selectPreset = (preset: CameraPreset) => {
       <button
         id="btn-top-owner-hub"
         @click="$emit('openOwnerHubModal'); closeAllMenus();"
-        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold transition-all cursor-pointer shadow-sm text-xs shrink-0"
+        class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-slate-200 hover:text-white font-medium transition-all cursor-pointer text-xs shrink-0"
         title="农业企业负责人与园区经营决策中枢（六大命脉台账与综合Master Excel总导出）"
       >
-        <Briefcase class="w-3.5 h-3.5 text-emerald-100" />
-        <span>负责人中枢</span>
+        <Briefcase class="w-3.5 h-3.5 text-emerald-400" />
+        <span class="hidden sm:inline">负责人中枢</span>
+      </button>
+
+      <!-- 2.4 Standalone Primary Entrance: Admin Management Portal (后台管理) -->
+      <button
+        id="btn-top-admin-portal"
+        @click="$emit('openAdminPortal', 'dashboard'); closeAllMenus();"
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold transition-all cursor-pointer shadow-md shadow-emerald-950/40 text-xs shrink-0 ring-1 ring-white/20 group"
+        title="进入园区综合运营与后台管理（预警处置、工单协同、设备调度、作物档案、冷链门禁等）"
+      >
+        <LayoutDashboard class="w-3.5 h-3.5 text-emerald-200 group-hover:rotate-12 transition-transform" />
+        <span>后台管理</span>
+        <span class="px-1 py-0.2 rounded bg-white/20 text-white text-[9px] font-mono font-semibold hidden md:inline">
+          运营中心
+        </span>
       </button>
     </div>
 

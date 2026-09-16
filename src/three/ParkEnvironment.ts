@@ -1,9 +1,22 @@
 import * as THREE from 'three';
 
+export interface KoiFishActor {
+  mesh: THREE.Group;
+  orbitCenter: THREE.Vector3;
+  radiusX: number;
+  radiusZ: number;
+  speed: number;
+  phase: number;
+  tail: THREE.Mesh;
+}
+
 export interface ParkSubsystems {
   waterMesh: THREE.Mesh;
   buoy: THREE.Group;
   beaconLight: THREE.PointLight;
+  fountainParticles?: THREE.Points;
+  fountainMeshList?: THREE.Group[];
+  fishList?: KoiFishActor[];
 }
 
 export interface PerimeterGateSubsystems {
@@ -12,44 +25,181 @@ export interface PerimeterGateSubsystems {
 }
 
 export class ParkEnvironment {
+  // -------------------------------------------------------------
+  // PROCEDURAL TEXTURE GENERATORS (Lawn Grass & Water Caustics)
+  // -------------------------------------------------------------
+  public static createGrassTexture(): THREE.CanvasTexture {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d')!;
+
+    // Rich agricultural springtime grass green base
+    ctx.fillStyle = '#3a7d32';
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Subtle manicured lawn mowing stripes
+    for (let y = 0; y < 512; y += 64) {
+      ctx.fillStyle = y % 128 === 0 ? 'rgba(76, 154, 66, 0.24)' : 'rgba(44, 98, 38, 0.22)';
+      ctx.fillRect(0, y, 512, 64);
+    }
+
+    // Dense organic grass blade grain and fibrous texture
+    for (let i = 0; i < 26000; i++) {
+      const x = Math.random() * 512;
+      const y = Math.random() * 512;
+      const length = 2.5 + Math.random() * 4;
+      const angle = (Math.random() - 0.5) * 0.7;
+      const r = Math.floor(45 + Math.random() * 45);
+      const g = Math.floor(115 + Math.random() * 65);
+      const b = Math.floor(35 + Math.random() * 40);
+      const alpha = 0.35 + Math.random() * 0.45;
+      ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + Math.sin(angle) * length, y - Math.cos(angle) * length);
+      ctx.stroke();
+    }
+
+    // Subtle earthy clover and turf highlights
+    for (let i = 0; i < 50; i++) {
+      const cx = Math.random() * 512;
+      const cy = Math.random() * 512;
+      const rad = 6 + Math.random() * 20;
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
+      grad.addColorStop(0, 'rgba(88, 172, 70, 0.3)');
+      grad.addColorStop(1, 'rgba(50, 110, 42, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(38, 38);
+    return texture;
+  }
+
+  public static createWaterTexture(): THREE.CanvasTexture {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d')!;
+
+    // Aquatic gradient: sky-lit turquoise to deep reservoir blue
+    const grad = ctx.createLinearGradient(0, 0, 512, 512);
+    grad.addColorStop(0, '#0284c7');
+    grad.addColorStop(0.45, '#0891b2');
+    grad.addColorStop(1, '#0e7490');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Refracted caustic light web
+    ctx.strokeStyle = 'rgba(224, 242, 254, 0.42)';
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 160; i++) {
+      const x = Math.random() * 512;
+      const y = Math.random() * 512;
+      const r = 10 + Math.random() * 26;
+      ctx.beginPath();
+      for (let a = 0; a < Math.PI * 2; a += 0.95) {
+        const px = x + Math.cos(a) * r + (Math.random() - 0.5) * 5;
+        const py = y + Math.sin(a) * r + (Math.random() - 0.5) * 5;
+        if (a === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    }
+
+    // Specular sunlight sparkles
+    for (let i = 0; i < 350; i++) {
+      const sx = Math.random() * 512;
+      const sy = Math.random() * 512;
+      const sr = 1 + Math.random() * 2.2;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(6, 6);
+    return texture;
+  }
+
   public static buildRoadNetwork(
     scene: THREE.Scene,
     parkGroup: THREE.Group,
     interactiveObjects: THREE.Object3D[]
   ) {
-    // 1. Campus Extended Ground Surface (270m x 270m)
-    const groundGeo = new THREE.PlaneGeometry(270, 270);
-    const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x111622, // Natural deep dark agricultural campus terrain
-      roughness: 0.88,
-      metalness: 0.05,
+    // -------------------------------------------------------------
+    // 1. CAMPUS LUSH GRASSLAND TERRAIN SYSTEM (280m x 280m)
+    // Seamlessly covers all blank spaces with high-quality green lawn,
+    // with an exact excavation opening cutout for the ecological pond!
+    // Pond Cutout Box: X from 23 to 61 (width 38), Z from 29 to 59 (length 30)
+    // -------------------------------------------------------------
+    const grassTex = this.createGrassTexture();
+    const grassMat = new THREE.MeshStandardMaterial({
+      map: grassTex,
+      color: 0x48963f, // Vibrant fresh agricultural lawn green
+      roughness: 0.82,
+      metalness: 0.02,
     });
-    const ground = new THREE.Mesh(groundGeo, groundMat);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -0.06;
-    ground.receiveShadow = true;
-    parkGroup.add(ground);
 
-    // Subtle agricultural open field plots around the perimeter
-    const plotMat1 = new THREE.MeshStandardMaterial({ color: 0x15221b, roughness: 0.85 });
-    const plotMat2 = new THREE.MeshStandardMaterial({ color: 0x16202c, roughness: 0.85 });
+    // 4 Seamless Grassland Plates surrounding the Pond Cutout
+    // A. West Plate: X: -140 to 23 (width 163, length 280)
+    const plateWestGeo = new THREE.PlaneGeometry(163, 280);
+    const plateWest = new THREE.Mesh(plateWestGeo, grassMat);
+    plateWest.rotation.x = -Math.PI / 2;
+    plateWest.position.set(-58.5, -0.04, 0);
+    plateWest.receiveShadow = true;
+    parkGroup.add(plateWest);
 
-    // Open farm plot A (Far East)
-    const plotA = new THREE.Mesh(new THREE.PlaneGeometry(35, 75), plotMat1);
-    plotA.rotation.x = -Math.PI / 2;
-    plotA.position.set(78, -0.05, -5);
-    parkGroup.add(plotA);
+    // B. East Plate: X: 61 to 140 (width 79, length 280)
+    const plateEastGeo = new THREE.PlaneGeometry(79, 280);
+    const plateEast = new THREE.Mesh(plateEastGeo, grassMat);
+    plateEast.rotation.x = -Math.PI / 2;
+    plateEast.position.set(100.5, -0.04, 0);
+    plateEast.receiveShadow = true;
+    parkGroup.add(plateEast);
 
-    // Open farm plot B (Far West)
-    const plotB = new THREE.Mesh(new THREE.PlaneGeometry(35, 75), plotMat2);
-    plotB.rotation.x = -Math.PI / 2;
-    plotB.position.set(-78, -0.05, -5);
-    parkGroup.add(plotB);
+    // C. North Plate: X: 23 to 61 (width 38, length 169, Z: -140 to 29)
+    const plateNorthGeo = new THREE.PlaneGeometry(38, 169);
+    const plateNorth = new THREE.Mesh(plateNorthGeo, grassMat);
+    plateNorth.rotation.x = -Math.PI / 2;
+    plateNorth.position.set(42, -0.04, -55.5);
+    plateNorth.receiveShadow = true;
+    parkGroup.add(plateNorth);
 
-    // Architectural subtle reference grid (subdued, non-intrusive)
-    const parkGrid = new THREE.GridHelper(270, 54, 0x1e293b, 0x141d2a);
-    parkGrid.position.y = -0.04;
-    parkGroup.add(parkGrid);
+    // D. South Plate: X: 23 to 61 (width 38, length 81, Z: 59 to 140)
+    const plateSouthGeo = new THREE.PlaneGeometry(38, 81);
+    const plateSouth = new THREE.Mesh(plateSouthGeo, grassMat);
+    plateSouth.rotation.x = -Math.PI / 2;
+    plateSouth.position.set(42, -0.04, 99.5);
+    plateSouth.receiveShadow = true;
+    parkGroup.add(plateSouth);
+
+    // -------------------------------------------------------------
+    // 2. AGRICULTURAL OPEN DEMONSTRATION FIELDS & ORCHARD
+    // -------------------------------------------------------------
+    // East Field: High-Standard Organic Vegetable Furrow Ridges (露天起垄蔬菜示范区)
+    this.createVegetableDemoField(parkGroup, 78, -5, 34, 72);
+
+    // West Field: Ecological High-Density Dwarf Fruit Tree Orchard (生态矮化密植果林)
+    this.createFruitTreeOrchard(parkGroup, -78, -5, 34, 72);
+
+    // Central Scenic Lawn & Flowerbed Plaza (中央迎宾生态花坛与绿化景观)
+    this.createCentralScenicPlaza(parkGroup);
+
+    // Avenue Roadside Trees & Perimeter Windbreak Forest
+    this.createCampusForestry(parkGroup);
 
     // -------------------------------------------------------------
     // ROAD SYSTEM (Asphalt, Markings, Curbs, Crosswalks, Service Spurs)
@@ -2026,7 +2176,8 @@ export class ParkEnvironment {
   }
 
   // -------------------------------------------------------------
-  // ECOLOGICAL RIVER/POND & WATER TELEMETRY BUOY STATION
+  // ECOLOGICAL RESERVOIR/POND, FOUNTAINS & WATER TELEMETRY BUOY
+  // (生态蓄水灌溉河塘、增氧喷泉水景、锦鲤群与水质监测浮标)
   // -------------------------------------------------------------
   public static buildPondAndWaterStation(
     scene: THREE.Scene,
@@ -2037,74 +2188,332 @@ export class ParkEnvironment {
     const pondWidth = 38;
     const pondLength = 30;
 
-    // 1. Excavated Sunken Pond Basin & Embankment
-    const basinMat = new THREE.MeshStandardMaterial({
-      color: 0x8295a8,
+    // 1. TRUE EXCAVATED SUNKEN POND BASIN (真实凹陷沉水池底与生态驳岸)
+    // A. Sunken Pond Bed Floor at y = -1.6m (1.6米深蓄水池底)
+    const bedGeo = new THREE.PlaneGeometry(34, 26);
+    const bedMat = new THREE.MeshStandardMaterial({
+      color: 0x0c3b32, // Deep natural aquatic gravel & silt bed
+      roughness: 0.95,
+      metalness: 0.05,
+    });
+    const bedMesh = new THREE.Mesh(bedGeo, bedMat);
+    bedMesh.rotation.x = -Math.PI / 2;
+    bedMesh.position.set(pondCenter.x, -1.6, pondCenter.z);
+    bedMesh.receiveShadow = true;
+    parkGroup.add(bedMesh);
+
+    // B. Sloping Embankments (四面生态护坡驳岸从地面高度缓坡下切到水底)
+    const bankMat = new THREE.MeshStandardMaterial({
+      color: 0x5a6a7c, // River stones & natural riprap embankment
       roughness: 0.9,
     });
 
-    // Sunken bed
-    const bedGeo = new THREE.BoxGeometry(pondWidth, 2.6, pondLength);
-    const bedMesh = new THREE.Mesh(bedGeo, basinMat);
-    bedMesh.position.set(pondCenter.x, -1.35, pondCenter.z);
-    parkGroup.add(bedMesh);
+    // North Slope
+    const northBank = new THREE.Mesh(new THREE.PlaneGeometry(38, 2.7), bankMat);
+    northBank.position.set(pondCenter.x, -0.78, pondCenter.z - 14.0);
+    northBank.rotation.x = Math.atan2(1.68, 2.0); // Sloping down to bed
+    parkGroup.add(northBank);
 
-    // Stone riprap slope border (驳岸乱石与护坡)
+    // South Slope
+    const southBank = new THREE.Mesh(new THREE.PlaneGeometry(38, 2.7), bankMat);
+    southBank.position.set(pondCenter.x, -0.78, pondCenter.z + 14.0);
+    southBank.rotation.x = -Math.atan2(1.68, 2.0);
+    parkGroup.add(southBank);
+
+    // West Slope
+    const westBank = new THREE.Mesh(new THREE.PlaneGeometry(2.7, 30), bankMat);
+    westBank.position.set(pondCenter.x - 18.0, -0.78, pondCenter.z);
+    westBank.rotation.z = -Math.atan2(1.68, 2.0);
+    parkGroup.add(westBank);
+
+    // East Slope
+    const eastBank = new THREE.Mesh(new THREE.PlaneGeometry(2.7, 30), bankMat);
+    eastBank.position.set(pondCenter.x + 18.0, -0.78, pondCenter.z);
+    eastBank.rotation.z = Math.atan2(1.68, 2.0);
+    parkGroup.add(eastBank);
+
+    // Natural landscape boulders and decorative river pebbles along the shoreline
     const stoneMat = new THREE.MeshStandardMaterial({
-      color: 0x94a3b8,
-      roughness: 0.8,
+      color: 0x788898,
+      roughness: 0.85,
     });
-    // Add stone boulders along perimeter
-    for (let angle = 0; angle < Math.PI * 2; angle += 0.2) {
-      const rx = (pondWidth / 2) * Math.cos(angle) + (Math.random() - 0.5) * 1.2;
-      const rz = (pondLength / 2) * Math.sin(angle) + (Math.random() - 0.5) * 1.2;
-      const rock = new THREE.Mesh(
-        new THREE.DodecahedronGeometry(0.7 + Math.random() * 0.5, 0),
-        stoneMat
-      );
-      rock.position.set(pondCenter.x + rx, 0.1, pondCenter.z + rz);
-      rock.rotation.set(Math.random(), Math.random(), Math.random());
+    for (let i = 0; i < 48; i++) {
+      const angle = (i / 48) * Math.PI * 2;
+      const rx = (pondWidth / 2 - 0.5) * Math.cos(angle) + (Math.random() - 0.5) * 1.5;
+      const rz = (pondLength / 2 - 0.5) * Math.sin(angle) + (Math.random() - 0.5) * 1.5;
+      const size = 0.5 + Math.random() * 0.7;
+      const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(size, 0), stoneMat);
+      rock.position.set(pondCenter.x + rx, 0.05 + Math.random() * 0.1, pondCenter.z + rz);
+      rock.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+      rock.castShadow = true;
+      rock.receiveShadow = true;
       parkGroup.add(rock);
     }
 
-    // 2. Realistic Natural Reservoir Water Surface (MeshPhysicalMaterial)
-    const waterGeo = new THREE.PlaneGeometry(pondWidth - 1.2, pondLength - 1.2, 40, 32);
+    // 2. VIBRANT, CRYSTAL CLEAR WATER SURFACE (MeshPhysicalMaterial + Caustics)
+    // At y = -0.12m (Sunken 12cm below ground, 1.48m of crystal clear visible water depth)
+    const waterTex = this.createWaterTexture();
+    const waterGeo = new THREE.PlaneGeometry(pondWidth - 0.6, pondLength - 0.6, 64, 48);
     const waterMat = new THREE.MeshPhysicalMaterial({
-      color: 0x0f4c5c, // Deep natural reservoir water
-      roughness: 0.08,
-      metalness: 0.05,
-      transmission: 0.82,
+      map: waterTex,
+      color: 0x0284c7, // Radiant sky-lit turquoise & cerulean aquatic blue
+      roughness: 0.03, // Glassy specular reflections
+      metalness: 0.16,
+      transmission: 0.68, // Translucent clear water reveals fish and depths
       transparent: true,
-      opacity: 0.85,
-      ior: 1.333,
-      reflectivity: 0.85,
-      depthWrite: false,
+      opacity: 0.90,
+      ior: 1.333, // Real physical water refractive index
+      reflectivity: 0.95,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.05,
+      depthWrite: true,
     });
     const waterMesh = new THREE.Mesh(waterGeo, waterMat);
     waterMesh.rotation.x = -Math.PI / 2;
-    waterMesh.position.set(pondCenter.x, -0.22, pondCenter.z);
+    waterMesh.position.set(pondCenter.x, -0.12, pondCenter.z);
+    waterMesh.receiveShadow = true;
     parkGroup.add(waterMesh);
 
-    // Water lilies / Lotus pads floating on water
-    const lilyMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.6 });
-    for (let i = 0; i < 18; i++) {
-      const lx = pondCenter.x + (Math.random() - 0.5) * (pondWidth - 8);
-      const lz = pondCenter.z + (Math.random() - 0.5) * (pondLength - 8);
-      const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.02, 12), lilyMat);
-      pad.position.set(lx, -0.2, lz);
+    // 3. FLOATING AERATION FOUNTAINS (2座漂浮式生态增氧水景曝气喷泉)
+    const fountainMeshList: THREE.Group[] = [];
+    const aeratorPositions = [
+      new THREE.Vector3(35, -0.12, 40),
+      new THREE.Vector3(49, -0.12, 48),
+    ];
+
+    aeratorPositions.forEach((pos, idx) => {
+      const aeratorGroup = new THREE.Group();
+      aeratorGroup.position.copy(pos);
+
+      // Yellow buoyant floating ring
+      const floatRing = new THREE.Mesh(
+        new THREE.TorusGeometry(1.2, 0.22, 12, 24),
+        new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.4 })
+      );
+      floatRing.rotation.x = Math.PI / 2;
+      floatRing.position.y = 0.08;
+      aeratorGroup.add(floatRing);
+
+      // Stainless central motor & fountain nozzle
+      const motor = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.35, 0.4, 0.6, 12),
+        new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.8, roughness: 0.2 })
+      );
+      motor.position.y = 0.25;
+      aeratorGroup.add(motor);
+
+      const nozzle = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.1, 0.18, 0.4, 12),
+        new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.9, roughness: 0.1 })
+      );
+      nozzle.position.y = 0.65;
+      aeratorGroup.add(nozzle);
+
+      // Concentric water ripple foam rings
+      for (let r = 1; r <= 2; r++) {
+        const ripple = new THREE.Mesh(
+          new THREE.RingGeometry(1.4 * r, 1.4 * r + 0.18, 32),
+          new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.45 / r,
+            side: THREE.DoubleSide,
+          })
+        );
+        ripple.rotation.x = -Math.PI / 2;
+        ripple.position.y = 0.02;
+        aeratorGroup.add(ripple);
+      }
+
+      parkGroup.add(aeratorGroup);
+      fountainMeshList.push(aeratorGroup);
+    });
+
+    // Animated Fountain Water Spray Particle System (300 particles arching up and splashing)
+    const particleCount = 300;
+    const particleGeo = new THREE.BufferGeometry();
+    const particlePositions = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount; i++) {
+      const isF1 = i < particleCount / 2;
+      const origin = isF1 ? aeratorPositions[0] : aeratorPositions[1];
+      particlePositions[i * 3] = origin.x;
+      particlePositions[i * 3 + 1] = origin.y + 0.6;
+      particlePositions[i * 3 + 2] = origin.z;
+    }
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+    const particleMat = new THREE.PointsMaterial({
+      color: 0xf0fdf4,
+      size: 0.26,
+      transparent: true,
+      opacity: 0.85,
+    });
+    const fountainParticles = new THREE.Points(particleGeo, particleMat);
+    parkGroup.add(fountainParticles);
+
+    // 4. SUBMERGED SWIMMING KOI FISH (水下游弋锦鲤鱼群)
+    const fishList: KoiFishActor[] = [];
+    const koiColors = [
+      { body: 0xea580c, fin: 0xffffff }, // Kohaku (Red & White)
+      { body: 0xf59e0b, fin: 0xfef08a }, // Yamabuki Ogon (Golden Yellow)
+      { body: 0xdc2626, fin: 0x1e293b }, // Showa (Crimson & Black)
+      { body: 0xffffff, fin: 0xea580c }, // Tancho
+      { body: 0xea580c, fin: 0xffffff },
+      { body: 0xf59e0b, fin: 0xffffff },
+    ];
+
+    koiColors.forEach((colorScheme, idx) => {
+      const fishGroup = new THREE.Group();
+      const fishMat = new THREE.MeshStandardMaterial({
+        color: colorScheme.body,
+        roughness: 0.35,
+        metalness: 0.1,
+      });
+      const finMat = new THREE.MeshStandardMaterial({
+        color: colorScheme.fin,
+        transparent: true,
+        opacity: 0.85,
+        roughness: 0.4,
+      });
+
+      // Streamlined Koi Body
+      const body = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.9, 8), fishMat);
+      body.rotation.x = Math.PI / 2;
+      fishGroup.add(body);
+
+      // Pectoral fins
+      const finL = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.02, 0.14), finMat);
+      finL.position.set(-0.16, 0, 0.15);
+      finL.rotation.y = -0.35;
+      const finR = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.02, 0.14), finMat);
+      finR.position.set(0.16, 0, 0.15);
+      finR.rotation.y = 0.35;
+      fishGroup.add(finL, finR);
+
+      // Dorsal Fin
+      const dorsal = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.16, 0.35), finMat);
+      dorsal.position.set(0, 0.12, -0.05);
+      fishGroup.add(dorsal);
+
+      // Articulated Tail Fin
+      const tail = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.26, 0.3), finMat);
+      tail.position.set(0, 0, -0.52);
+      fishGroup.add(tail);
+
+      fishGroup.position.set(pondCenter.x, -0.48, pondCenter.z);
+      parkGroup.add(fishGroup);
+
+      fishList.push({
+        mesh: fishGroup,
+        orbitCenter: new THREE.Vector3(
+          pondCenter.x + (idx % 2 === 0 ? -4 : 5),
+          -0.48,
+          pondCenter.z + (idx % 3 === 0 ? -3 : 4)
+        ),
+        radiusX: 5.5 + (idx % 3) * 2.2,
+        radiusZ: 4.5 + (idx % 2) * 2.0,
+        speed: 0.6 + idx * 0.12,
+        phase: (idx / koiColors.length) * Math.PI * 2,
+        tail,
+      });
+    });
+
+    // 5. WATER LILIES & BLOOMING LOTUS BLOSSOMS (水面睡莲与荷花)
+    const lilyMat = new THREE.MeshStandardMaterial({
+      color: 0x166534, // Emerald green water lily pad
+      roughness: 0.5,
+    });
+    const lotusPetalMat = new THREE.MeshStandardMaterial({
+      color: 0xf472b6, // Delicate blooming pink lotus petals
+      roughness: 0.4,
+    });
+    const lotusCoreMat = new THREE.MeshStandardMaterial({
+      color: 0xfacc15, // Golden stamen
+      roughness: 0.3,
+    });
+
+    for (let i = 0; i < 22; i++) {
+      const lx = pondCenter.x + (Math.random() - 0.5) * (pondWidth - 10);
+      const lz = pondCenter.z + (Math.random() - 0.5) * (pondLength - 10);
+
+      // Lily pad with notch
+      const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.02, 14), lilyMat);
+      pad.position.set(lx, -0.11, lz);
+      pad.rotation.y = Math.random() * Math.PI * 2;
       parkGroup.add(pad);
+
+      // Every 3rd pad has a blooming lotus blossom
+      if (i % 3 === 0) {
+        const lotusGroup = new THREE.Group();
+        lotusGroup.position.set(lx, -0.09, lz);
+
+        // Petals radiating in 2 tiers
+        for (let p = 0; p < 8; p++) {
+          const petal = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.22, 5), lotusPetalMat);
+          const pAngle = (p / 8) * Math.PI * 2;
+          petal.position.set(Math.cos(pAngle) * 0.12, 0.08, Math.sin(pAngle) * 0.12);
+          petal.rotation.x = Math.sin(pAngle) * 0.5;
+          petal.rotation.z = -Math.cos(pAngle) * 0.5;
+          lotusGroup.add(petal);
+        }
+        // Center stamen
+        const core = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.08, 8), lotusCoreMat);
+        core.position.y = 0.08;
+        lotusGroup.add(core);
+
+        parkGroup.add(lotusGroup);
+      }
     }
 
-    // 3. Wooden Inspection Dock/Pier (观水平台与监测码头)
+    // 6. SHORELINE WEEPING WILLOWS & REED GRASS (池畔垂柳与亲水芦苇)
+    // 3 Weeping willows along the lake banks
+    this.createWillowTree(parkGroup, pondCenter.x - 17, 0, pondCenter.z + 13);
+    this.createWillowTree(parkGroup, pondCenter.x + 16, 0, pondCenter.z - 12);
+    this.createWillowTree(parkGroup, pondCenter.x + 17, 0, pondCenter.z + 12);
+
+    // Reed grass clumps
+    const reedMat = new THREE.MeshStandardMaterial({ color: 0x4d7c0f, roughness: 0.8 });
+    const cattailMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.9 });
+    for (let r = 0; r < 36; r++) {
+      const angle = (r / 36) * Math.PI * 2;
+      const qx = (pondWidth / 2 - 1.2) * Math.cos(angle) + (Math.random() - 0.5) * 0.8;
+      const qz = (pondLength / 2 - 1.2) * Math.sin(angle) + (Math.random() - 0.5) * 0.8;
+      // Stems
+      for (let s = 0; s < 3; s++) {
+        const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 1.2 + Math.random() * 0.6, 6), reedMat);
+        stem.position.set(pondCenter.x + qx + (Math.random() - 0.5) * 0.4, 0.2, pondCenter.z + qz + (Math.random() - 0.5) * 0.4);
+        stem.rotation.z = (Math.random() - 0.5) * 0.2;
+        parkGroup.add(stem);
+
+        if (s === 0) {
+          const cattail = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.25, 8), cattailMat);
+          cattail.position.copy(stem.position);
+          cattail.position.y += 0.5;
+          parkGroup.add(cattail);
+        }
+      }
+    }
+
+    // 7. WOODEN INSPECTION PIER / DOCK (观水平台与监测码头)
+    // Matches existing coordinates (pondCenter.x - 14 = 28, pondCenter.z - 8 = 36)
     const woodMat = new THREE.MeshStandardMaterial({
-      color: 0x78350f,
-      roughness: 0.8,
+      color: 0x854d0e,
+      roughness: 0.75,
     });
     const pierGeo = new THREE.BoxGeometry(4.5, 0.2, 10);
     const pier = new THREE.Mesh(pierGeo, woodMat);
     pier.position.set(pondCenter.x - 14, 0.15, pondCenter.z - 8);
     pier.receiveShadow = true;
     parkGroup.add(pier);
+
+    // Timber floor plank grooves
+    for (let pl = -4; pl <= 4; pl++) {
+      const groove = new THREE.Mesh(
+        new THREE.BoxGeometry(4.4, 0.02, 0.04),
+        new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.9 })
+      );
+      groove.position.set(pondCenter.x - 14, 0.26, pondCenter.z - 8 + pl * 1.0);
+      parkGroup.add(groove);
+    }
 
     // Pier guardrails
     const railMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.6 });
@@ -2114,7 +2523,7 @@ export class ParkEnvironment {
     rail2.position.set(pondCenter.x - 14 + 2.1, 0.65, pondCenter.z - 8);
     parkGroup.add(rail1, rail2);
 
-    // 4. Solar Telemetry Buoy (生态水质水温水位智能浮标站)
+    // 8. SOLAR TELEMETRY BUOY (生态水质水温水位智能浮标站)
     const buoyGroup = new THREE.Group();
     buoyGroup.position.set(pondCenter.x, -0.1, pondCenter.z);
     buoyGroup.userData = {
@@ -2181,7 +2590,7 @@ export class ParkEnvironment {
     parkGroup.add(buoyGroup);
     interactiveObjects.push(buoyGroup);
 
-    // 5. Pond Water Intake Pumping Station (河塘生态提水灌溉泵站)
+    // 9. Pond Water Intake Pumping Station (河塘生态提水灌溉泵站)
     const pumpStationGroup = new THREE.Group();
     pumpStationGroup.position.set(pondCenter.x - 17, 0, pondCenter.z - 4);
     pumpStationGroup.userData = {
@@ -2243,6 +2652,9 @@ export class ParkEnvironment {
       waterMesh,
       buoy: buoyGroup,
       beaconLight,
+      fountainParticles,
+      fountainMeshList,
+      fishList,
     };
   }
 
@@ -2909,5 +3321,440 @@ export class ParkEnvironment {
 
     parkGroup.add(towerGroup);
     interactiveObjects.push(towerGroup);
+  }
+
+  // -------------------------------------------------------------
+  // OPEN FARMLAND DEMO: Raised Soil Furrows with Crops & Drip Lines
+  // (高标准露天有机蔬菜起垄栽培示范区)
+  // -------------------------------------------------------------
+  public static createVegetableDemoField(
+    parent: THREE.Group,
+    centerX: number,
+    centerZ: number,
+    width: number,
+    length: number
+  ) {
+    const fieldGroup = new THREE.Group();
+    fieldGroup.position.set(centerX, 0, centerZ);
+
+    // Rich dark loam soil base
+    const soilMat = new THREE.MeshStandardMaterial({
+      color: 0x3e2817,
+      roughness: 0.95,
+    });
+    const soilBase = new THREE.Mesh(new THREE.PlaneGeometry(width, length), soilMat);
+    soilBase.rotation.x = -Math.PI / 2;
+    soilBase.position.y = 0.01;
+    soilBase.receiveShadow = true;
+    fieldGroup.add(soilBase);
+
+    // 12 Parallel Raised Soil Furrow Ridges (起垄泥土)
+    const ridgeCount = 12;
+    const ridgeSpacing = width / (ridgeCount + 1);
+    const ridgeMat = new THREE.MeshStandardMaterial({
+      color: 0x4a321e,
+      roughness: 0.9,
+    });
+    const cropMat1 = new THREE.MeshStandardMaterial({ color: 0x4ade80, roughness: 0.6 }); // Bright lettuce
+    const cropMat2 = new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.6 }); // Fresh cabbage
+    const cropMat3 = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.6 }); // Broccoli
+    const pipeMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5 }); // Black drip tape
+
+    for (let i = 0; i < ridgeCount; i++) {
+      const rx = -width / 2 + (i + 1) * ridgeSpacing;
+      // Soil Ridge Mound
+      const ridge = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.55, 0.75, length - 4, 8),
+        ridgeMat
+      );
+      ridge.rotation.x = Math.PI / 2;
+      ridge.position.set(rx, 0.18, 0);
+      ridge.receiveShadow = true;
+      fieldGroup.add(ridge);
+
+      // Black Drip Irrigation Tube running along top of ridge
+      const dripTube = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.04, 0.04, length - 4, 6),
+        pipeMat
+      );
+      dripTube.rotation.x = Math.PI / 2;
+      dripTube.position.set(rx, 0.38, 0);
+      fieldGroup.add(dripTube);
+
+      // Neat rows of crops planted along each ridge
+      const plantsPerRidge = 16;
+      const cropMat = i % 3 === 0 ? cropMat1 : i % 3 === 1 ? cropMat2 : cropMat3;
+      for (let p = 0; p < plantsPerRidge; p++) {
+        const pz = -(length - 8) / 2 + (p / (plantsPerRidge - 1)) * (length - 8);
+        const plant = new THREE.Mesh(new THREE.DodecahedronGeometry(0.28 + Math.random() * 0.08, 0), cropMat);
+        plant.position.set(rx, 0.42, pz);
+        plant.castShadow = true;
+        fieldGroup.add(plant);
+      }
+    }
+
+    // Modern Solar Pest Trap Lamp
+    const lampMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.6 });
+    const pestLamp = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 3.5, 8), lampMat);
+    pestLamp.position.set(0, 1.75, -length / 2 + 2);
+    const lampTop = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.08, 0.6), lampMat);
+    lampTop.position.set(0, 3.5, -length / 2 + 2);
+    const purpleLight = new THREE.Mesh(
+      new THREE.SphereGeometry(0.2, 8, 8),
+      new THREE.MeshBasicMaterial({ color: 0xa855f7 })
+    );
+    purpleLight.position.set(0, 3.2, -length / 2 + 2);
+    fieldGroup.add(pestLamp, lampTop, purpleLight);
+
+    // Demonstration Area Signboard
+    this.createRoadSign(fieldGroup, 0, length / 2 - 2, '露天高标准有机蔬菜起垄栽培示范田');
+
+    parent.add(fieldGroup);
+  }
+
+  // -------------------------------------------------------------
+  // ECOLOGICAL HIGH-DENSITY DWARF FRUIT TREE ORCHARD & PERGOLA
+  // (生态矮化密植果树示范区与攀爬果蔬长廊)
+  // -------------------------------------------------------------
+  public static createFruitTreeOrchard(
+    parent: THREE.Group,
+    centerX: number,
+    centerZ: number,
+    width: number,
+    length: number
+  ) {
+    const orchardGroup = new THREE.Group();
+    orchardGroup.position.set(centerX, 0, centerZ);
+
+    // 16 Fruit Trees in 4x4 Grid
+    for (let row = 0; row < 4; row++) {
+      for (let col = 0; col < 4; col++) {
+        const tx = -width / 2 + 5 + col * (width / 4);
+        const tz = -length / 2 + 8 + row * (length / 4.5);
+        this.createFruitTree(orchardGroup, tx, 0, tz, col % 2 === 0);
+      }
+    }
+
+    // Fruit Pergola Trellis (葡萄与瓜果立体攀爬廊架)
+    const pergolaMat = new THREE.MeshStandardMaterial({ color: 0x92400e, roughness: 0.8 });
+    const pergolaGroup = new THREE.Group();
+    pergolaGroup.position.set(0, 0, length / 2 - 10);
+    // 8 posts
+    for (let px = -5; px <= 5; px += 5) {
+      for (let pz = -6; pz <= 6; pz += 4) {
+        const post = new THREE.Mesh(new THREE.BoxGeometry(0.18, 2.8, 0.18), pergolaMat);
+        post.position.set(px, 1.4, pz);
+        pergolaGroup.add(post);
+      }
+    }
+    // Overhead rafters
+    for (let rz = -6.5; rz <= 6.5; rz += 1.3) {
+      const rafter = new THREE.Mesh(new THREE.BoxGeometry(11, 0.1, 0.1), pergolaMat);
+      rafter.position.set(0, 2.85, rz);
+      pergolaGroup.add(rafter);
+    }
+    // Climbing foliage vine clusters on top
+    const vineMat = new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.6 });
+    for (let v = 0; v < 14; v++) {
+      const vx = (Math.random() - 0.5) * 9.5;
+      const vz = (Math.random() - 0.5) * 11;
+      const vine = new THREE.Mesh(new THREE.DodecahedronGeometry(0.65 + Math.random() * 0.4, 0), vineMat);
+      vine.position.set(vx, 2.95, vz);
+      pergolaGroup.add(vine);
+    }
+    orchardGroup.add(pergolaGroup);
+
+    this.createRoadSign(orchardGroup, 0, length / 2 - 2, '现代矮化密植生态果园与立体展示区');
+    parent.add(orchardGroup);
+  }
+
+  // -------------------------------------------------------------
+  // CENTRAL SCENIC LAWN & FLOWERBED PLAZA
+  // (中央迎宾生态花坛、景观草坪与休闲汀步)
+  // -------------------------------------------------------------
+  public static createCentralScenicPlaza(parent: THREE.Group) {
+    const plazaGroup = new THREE.Group();
+    plazaGroup.position.set(13.5, 0, -2);
+
+    // Decorative Raised Circular Floral Display (中央环形迎宾花坛)
+    const curbMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.5 });
+    const flowerRingMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.7 });
+    const ringCurb = new THREE.Mesh(new THREE.TorusGeometry(3.6, 0.22, 8, 32), curbMat);
+    ringCurb.rotation.x = Math.PI / 2;
+    ringCurb.position.y = 0.18;
+    plazaGroup.add(ringCurb);
+
+    // Inner soil
+    const bed = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 3.6, 0.25, 32), flowerRingMat);
+    bed.position.y = 0.12;
+    plazaGroup.add(bed);
+
+    // Blossom Clusters: Lavender Purple, Calendula Yellow, Scarlet Sage
+    const flowerColors = [0x8b5cf6, 0xf59e0b, 0xef4444, 0xec4899];
+    for (let f = 0; f < 32; f++) {
+      const angle = (f / 32) * Math.PI * 2;
+      const dist = 0.8 + Math.random() * 2.2;
+      const col = flowerColors[f % flowerColors.length];
+      const flMat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.4 });
+      const bloom = new THREE.Mesh(new THREE.DodecahedronGeometry(0.32, 0), flMat);
+      bloom.position.set(Math.cos(angle) * dist, 0.32, Math.sin(angle) * dist);
+      plazaGroup.add(bloom);
+    }
+
+    // 4 Ornamental Spherical Boxwood Topiary Bushes (造型球状黄杨灌木)
+    const boxwoodMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.45 });
+    [[-5, -6], [-5, 6], [5, -6], [5, 6]].forEach(([bx, bz]) => {
+      const bush = new THREE.Mesh(new THREE.SphereGeometry(0.85, 14, 14), boxwoodMat);
+      bush.position.set(bx, 0.75, bz);
+      bush.castShadow = true;
+      plazaGroup.add(bush);
+    });
+
+    // Garden Slate Stepping Path (自然石质景观汀步)
+    const paverMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.8 });
+    for (let s = 0; s < 12; s++) {
+      const sz = -12 + s * 2.2;
+      const paver = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.06, 1.2), paverMat);
+      paver.position.set(-1.2 + Math.sin(s * 0.8) * 0.4, 0.04, sz);
+      paver.receiveShadow = true;
+      plazaGroup.add(paver);
+    }
+
+    parent.add(plazaGroup);
+  }
+
+  // -------------------------------------------------------------
+  // CAMPUS FORESTRY: Avenue Shade Trees & Perimeter Windbreak
+  // (园区林荫大道行道树与外围生态防风林带)
+  // -------------------------------------------------------------
+  public static createCampusForestry(parent: THREE.Group) {
+    // 1. Central Avenue Broadleaf Trees (沿中央主干道两侧行道树)
+    const avenueTreeZs = [-95, -75, -50, -22, 6, 45, 68];
+    avenueTreeZs.forEach((tz) => {
+      // West side of avenue (X = 15.5)
+      this.createBroadleafTree(parent, 15.5, 0, tz);
+      // East side of avenue (X = 28.5)
+      this.createBroadleafTree(parent, 28.5, 0, tz);
+    });
+
+    // 2. Perimeter Shelterbelt Windbreak Evergreens (四周防风隔离林)
+    // North Boundary (Z = -120)
+    for (let x = -120; x <= 120; x += 30) {
+      this.createPineTree(parent, x, 0, -120);
+    }
+    // South Boundary (Z = 120)
+    for (let x = -120; x <= 120; x += 30) {
+      if (Math.abs(x - 22) > 15) { // Skip entrance road opening
+        this.createPineTree(parent, x, 0, 120);
+      }
+    }
+    // West Boundary (X = -120)
+    for (let z = -100; z <= 100; z += 28) {
+      this.createPineTree(parent, -120, 0, z);
+    }
+    // East Boundary (X = 120)
+    for (let z = -100; z <= 100; z += 28) {
+      this.createPineTree(parent, 120, 0, z);
+    }
+  }
+
+  // -------------------------------------------------------------
+  // TREE MODEL GENERATORS: Broadleaf, Pine, Willow, Fruit
+  // -------------------------------------------------------------
+  public static createBroadleafTree(parent: THREE.Group, x: number, y: number, z: number) {
+    const treeGroup = new THREE.Group();
+    treeGroup.position.set(x, y, z);
+
+    // Tree curb planter
+    const planterMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.7 });
+    const planter = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.14, 2.4), planterMat);
+    planter.position.y = 0.07;
+    treeGroup.add(planter);
+
+    // Trunk
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.9 });
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.35, 3.6, 8), woodMat);
+    trunk.position.y = 1.8;
+    trunk.castShadow = true;
+    treeGroup.add(trunk);
+
+    // Lush Layered Foliage Crown
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.6 });
+    const leafMat2 = new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.6 });
+    const c1 = new THREE.Mesh(new THREE.DodecahedronGeometry(1.9, 1), leafMat);
+    c1.position.set(0, 4.2, 0);
+    c1.castShadow = true;
+    const c2 = new THREE.Mesh(new THREE.DodecahedronGeometry(1.5, 1), leafMat2);
+    c2.position.set(0.6, 5.0, 0.5);
+    c2.castShadow = true;
+    const c3 = new THREE.Mesh(new THREE.DodecahedronGeometry(1.4, 1), leafMat);
+    c3.position.set(-0.6, 4.8, -0.4);
+    c3.castShadow = true;
+    treeGroup.add(c1, c2, c3);
+
+    parent.add(treeGroup);
+  }
+
+  public static createPineTree(parent: THREE.Group, x: number, y: number, z: number) {
+    const treeGroup = new THREE.Group();
+    treeGroup.position.set(x, y, z);
+
+    // Trunk
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.9 });
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.32, 2.8, 8), trunkMat);
+    trunk.position.y = 1.4;
+    trunk.castShadow = true;
+    treeGroup.add(trunk);
+
+    // 3 Conical Evergreen Tiers
+    const pineMat = new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.7 });
+    for (let tier = 0; tier < 3; tier++) {
+      const cone = new THREE.Mesh(
+        new THREE.ConeGeometry(2.4 - tier * 0.5, 2.4 - tier * 0.3, 8),
+        pineMat
+      );
+      cone.position.y = 3.0 + tier * 1.5;
+      cone.castShadow = true;
+      treeGroup.add(cone);
+    }
+
+    parent.add(treeGroup);
+  }
+
+  public static createWillowTree(parent: THREE.Group, x: number, y: number, z: number) {
+    const willowGroup = new THREE.Group();
+    willowGroup.position.set(x, y, z);
+
+    // Gnarled leaning trunk
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x422006, roughness: 0.85 });
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.45, 3.2, 8), trunkMat);
+    trunk.position.set(0, 1.6, 0);
+    trunk.rotation.z = 0.12;
+    trunk.castShadow = true;
+    willowGroup.add(trunk);
+
+    // Weeping canopy clusters
+    const willowMat = new THREE.MeshStandardMaterial({ color: 0x4ade80, roughness: 0.55 });
+    const centerCanopy = new THREE.Mesh(new THREE.SphereGeometry(2.2, 10, 10), willowMat);
+    centerCanopy.position.set(0.3, 4.0, 0);
+    centerCanopy.scale.set(1.2, 0.8, 1.2);
+    centerCanopy.castShadow = true;
+    willowGroup.add(centerCanopy);
+
+    // Drooping willow fronds dipping toward water
+    for (let fr = 0; fr < 8; fr++) {
+      const angle = (fr / 8) * Math.PI * 2;
+      const frond = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.3, 2.2, 6), willowMat);
+      frond.position.set(Math.cos(angle) * 1.8 + 0.3, 2.6, Math.sin(angle) * 1.8);
+      frond.castShadow = true;
+      willowGroup.add(frond);
+    }
+
+    parent.add(willowGroup);
+  }
+
+  public static createFruitTree(parent: THREE.Group, x: number, y: number, z: number, isApple: boolean) {
+    const treeGroup = new THREE.Group();
+    treeGroup.position.set(x, y, z);
+
+    // Trunk
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x582f0e, roughness: 0.9 });
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, 2.2, 8), trunkMat);
+    trunk.position.y = 1.1;
+    trunk.castShadow = true;
+    treeGroup.add(trunk);
+
+    // Foliage crown
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.55 });
+    const crown = new THREE.Mesh(new THREE.DodecahedronGeometry(1.4, 1), leafMat);
+    crown.position.y = 2.6;
+    crown.castShadow = true;
+    treeGroup.add(crown);
+
+    // Hanging Fruits (Red Apples or Golden Oranges)
+    const fruitColor = isApple ? 0xef4444 : 0xf59e0b;
+    const fruitMat = new THREE.MeshStandardMaterial({ color: fruitColor, roughness: 0.3 });
+    for (let f = 0; f < 12; f++) {
+      const fa = (f / 12) * Math.PI * 2;
+      const fruit = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), fruitMat);
+      fruit.position.set(
+        Math.cos(fa) * 1.1 + (Math.random() - 0.5) * 0.3,
+        2.2 + (Math.random() - 0.5) * 0.6,
+        Math.sin(fa) * 1.1 + (Math.random() - 0.5) * 0.3
+      );
+      treeGroup.add(fruit);
+    }
+
+    parent.add(treeGroup);
+  }
+
+  // -------------------------------------------------------------
+  // POND DYNAMIC ANIMATION RUNTIME ENGINE
+  // (水波动态起伏、曝气喷泉粒子轨迹、锦鲤游弋尾巴摆动、浮标浮沉)
+  // -------------------------------------------------------------
+  public static updatePond(subsystems: ParkSubsystems, elapsedTime: number) {
+    // 1. Water waves vertex deformation & dynamic normal recalculation
+    if (subsystems.waterMesh) {
+      const posAttr = subsystems.waterMesh.geometry.attributes.position;
+      const count = posAttr.count;
+      for (let i = 0; i < count; i++) {
+        const u = posAttr.getX(i);
+        const v = posAttr.getY(i);
+        const wave =
+          Math.sin(u * 0.42 + elapsedTime * 2.6) * 0.07 +
+          Math.cos(v * 0.48 + elapsedTime * 2.0) * 0.05 +
+          Math.sin((u + v) * 0.28 + elapsedTime * 1.7) * 0.035;
+        posAttr.setZ(i, wave);
+      }
+      posAttr.needsUpdate = true;
+      subsystems.waterMesh.geometry.computeVertexNormals();
+    }
+
+    // 2. Buoy Bobbing & Beacon Pulse
+    if (subsystems.buoy) {
+      subsystems.buoy.position.y = -0.1 + Math.sin(elapsedTime * 2.2) * 0.045;
+      subsystems.buoy.rotation.z = Math.sin(elapsedTime * 1.6) * 0.03;
+      subsystems.buoy.rotation.x = Math.cos(elapsedTime * 1.8) * 0.03;
+    }
+    if (subsystems.beaconLight) {
+      subsystems.beaconLight.intensity = Math.sin(elapsedTime * 5.0) > 0 ? 1.8 : 0.2;
+    }
+
+    // 3. Floating Aerator Fountain Spray Particles
+    if (subsystems.fountainParticles) {
+      const pos = subsystems.fountainParticles.geometry.attributes.position;
+      const count = pos.count;
+      for (let i = 0; i < count; i++) {
+        const isF1 = i < count / 2;
+        const originX = isF1 ? 35 : 49;
+        const originZ = isF1 ? 40 : 48;
+        const seed = i * 0.137;
+        const t = (elapsedTime * 2.2 + seed) % 1.0; // Life progress: 0 to 1
+        const angle = (i % 32) * ((Math.PI * 2) / 32) + seed;
+        const spreadRadius = t * 2.8;
+        const px = originX + Math.cos(angle) * spreadRadius;
+        const pz = originZ + Math.sin(angle) * spreadRadius;
+        // Parabolic arc height
+        const py = -0.12 + Math.sin(t * Math.PI) * 2.2 - t * 0.4;
+        pos.setXYZ(i, px, py, pz);
+      }
+      pos.needsUpdate = true;
+    }
+
+    // 4. Submerged Living Swimming Koi Fish
+    if (subsystems.fishList) {
+      for (const fish of subsystems.fishList) {
+        const angle = fish.phase + elapsedTime * fish.speed;
+        const x = fish.orbitCenter.x + Math.cos(angle) * fish.radiusX;
+        const z = fish.orbitCenter.z + Math.sin(angle) * fish.radiusZ;
+        const dx = -Math.sin(angle) * fish.radiusX;
+        const dz = Math.cos(angle) * fish.radiusZ;
+        const yaw = Math.atan2(dx, dz) + Math.PI / 2;
+
+        fish.mesh.position.set(x, -0.48 + Math.sin(elapsedTime * 2.5 + fish.phase) * 0.03, z);
+        fish.mesh.rotation.y = yaw;
+        fish.tail.rotation.y = Math.sin(elapsedTime * 8.5 + fish.phase) * 0.45;
+      }
+    }
   }
 }

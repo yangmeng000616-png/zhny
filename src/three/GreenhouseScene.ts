@@ -12,7 +12,7 @@ import {
   SurveillanceCameraConfig,
 } from '../types/digitalTwin';
 import { surveillanceCamerasData } from '../data/surveillanceData';
-import { ParkEnvironment } from './ParkEnvironment';
+import { ParkEnvironment, ParkSubsystems } from './ParkEnvironment';
 import { DynamicActorsManager } from './DynamicActorsManager';
 import { gateService } from '../services/gateService';
 
@@ -75,6 +75,7 @@ export class GreenhouseScene {
   public surveillanceGroup: THREE.Group;
 
   // Pond & Water telemetry animation references
+  private pondSubsystems: ParkSubsystems | null = null;
   private pondWaterMesh: THREE.Mesh | null = null;
   private pondBuoy: THREE.Group | null = null;
   private pondBeaconLight: THREE.PointLight | null = null;
@@ -328,6 +329,7 @@ export class GreenhouseScene {
     ParkEnvironment.buildAdditionalGreenhouses(this.scene, this.parkGroup, this.glassMaterials, this.interactiveObjects);
     ParkEnvironment.buildAdvancedFacilities(this.scene, this.parkGroup, this.interactiveObjects);
     const pondSubsystems = ParkEnvironment.buildPondAndWaterStation(this.scene, this.parkGroup, this.interactiveObjects);
+    this.pondSubsystems = pondSubsystems;
     this.pondWaterMesh = pondSubsystems.waterMesh;
     this.pondBuoy = pondSubsystems.buoy;
     this.pondBeaconLight = pondSubsystems.beaconLight;
@@ -376,13 +378,13 @@ export class GreenhouseScene {
   // LIGHTING & ENVIRONMENT
   // -------------------------------------------------------------
   private setupLighting() {
-    // Natural slate architectural ambient (balanced, prevents muddy shadows)
-    const ambientLight = new THREE.AmbientLight(0x1e293b, 0.45);
+    // Natural fresh outdoor daylight ambient (balanced, brings out lush greenery)
+    const ambientLight = new THREE.AmbientLight(0x334139, 0.62);
     this.scene.add(ambientLight);
     this.ambientLight = ambientLight;
 
     // Natural warm solar directional light (5600K balanced sunlight)
-    const sunLight = new THREE.DirectionalLight(0xfffbf2, 2.0);
+    const sunLight = new THREE.DirectionalLight(0xfffae8, 2.3);
     sunLight.position.set(48, 65, 40);
     sunLight.castShadow = true;
     sunLight.shadow.mapSize.width = 2048;
@@ -399,8 +401,8 @@ export class GreenhouseScene {
     this.scene.add(sunLight);
     this.sunLight = sunLight;
 
-    // Sky and ground bounce hemisphere (gentle cool daylight + warm bounce)
-    const hemiLight = new THREE.HemisphereLight(0xc7d2fe, 0x1b2432, 0.55);
+    // Sky and ground bounce hemisphere (gentle azure daylight + fresh grass bounce)
+    const hemiLight = new THREE.HemisphereLight(0xbae6fd, 0x3f6212, 0.72);
     this.scene.add(hemiLight);
     this.hemiLight = hemiLight;
 
@@ -418,10 +420,10 @@ export class GreenhouseScene {
   }
 
   private buildGroundAndSite() {
-    // 1. Concrete perimeter foundation apron (matte dark architectural concrete)
-    const groundGeo = new THREE.PlaneGeometry(80, 80);
+    // 1. Concrete perimeter foundation apron closely hugging greenhouse perimeter
+    const groundGeo = new THREE.PlaneGeometry(28, 34);
     const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x141d2b,
+      color: 0x334155,
       roughness: 0.88,
       metalness: 0.08,
     });
@@ -3411,27 +3413,9 @@ export class GreenhouseScene {
       s.halo.scale.set(scale, scale, scale);
     });
 
-    // 7. Pond Water Surface Wave Ripples & Buoy Bobbing Animation
-    if (this.pondWaterMesh) {
-      const posAttr = this.pondWaterMesh.geometry.attributes.position;
-      const count = posAttr.count;
-      for (let i = 0; i < count; i++) {
-        const u = posAttr.getX(i);
-        const v = posAttr.getY(i);
-        const wave = Math.sin(u * 0.35 + elapsedTime * 2.2) * 0.08 + Math.cos(v * 0.35 + elapsedTime * 1.8) * 0.06;
-        posAttr.setZ(i, wave);
-      }
-      posAttr.needsUpdate = true;
-    }
-
-    if (this.pondBuoy) {
-      this.pondBuoy.position.y = -0.1 + Math.sin(elapsedTime * 2.0) * 0.06;
-      this.pondBuoy.rotation.z = Math.sin(elapsedTime * 1.5) * 0.03;
-      this.pondBuoy.rotation.x = Math.cos(elapsedTime * 1.7) * 0.03;
-    }
-
-    if (this.pondBeaconLight) {
-      this.pondBeaconLight.intensity = Math.sin(elapsedTime * 5.0) > 0 ? 1.8 : 0.2;
+    // 7. Pond Water Surface Wave Ripples, Aerator Spray Particles, Swimming Koi & Buoy Animation
+    if (this.pondSubsystems) {
+      ParkEnvironment.updatePond(this.pondSubsystems, elapsedTime);
     }
 
     // 8. Smooth Camera Lerp

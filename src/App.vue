@@ -78,10 +78,20 @@ import EnterpriseOwnerHubModal from './components/EnterpriseOwnerHubModal.vue';
 import LogisticsLedgerModal from './components/LogisticsLedgerModal.vue';
 import ParkGateLedgerModal from './components/ParkGateLedgerModal.vue';
 import VehicleMissionModal from './components/VehicleMissionModal.vue';
+import AdminPortal from './components/AdminPortal.vue';
 import { gateService } from './services/gateService';
 
 const canvasContainerRef = ref<HTMLDivElement | null>(null);
 let sceneInstance: GreenhouseScene | null = null;
+
+// Dedicated Admin Portal & Backend Management State
+const showAdminPortal = ref<boolean>(false);
+const adminPortalInitialTab = ref<string>('dashboard');
+
+const openAdminPortal = (tab: string = 'dashboard') => {
+  adminPortalInitialTab.value = tab;
+  showAdminPortal.value = true;
+};
 
 // Digital Twin Dynamic States (accessed via dataService layer)
 const environment = ref<EnvironmentSnapshot>(initialEnvironment);
@@ -341,7 +351,7 @@ const showSpatialTags = ref<boolean>(false); // Default clean mode: disable floa
 // Coordinated responsive panel states to prevent overlapping
 const isMobileScreen = typeof window !== 'undefined' ? window.innerWidth < 1024 : false;
 const leftPanelCollapsed = ref<boolean>(isMobileScreen);
-const rightPanelCollapsed = ref<boolean>(isMobileScreen); // Dual-zone layout: left monitoring & right control
+const rightPanelCollapsed = ref<boolean>(true); // Default collapsed for a clean, concise homepage presentation
 const bottomPanelCollapsed = ref<boolean>(true); // Default collapsed for clean visual presentation
 
 // Zen / Clean Screen Mode
@@ -1089,14 +1099,15 @@ const handleTimeChange = (hourFraction: number) => {
       @toggle-history-bar="showHistoryBar = !showHistoryBar; if (showHistoryBar) bottomPanelCollapsed = true;"
       @toggle-sensors="handleToggleSensors"
       @toggle-zen-mode="handleToggleZenMode"
+      @open-admin-portal="openAdminPortal"
       @open-greenhouse-matrix="openGreenhouseMatrix"
-      @open-farming-center="openFarmingCenter"
-      @open-pest-modal="showPestMonitoring = true"
-      @open-feeding-modal="showFeedingModal = true"
+      @open-farming-center="() => openAdminPortal('crops')"
+      @open-pest-modal="() => openAdminPortal('protection')"
+      @open-feeding-modal="() => openAdminPortal('ecology')"
       @open-temp-modal="showTempHistoryModal = true"
-      @open-owner-hub-modal="showOwnerHubModal = true"
-      @open-logistics-modal="showLogisticsLedger = true"
-      @open-gate-modal="showGateModal = true"
+      @open-owner-hub-modal="() => openAdminPortal('dashboard')"
+      @open-logistics-modal="() => openAdminPortal('logistics')"
+      @open-gate-modal="() => openAdminPortal('logistics')"
     />
 
     <!-- Left Environment Telemetry Panel -->
@@ -1118,11 +1129,12 @@ const handleTimeChange = (hourFraction: number) => {
       @toggle-demo-jitter="handleToggleDemoJitter"
       @open-station="openGreenhouseStation"
       @open-matrix="openGreenhouseMatrix"
-      @open-feeding-modal="showFeedingModal = true"
+      @open-admin-portal="openAdminPortal"
+      @open-feeding-modal="() => openAdminPortal('ecology')"
       @open-temp-modal="showTempHistoryModal = true"
-      @open-pest-modal="showPestMonitoring = true"
-      @open-owner-hub-modal="showOwnerHubModal = true"
-      @open-logistics-modal="showLogisticsLedger = true"
+      @open-pest-modal="() => openAdminPortal('protection')"
+      @open-owner-hub-modal="() => openAdminPortal('dashboard')"
+      @open-logistics-modal="() => openAdminPortal('logistics')"
       @open-weather-modal="showWeatherPanel = true"
       @fly-to-camera-view="handleFlyToCameraView"
       @toggle-fov-visible="handleToggleFovVisible"
@@ -1344,5 +1356,28 @@ const handleTimeChange = (hourFraction: number) => {
 
     <!-- Navigation Guide Modal -->
     <RoamGuideOverlay :is-open="showRoamGuide" @close="showRoamGuide = false" />
+
+    <!-- Dedicated Full-Screen Admin Management Portal (后台管理运营中心) -->
+    <AdminPortal
+      v-if="showAdminPortal"
+      :initial-tab="adminPortalInitialTab"
+      :greenhouses="greenhousesMicroclimates"
+      :actuators="actuators"
+      :farming-records="farmingRecords"
+      :planting-cycles="plantingCycles"
+      :pest-records="pestRecords"
+      :pest-weekly-trend="pestWeeklyTrend"
+      :feeding-records="feedingRecords"
+      :history-logs="historyLogs"
+      :gate-barrier-raised="gateBarrierRaised"
+      @back-to-twin="showAdminPortal = false"
+      @toggle-actuator="handleToggleActuator"
+      @update-actuator-value="handleUpdateActuatorValue"
+      @toggle-gate-barrier="handleToggleGateBarrier"
+      @add-farming-record="handleAddFarmingRecord"
+      @add-pest-record="handleAddPestRecord"
+      @add-feeding-record="handleAddFeedingRecord"
+      @focus-greenhouse-3-d="(ghId) => { showAdminPortal = false; handleSelectGreenhouse(ghId); }"
+    />
   </div>
 </template>
